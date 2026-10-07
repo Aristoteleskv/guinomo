@@ -1,0 +1,17 @@
+{
+  "name": "guinomo-browser",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "guinomo_browser_bg.wasm",
+    "guinomo_browser.js",
+    "guinomo_browser_bg.js",
+    "guinomo_browser.d.ts"
+  ],
+  "main": "guinomo_browser.js",
+  "types": "guinomo_browser.d.ts",
+  "sideEffects": [
+    "./summer_browser.js",
+    "./snippets/*"
+  ]
+}

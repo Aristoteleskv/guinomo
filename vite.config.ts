@@ -10,7 +10,16 @@ export default defineConfig({
       name: 'force-allow-iframe',
       configureServer(server) {
         server.middlewares.use((_req, res, next) => {
-          res.setHeader('X-Frame-Options', 'ALLOWALL');
+          // Remove o cabeçalho que causa o erro de negação
+          res.removeHeader('X-Frame-Options');
+          // Define a política moderna que permite ser exibido em iframes do localhost
+          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*");
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((_req, res, next) => {
+          res.removeHeader('X-Frame-Options');
           res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*");
           next();
         });

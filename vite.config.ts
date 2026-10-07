@@ -4,9 +4,8 @@ import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
   plugins: [wasm(), topLevelAwait()],
-  // The P2P wasm package must not be pre-bundled by Vite's dep optimizer.
   optimizeDeps: {
-    exclude: ['guinomo-iroh'],
+    exclude: ['guinomo-browser'],
   },
   publicDir: 'public',
   build: {
@@ -15,10 +14,21 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5173,
+    port: 8081,
+    strictPort: true,
+    headers: {
+      "Content-Security-Policy": "frame-ancestors 'self' *",
+      "X-Frame-Options": "ALLOWALL",
+      "Access-Control-Allow-Origin": "*",
+    }
   },
   preview: {
     host: true,
-    port: 4173,
+    port: 8081,
+    headers: {
+      "Content-Security-Policy": "frame-ancestors 'self' *",
+      "X-Frame-Options": "ALLOWALL",
+      "Access-Control-Allow-Origin": "*",
+    }
   },
 });

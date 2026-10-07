@@ -3,7 +3,20 @@ import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
-  plugins: [wasm(), topLevelAwait()],
+  plugins: [
+    wasm(),
+    topLevelAwait(),
+    {
+      name: 'force-allow-iframe',
+      configureServer(server) {
+        server.middlewares.use((_req, res, next) => {
+          res.setHeader('X-Frame-Options', 'ALLOWALL');
+          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*");
+          next();
+        });
+      }
+    }
+  ],
   optimizeDeps: {
     exclude: ['guinomo-browser'],
   },
@@ -16,19 +29,11 @@ export default defineConfig({
     host: true,
     port: 8081,
     strictPort: true,
-    headers: {
-      "Content-Security-Policy": "frame-ancestors 'self' *",
-      "X-Frame-Options": "ALLOWALL",
-      "Access-Control-Allow-Origin": "*",
-    }
+    cors: true
   },
   preview: {
     host: true,
     port: 8081,
-    headers: {
-      "Content-Security-Policy": "frame-ancestors 'self' *",
-      "X-Frame-Options": "ALLOWALL",
-      "Access-Control-Allow-Origin": "*",
-    }
+    cors: true
   },
 });

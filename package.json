@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "gsap": "3.11.3",
-    "guinomo-iroh": "file:multiplayer/browser-wasm/pkg",
+    "guinomo-browser": "file:multiplayer/browser-wasm/pkg",
     "three": "0.148.0",
     "three-mesh-bvh": "0.5.24"
   },

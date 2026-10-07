@@ -5,14 +5,16 @@
 // public relays — still e2e encrypted, no app server. Frames are signed
 // (ed25519) + sequenced in Rust.
 //
-// State encoding (26 bytes):
-//   [0]      u8   version (1)
+// State encoding (31 bytes):
+//   [0]      u8   version (2)
 //   [1..13]  p    3 × f32 LE
 //   [13..21] r    2 × f32 LE
 //   [21]     u8   a (animation: 0 idle, 1 run, 2 bored)
 //   [22..26] seed f32 LE
+//   [26..30] uid  u32 LE
+//   [30]     u8   h (hat visible)
 
-import { SummerNode, type RoomChannel } from 'guinomo-iroh';
+import { SummerNode, type RoomChannel } from 'guinomo-browser';
 
 export type P2PData = Record<string, number[] | number | string | boolean | null>;
 
@@ -28,7 +30,6 @@ export interface P2PClientData {
 
 interface P2POptions {
   data: P2PData;
-  roomSeed?: Uint8Array;
   updateRate?: number;
   addClient?: (id: string, data: P2PClientData) => void;
   removeClient?: (id: string) => void;
@@ -39,8 +40,6 @@ interface P2POptions {
 
 const STATE_VERSION = 2;
 const STATE_BYTES = 31;
-/** Default room seed if none provided (legacy compatibility). */
-const DEFAULT_ROOM_SEED = new TextEncoder().encode("guinomo-p2p-room-v1\0\0\0\0\0\0\0\0\0\0\0\0\0");
 /** Remove remotes that stopped sending this long ago (they left or hid). */
 const REMOTE_TIMEOUT_MS = 10_000;
 /** Full-state heartbeat: newcomers can always bootstrap from us. */

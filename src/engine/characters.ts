@@ -320,7 +320,6 @@ export class Characters extends CharacterSkinnedMesh {
         // Join the dynamic P2P room based on URL world parameter
         this._connection = new P2PConnection({
           data: this._dataUpdate,
-          roomSeed: roomSeed,
           onConnect: () => this.connected.resolve(),
           addClient: (id, data) => this._addCharacter(id, data),
           removeClient: (id) => this._removeCharacter(id),

@@ -7,20 +7,18 @@ export default defineConfig({
     wasm(),
     topLevelAwait(),
     {
-      name: 'force-allow-iframe',
+      name: 'allow-iframe-plugin',
       configureServer(server) {
         server.middlewares.use((_req, res, next) => {
-          // Remove o cabeçalho que causa o erro de negação
           res.removeHeader('X-Frame-Options');
-          // Define a política moderna que permite ser exibido em iframes do localhost
-          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*");
+          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://localhost:* http://127.0.0.1:*");
           next();
         });
       },
       configurePreviewServer(server) {
         server.middlewares.use((_req, res, next) => {
           res.removeHeader('X-Frame-Options');
-          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*");
+          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://localhost:* http://127.0.0.1:*");
           next();
         });
       }
@@ -38,11 +36,9 @@ export default defineConfig({
     host: true,
     port: 8081,
     strictPort: true,
-    cors: true
-  },
-  preview: {
-    host: true,
-    port: 8081,
-    cors: true
-  },
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      // Não use DENY ou SAMEORIGIN aqui
+    }
+  }
 });

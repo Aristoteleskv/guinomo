@@ -145,7 +145,7 @@ export class UiController {
       this.hatButton.style.display = show ? 'inline-block' : 'none';
     });
 
-    this.createSocialSidebar(root, appPath);
+    this.createSocialSidebar(appPath);
     this.startNotificationToasts(appPath);
 
     this.secretModal = document.createElement('div');
@@ -200,20 +200,17 @@ export class UiController {
     this.colorSquare.style.backgroundColor = color;
   }
 
-  private createSocialSidebar(root: HTMLElement, appPath: string) {
+  private createSocialSidebar(appPath: string) {
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
     const links = [
       { label: language === 'en' ? 'Map' : 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
       { label: language === 'en' ? 'Friends' : 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
       { label: language === 'en' ? 'Messages' : 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
     ];
-    const sidebar = document.createElement('aside');
-    sidebar.id = 'noop-social-sidebar';
-    sidebar.setAttribute('aria-label', language === 'en' ? 'Noop social shortcuts' : 'Atalhos sociais da Noop');
 
     links.forEach(({ label, href, icon }) => {
       const link = document.createElement('a');
-      link.className = 'social-link';
+      link.className = 'button social-link';
       link.href = href;
       link.title = label;
       link.setAttribute('aria-label', label);
@@ -232,15 +229,17 @@ export class UiController {
           this.openChatOverlay(appPath);
         });
       }
-      sidebar.append(link);
+      this.nav.insertBefore(link, this.soundButton);
     });
 
-    const worldControls = document.createElement('div');
-    worldControls.className = 'world-controls';
+    const worldControl = document.createElement('label');
+    worldControl.className = 'button social-link world-select-control';
+    worldControl.title = language === 'en' ? 'Choose a world' : 'Escolher mundo';
+    worldControl.setAttribute('aria-label', worldControl.title);
+    worldControl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>';
     const worldSelect = document.createElement('select');
     worldSelect.className = 'world-select';
     worldSelect.setAttribute('aria-label', language === 'en' ? 'Choose a world' : 'Escolher mundo');
-    worldSelect.title = language === 'en' ? 'Choose a world' : 'Escolher mundo';
     WORLDS.forEach((world) => {
       const option = document.createElement('option');
       option.value = world.id;
@@ -255,10 +254,11 @@ export class UiController {
       else next.searchParams.set('world', worldSelect.value);
       window.location.assign(next.toString());
     });
-    worldControls.append(worldSelect);
+    worldControl.append(worldSelect);
+    this.nav.insertBefore(worldControl, this.soundButton);
 
     const inviteButton = document.createElement('button');
-    inviteButton.className = 'world-invite';
+    inviteButton.className = 'button social-link world-invite';
     inviteButton.type = 'button';
     inviteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4.4"/></svg>';
     const inviteLabel = language === 'en' ? 'Invite friends' : 'Convidar amigos';
@@ -298,20 +298,17 @@ export class UiController {
         inviteButton.title = language === 'en' ? 'Copy a link to meet in this world' : 'Copiar link para encontrar amigos neste mundo';
         inviteButton.setAttribute('aria-label', inviteLabel);
       }, 2200);
-    });
-    worldControls.append(inviteButton);
-    sidebar.append(worldControls);
+      });
+      this.nav.insertBefore(inviteButton, this.soundButton);
 
-    const skyTheme = document.createElement('button');
-    skyTheme.className = 'social-link sky-theme-toggle';
-    skyTheme.type = 'button';
-    skyTheme.title = language === 'en' ? 'Cycle day, night, and alien skies' : 'Alternar céu de dia, noite ou alienígena';
-    skyTheme.setAttribute('aria-label', skyTheme.title);
-    skyTheme.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>';
-    skyTheme.addEventListener('click', () => events.emit('webgl_sky_theme_cycle'));
-    sidebar.append(skyTheme);
-
-    root.append(sidebar);
+      const skyTheme = document.createElement('button');
+      skyTheme.className = 'button social-link sky-theme-toggle';
+      skyTheme.type = 'button';
+      skyTheme.title = language === 'en' ? 'Cycle day, night, and alien skies' : 'Alternar céu de dia, noite ou alienígena';
+      skyTheme.setAttribute('aria-label', skyTheme.title);
+      skyTheme.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>';
+      skyTheme.addEventListener('click', () => events.emit('webgl_sky_theme_cycle'));
+      this.nav.insertBefore(skyTheme, this.soundButton);
   }
 
   private startNotificationToasts(appPath: string) {

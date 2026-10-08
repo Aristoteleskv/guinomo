@@ -496,63 +496,17 @@ nav .cnt {
   opacity: 0;
   pointer-events: none;
 }
-#noop-social-sidebar {
-  position: fixed;
-  z-index: 20;
-  top: 92px;
-  right: 35px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 9px;
-  width: 46px;
-  transition: opacity 160ms ease;
+html.guinomo-chat-open nav .social-link {
+  display: none;
 }
-html.guinomo-chat-open #noop-social-sidebar {
-  opacity: 0;
-  pointer-events: none;
-}
-#noop-social-sidebar .world-controls {
-  display: grid;
-  gap: 6px;
-  width: 138px;
-  margin-bottom: 2px;
-}
-#noop-social-sidebar .world-select,
-#noop-social-sidebar .world-invite {
-  width: 100%;
-  min-height: 36px;
-  padding: 0 9px;
-  border: 1px solid rgba(113, 108, 102, 0.32);
-  border-radius: 9px;
-  background: rgba(249, 239, 220, 0.94);
-  box-shadow: 2px 2px rgba(113, 108, 102, 0.5);
-  color: #514d48;
-  font: 600 11px Arial, sans-serif;
-}
-#noop-social-sidebar .world-select {
-  cursor: pointer;
-}
-#noop-social-sidebar .world-invite {
-  cursor: pointer;
-}
-#noop-social-sidebar .world-invite:hover {
-  background: #fffaf0;
-  transform: translateX(-3px);
-}
-#noop-social-sidebar .world-select:focus-visible,
-#noop-social-sidebar .world-invite:focus-visible {
-  outline: 2px solid #716c66;
-  outline-offset: 2px;
-}
-#noop-social-sidebar .social-link {
+nav .social-link {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  min-width: 46px;
-  height: 46px;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid rgba(113, 108, 102, 0.32);
   border-radius: 12px;
@@ -561,23 +515,24 @@ html.guinomo-chat-open #noop-social-sidebar {
   color: #514d48;
   font: 600 12px Arial, sans-serif;
   text-decoration: none;
+  transform: none;
   transition: transform 160ms ease, background-color 160ms ease;
 }
-#noop-social-sidebar button.social-link {
+nav button.social-link {
   cursor: pointer;
   appearance: none;
 }
-#noop-social-sidebar .social-link:hover,
-#noop-social-sidebar .social-link:focus-visible {
+nav .social-link:hover,
+nav .social-link:focus-visible {
   background: #fffaf0;
-  transform: translateX(-3px);
+  transform: translateY(-2px);
 }
-#noop-social-sidebar .social-link:focus-visible,
+nav .social-link:focus-visible,
 .name-tag-color-button:focus-visible {
   outline: 2px solid #716c66;
   outline-offset: 3px;
 }
-#noop-social-sidebar svg {
+nav .social-link svg {
   width: 18px;
   height: 18px;
   flex: 0 0 auto;
@@ -587,7 +542,7 @@ html.guinomo-chat-open #noop-social-sidebar {
   stroke-linejoin: round;
   stroke-width: 1.8;
 }
-#noop-social-sidebar .social-link::after {
+nav .social-link::after {
   position: absolute;
   top: 50%;
   right: calc(100% + 8px);
@@ -602,10 +557,25 @@ html.guinomo-chat-open #noop-social-sidebar {
   transform: translate(4px, -50%);
   transition: opacity 140ms ease, transform 140ms ease;
 }
-#noop-social-sidebar .social-link:hover::after,
-#noop-social-sidebar .social-link:focus-visible::after {
+nav .social-link:hover::after,
+nav .social-link:focus-visible::after {
   opacity: 1;
   transform: translate(0, -50%);
+}
+.world-select-control {
+  cursor: pointer;
+}
+nav .world-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.world-select-control:focus-within {
+  outline: 2px solid #716c66;
+  outline-offset: 3px;
 }
 #noop-chat-overlay {
   position: fixed;
@@ -834,30 +804,6 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   content: '';
 }
 @media (max-width: 640px) {
-  #noop-social-sidebar {
-    top: 150px;
-    right: 58px;
-    gap: 6px;
-  }
-  #noop-social-sidebar .world-controls {
-    width: 122px;
-    margin-right: 0;
-  }
-  #noop-social-sidebar .social-link {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-  }
-  #noop-social-sidebar .social-link::after {
-    top: auto;
-    right: 50%;
-    bottom: calc(100% + 7px);
-    transform: translate(50%, 4px);
-  }
-  #noop-social-sidebar .social-link:hover::after,
-  #noop-social-sidebar .social-link:focus-visible::after {
-    transform: translate(50%, 0);
-  }
   #noop-chat-overlay {
     top: 12px;
     right: 112px;

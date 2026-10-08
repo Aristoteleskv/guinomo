@@ -7,6 +7,7 @@ import { geometryLoader } from '../engine/loaders/geometries';
 import { Characters } from '../engine/characters';
 import { depthCharsMaterial, phongMaterial } from './materials';
 import { SceneModule } from './SceneModule';
+import { appEndpointUrl } from '../core/assets';
 
 export class CharactersModule extends SceneModule {
   declare mesh: Characters;
@@ -32,12 +33,16 @@ export class CharactersModule extends SceneModule {
     }
 
     try {
-      const response = await fetch(`http://localhost/rede-social-dev/php/avatar.php?uid=${uid}&format=json`);
+      const endpoint = clientId === 'local'
+        ? appEndpointUrl('php/avatar.php?format=json')
+        : appEndpointUrl(`php/avatar.php?uid=${encodeURIComponent(uid)}&format=json`);
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error(`Avatar profile request failed (${response.status})`);
       const dna = await response.json();
 
       const shirt = new Color(dna['shirt-hex'] || '#4c80e5');
       const skin = new Color(dna['skin-hex'] || '#e5b299');
-      const name = dna['username'] || `User ${uid}`;
+      const name = dna['username'] || (clientId === 'local' ? window.GUINOMO_PROFILE?.username : '') || `User ${uid}`;
 
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
@@ -60,6 +65,7 @@ export class CharactersModule extends SceneModule {
         events.emit('ui_show_hat_button', true);
       }
     } catch (e) {
+      console.warn('Unable to load avatar profile:', e);
       const hue = (uid * 137.5) % 360 / 360;
       const c = new Color().setHSL(hue, 0.5, 0.5);
       userData.colorShirt = [c.r, c.g, c.b];
@@ -107,7 +113,7 @@ export class CharactersModule extends SceneModule {
 
   protected async init() {
     const urlParams = new URLSearchParams(window.location.search);
-    const uid = parseInt(urlParams.get('uid') || '0', 10);
+    const uid = window.GUINOMO_UID || parseInt(urlParams.get('uid') || '0', 10);
 
     const [skinned, clips, colliderGeometry] = await Promise.all([
       geometryLoader.skin('kid.bin', 'kid-bones.bin'),
@@ -226,8 +232,9 @@ export class CharactersModule extends SceneModule {
       formData.append('uid', uid.toString());
       formData.append('key', key);
       formData.append('value', value.toString());
+      formData.append('csrf_token', window.CSRF_TOKEN || '');
 
-      const response = await fetch('http://localhost/rede-social-dev/php/save_avatar_3d.php', {
+      const response = await fetch(appEndpointUrl('php/save_avatar_3d.php'), {
         method: 'POST',
         body: formData,
       });

@@ -17,6 +17,7 @@ import type { WebGLRenderer } from 'three';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { deferred, type Deferred } from '../../core/deferred';
+import { assetUrl } from '../../core/assets';
 
 const DEFAULT_TEXTURE = 'uv/uvchecker-srgb.png';
 const DEFAULT_TEXTURE_BASIS = 'uv/uvchecker-srgb.ktx2';
@@ -27,8 +28,7 @@ export interface LoadedTexture extends Texture {
   _loaded: Deferred<void>;
 }
 
-const asset = (path: string) => new URL(path, window.location.href).toString();
-const ktx2Loader = new KTX2Loader().setTranscoderPath(asset('assets/libs/basis/'));
+const ktx2Loader = new KTX2Loader().setTranscoderPath(assetUrl('assets/libs/basis/'));
 const imageLoader = new ThreeTextureLoader();
 const exrLoader = new EXRLoader();
 const cache = new Map<string, LoadedTexture>();
@@ -66,7 +66,7 @@ export const textureLoader = {
     texture.encoding = modeLower.includes('srgb') ? sRGBEncoding : texture.encoding;
     cache.set(key, texture);
 
-    const fullUrl = /^https?:\/\//.test(url) ? url : asset('assets/images/' + url);
+    const fullUrl = /^https?:\/\//.test(url) ? url : assetUrl('assets/images/' + url);
 
     setTimeout(async () => {
       let loaded: Texture | null = null;
@@ -79,7 +79,7 @@ export const textureLoader = {
         // fallback to the uv-checker texture (original behavior)
         try {
           const fallback = ext.startsWith('ktx2') ? DEFAULT_TEXTURE_BASIS : DEFAULT_TEXTURE;
-          loaded = await (ext.startsWith('ktx2') ? ktx2Loader : imageLoader).loadAsync(asset('assets/images/' + fallback));
+          loaded = await (ext.startsWith('ktx2') ? ktx2Loader : imageLoader).loadAsync(assetUrl('assets/images/' + fallback));
         } catch {
           const fallbackTexture = new DataTexture(new Uint8Array([255, 0, 255, 255]), 1, 1); fallbackTexture.needsUpdate = true; loaded = fallbackTexture;
         }

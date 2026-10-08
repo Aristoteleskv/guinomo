@@ -33,7 +33,7 @@ html body #app {
 }
 @font-face {
   font-family: Stylish;
-  src: url(assets/fonts/Stylish-Regular.woff2) format('woff2'), url(assets/fonts/Stylish-Regular.woff) format('woff');
+  src: url(fonts/Stylish-Regular.woff2) format('woff2'), url(fonts/Stylish-Regular.woff) format('woff');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -387,6 +387,33 @@ nav svg.sound {
   left: 4px;
 }
 nav svg.sound2 { left: 8px; }
+nav .back-button,
+nav .profile-avatar {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+nav .back-button svg {
+  width: 22px;
+  height: 22px;
+  transform: rotate(-10deg);
+}
+nav .profile-avatar {
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 50%;
+  transform: none;
+  background-color: #f9efdc;
+}
+nav .profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+nav .profile-avatar:hover { transform: translateY(-2px); }
 nav .color-square {
   display: block;
   position: relative;

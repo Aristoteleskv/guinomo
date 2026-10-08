@@ -5,6 +5,7 @@ const mutedIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="tr
 const infoIcon = '<svg class="info" viewBox="0 0 4 18" aria-hidden="true"><path d="M2 6a2 2 0 0 1 2 2v6.818a2 2 0 1 1-4 0V8a2 2 0 0 1 2-2ZM4 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" fill="#716C66"/></svg>';
 const hatIcon = '<svg class="hat" viewBox="0 0 20 20" style="width:18px;height:18px;" aria-hidden="true"><path d="M17 13v-2c0-3.866-3.134-7-7-7S3 7.134 3 11v2a4 4 0 0 0-4 4h20a4 4 0 0 0-4-4Z" fill="#716C66"/></svg>';
 const closeIcon = '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="m1.5 1.5 15 15m0-15-15 15" stroke="#989389" stroke-width="2" stroke-linecap="round"/></svg>';
+const backIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4 6.5 10l6 6M7 10h10" fill="none" stroke="#716C66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 const infoContent = {
   about: {
@@ -54,7 +55,10 @@ export class UiController {
     root.append(this.loader);
 
     this.nav = document.createElement('nav');
+    this.nav.setAttribute('aria-label', 'Guinomo controls');
     this.nav.innerHTML = `
+      <a class="button back-button" href="/" aria-label="Voltar para Noop" title="Voltar para Noop">${backIcon}</a>
+      <a class="button profile-avatar" href="/" aria-label="Abrir meu perfil" title="Meu perfil"><img alt=""></a>
       <button class="button" type="button" aria-label="toggle sound"></button>
       <button class="button hat-button" type="button" aria-label="toggle hat" style="display:none;">${hatIcon}</button>
       <button class="button" type="button" aria-label="randomize character color"><div class="color-square"></div></button>
@@ -62,6 +66,34 @@ export class UiController {
       <div class="cnt">0/0</div>
     `;
     root.append(this.nav);
+
+    const appPath = (window.APP_URL_PATH || '').replace(/\/+$/, '');
+    const backLink = this.nav.querySelector<HTMLAnchorElement>('.back-button')!;
+    backLink.href = `${appPath}/`;
+    backLink.hidden = !window.APP_URL_PATH;
+    backLink.addEventListener('click', (event) => {
+      if (!document.referrer) return;
+      const previous = new URL(document.referrer);
+      const isNoopPage = previous.origin === window.location.origin
+        && (previous.pathname === appPath || previous.pathname.startsWith(`${appPath}/`));
+      if (isNoopPage) {
+        event.preventDefault();
+        window.history.back();
+      }
+    });
+
+    const profileLink = this.nav.querySelector<HTMLAnchorElement>('.profile-avatar')!;
+    const profileImage = profileLink.querySelector('img')!;
+    const profile = window.GUINOMO_PROFILE;
+    if (profile) {
+      profileLink.href = profile.profileUrl;
+      profileLink.title = profile.username;
+      profileLink.setAttribute('aria-label', `Abrir perfil de ${profile.username}`);
+      profileImage.src = profile.avatarUrl;
+      profileImage.alt = `Avatar de ${profile.username}`;
+    } else {
+      profileLink.hidden = true;
+    }
 
     const buttons = this.nav.querySelectorAll('button');
     this.soundButton = buttons[0];

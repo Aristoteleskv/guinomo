@@ -8,10 +8,8 @@ import { events } from '../core/events';
 import { clock } from './clock';
 import { engine } from './globals';
 import { ease, fit } from '../core/math';
+import { assetUrl } from '../core/assets';
 import type { BaseScene } from './scene';
-
-const AUDIO_URL = 'assets/audio/';
-const assetUrl = (file: string) => new URL(AUDIO_URL + file, window.location.href).toString();
 
 /** three.js Audio extended with a loop offset for GSAP-synced looping. */
 export class LoopAudio extends Audio {
@@ -44,11 +42,11 @@ export class AudioController {
   private _filesPreloaded: Deferred<void> = deferred();
   private _filesBuffers: ArrayBuffer[] = [];
   private _files: Array<{ name: string; url: string }> = [
-    { name: 'forest', url: assetUrl('forest.mp3') },
-    { name: 'beach', url: assetUrl('beach.mp3') },
-    { name: 'steps', url: assetUrl('footsteps.mp3') },
-    { name: 'song', url: assetUrl('song.mp3') },
-    { name: 'click1', url: assetUrl('click1.mp3') },
+    { name: 'forest', url: assetUrl('assets/audio/forest.mp3') },
+    { name: 'beach', url: assetUrl('assets/audio/beach.mp3') },
+    { name: 'steps', url: assetUrl('assets/audio/footsteps.mp3') },
+    { name: 'song', url: assetUrl('assets/audio/song.mp3') },
+    { name: 'click1', url: assetUrl('assets/audio/click1.mp3') },
   ];
 
   constructor(scene: BaseScene, defaultVolume = 1) {

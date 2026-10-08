@@ -181,6 +181,7 @@ This port has been customized to integrate with a PHP-based social network (Noop
   - `php/save_avatar_3d.php`: Secure endpoint for persisting 3D customization back to the MySQL database.
 - **Customization:** Added a bidirectional sync for the `hat_visible` attribute, toggleable via the **H** key or a custom UI button (exclusive to the avatar owner).
 - **Data Source:** Fetches real user identity and color preferences from the `user_avatar_config` and `usuarios` tables.
+- **Subpath hosting:** Set `window.GUINOMO_ASSET_BASE` before loading the app bundle to the origin-relative directory containing `assets/` (for example, `/rede-social-dev/avatar-3d/`). Geometry, decoder, texture, audio, and font requests then stay under that directory instead of resolving against the host site's root.
 
 ## Credits & disclaimer
 

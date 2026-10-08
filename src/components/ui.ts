@@ -40,6 +40,7 @@ export class UiController {
   private readonly soundButton: HTMLButtonElement;
   private readonly hatButton: HTMLButtonElement;
   private readonly count: HTMLDivElement;
+  private chatOverlay: HTMLElement | null = null;
   private easterEggs = 0;
   private totalEasterEggs = 0;
   private overlayOpen = false;
@@ -139,7 +140,7 @@ export class UiController {
       this.hatButton.style.display = show ? 'inline-block' : 'none';
     });
 
-    this.createSocialSidebar(root, appPath, profile?.profileUrl);
+    this.createSocialSidebar(root, appPath);
 
     this.secretModal = document.createElement('div');
     this.secretModal.id = 'modal';
@@ -193,20 +194,18 @@ export class UiController {
     this.colorSquare.style.backgroundColor = color;
   }
 
-  private createSocialSidebar(root: HTMLElement, appPath: string, profileUrl?: string) {
+  private createSocialSidebar(root: HTMLElement, appPath: string) {
     const links = [
       { label: 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
       { label: 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
       { label: 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
       { label: 'Notificações', href: `${appPath}/notificacoes`, icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>' },
-      { label: 'Perfil', href: profileUrl || `${appPath}/perfil.php`, icon: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>', image: window.GUINOMO_PROFILE?.avatarUrl },
-      { label: 'Descobrir pessoas', href: `${appPath}/descobrir`, icon: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/>' },
     ];
     const sidebar = document.createElement('aside');
     sidebar.id = 'noop-social-sidebar';
     sidebar.setAttribute('aria-label', 'Atalhos sociais da Noop');
 
-    links.forEach(({ label, href, icon, image }) => {
+    links.forEach(({ label, href, icon }) => {
       const link = document.createElement('a');
       link.className = 'social-link';
       link.href = href;
@@ -214,26 +213,76 @@ export class UiController {
       link.setAttribute('aria-label', label);
       link.dataset.spa = 'false';
 
-      if (image) {
-        const avatar = document.createElement('img');
-        avatar.src = image;
-        avatar.alt = `Avatar de ${window.GUINOMO_PROFILE?.username || 'perfil'}`;
-        link.append(avatar);
-      } else {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 24 24');
-        svg.setAttribute('aria-hidden', 'true');
-        svg.innerHTML = icon;
-        link.append(svg);
-      }
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('aria-hidden', 'true');
+      svg.innerHTML = icon;
+      link.append(svg);
 
-      const text = document.createElement('span');
-      text.textContent = label;
-      link.append(text);
+      if (label === 'Mensagens' && appPath) {
+        link.dataset.transition = 'manual';
+        link.addEventListener('click', (event) => {
+          event.preventDefault();
+          this.openChatOverlay(appPath);
+        });
+      }
       sidebar.append(link);
     });
 
     root.append(sidebar);
+  }
+
+  private openChatOverlay(appPath: string) {
+    if (this.chatOverlay) {
+      this.chatOverlay.classList.add('open');
+      return;
+    }
+
+    const overlay = document.createElement('section');
+    overlay.id = 'noop-chat-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-label', 'Mensagens da Noop');
+    overlay.innerHTML = `
+      <header class="chat-overlay-header">
+        <span>Mensagens</span>
+        <button type="button" class="chat-overlay-close" aria-label="Fechar mensagens" title="Fechar">${closeIcon}</button>
+      </header>
+      <iframe title="Conversas da Noop" referrerpolicy="same-origin"></iframe>
+      <p class="chat-overlay-error" hidden>Não foi possível carregar o chat.</p>
+    `;
+
+    const frame = overlay.querySelector<HTMLIFrameElement>('iframe')!;
+    const error = overlay.querySelector<HTMLElement>('.chat-overlay-error')!;
+    frame.addEventListener('load', () => {
+      try {
+        const document = frame.contentDocument;
+        if (!document?.head) throw new Error('Chat frame document is unavailable');
+
+        const stylesheet = document.createElement('link');
+        stylesheet.rel = 'stylesheet';
+        stylesheet.href = `${appPath}/assets/estilos/guinomo-chat-embed.css`;
+        stylesheet.addEventListener('load', () => frame.classList.add('ready'), { once: true });
+        stylesheet.addEventListener('error', () => {
+          frame.remove();
+          error.hidden = false;
+        }, { once: true });
+        document.head.append(stylesheet);
+      } catch {
+        frame.remove();
+        error.hidden = false;
+      }
+    }, { once: true });
+    frame.src = `${appPath}/index.php?open=chat`;
+    overlay.querySelector<HTMLButtonElement>('.chat-overlay-close')!.addEventListener('click', () => {
+      overlay.classList.remove('open');
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') overlay.classList.remove('open');
+    });
+
+    document.body.append(overlay);
+    this.chatOverlay = overlay;
+    requestAnimationFrame(() => overlay.classList.add('open'));
   }
 
   closeOverlay() {

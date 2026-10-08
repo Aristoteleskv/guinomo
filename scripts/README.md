@@ -1,0 +1,20 @@
+# Scripts
+
+- `build-wasm.sh` — rebuild the iroh P2P WebAssembly package (see root README).
+- `pack-bin.mjs` — pack a `.glb` into the site's custom `.bin` container:
+  `node scripts/pack-bin.mjs input.glb [output.bin]`
+- `unpack-bin.mjs` — inspect/unpack a `.bin` back into a `.glb` outline:
+  `node scripts/unpack-bin.mjs input.bin [output.glb] [--info]`
+
+## About the `.bin` format
+
+`src/engine/loaders/bin.ts` reads: 10 ASCII digits holding the JSON header
+length, the JSON header (`{ type, attributes: [[name, typeIndex], ...] }`),
+then a **Draco-compressed** payload.
+
+**The runtime decoder requires a Draco payload.** `pack-bin.mjs` copies the
+GLB's BIN chunk verbatim, so its output is a valid container with a non-Draco
+payload until you compress it with a Draco encoder (e.g. `gltfpack` or
+`gltf-transform draco`). `unpack-bin.mjs` is intentionally an outline: the
+header does not record component counts, so accessors are guessed as VEC3 and
+Draco payloads are copied verbatim. Both scripts share `scripts/lib/bin-format.mjs`.

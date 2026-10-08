@@ -1,11 +1,11 @@
 // P2P multiplayer over iroh-gossip (wasm), replacing the old WebSocket relay.
-// One hardcoded room (fixed 32-byte seed = gossip topic + pkarr rendezvous
-// key on dns.iroh.link); peers discover each other via periodic pkarr
+// Room seeds define the gossip topic + pkarr rendezvous key on dns.iroh.link;
+// peers discover each other via periodic pkarr
 // resolve. Browsers can't hole-punch, so traffic is relayed through n0's
 // public relays — still e2e encrypted, no app server. Frames are signed
 // (ed25519) + sequenced in Rust.
 //
-// State encoding (32 bytes):
+// State encoding (34 bytes; older 32/33-byte frames remain readable):
 //   [0]      u8   version (2)
 //   [1..13]  p    3 × f32 LE
 //   [13..21] r    2 × f32 LE
@@ -14,6 +14,8 @@
 //   [26..30] uid  u32 LE
 //   [30]     u8   h (hat visible)
 //   [31]     u8   phy (physique index)
+//   [32]     u8   age scale (percentage)
+//   [33]     u8   gender category (0 unknown, 1 masculine, 2 feminine, 3 other)
 
 import { SummerNode, type RoomChannel } from 'guinomo-browser';
 
@@ -27,6 +29,8 @@ export interface P2PClientData {
   uid?: number;
   h?: number; // hat visible (1) or hidden (0)
   phy?: number; // physique index
+  ageScale?: number; // age-based scale factor
+  gender?: string;
   [key: string]: any;
 }
 
@@ -42,7 +46,8 @@ interface P2POptions {
 }
 
 const STATE_VERSION = 2;
-const STATE_BYTES = 32;
+const LEGACY_STATE_BYTES = 32;
+const STATE_BYTES = 34;
 const DEFAULT_ROOM_SEED = new Uint8Array(32);
 DEFAULT_ROOM_SEED.set(new TextEncoder().encode('guinomo-p2p-room-v1'));
 /** Remove remotes that stopped sending this long ago (they left or hid). */
@@ -276,11 +281,18 @@ function encodeState(data: P2PData): Uint8Array {
   view.setUint32(26, (data.uid as number) ?? 0, true);
   out[30] = (data.h as number) ?? 1; // Default hat visible
   out[31] = (data.phy as number) ?? 0; // Default physique
+  const ageScale = Number(data.ageScale);
+  out[32] = Number.isFinite(ageScale)
+    ? Math.round(Math.min(1.2, Math.max(0.6, ageScale)) * 100)
+    : 100;
+  out[33] = data.gender === 'masculino' ? 1
+    : data.gender === 'feminino' ? 2
+      : data.gender === 'outro' ? 3 : 0;
   return out;
 }
 
 function decodeState(bytes: Uint8Array): P2PClientData {
-  if (bytes.length < STATE_BYTES || bytes[0] !== STATE_VERSION) {
+  if (bytes.length < LEGACY_STATE_BYTES || bytes[0] !== STATE_VERSION) {
     throw new Error(`bad state frame: ${bytes.length} bytes, version ${bytes[0]}`);
   }
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -292,5 +304,9 @@ function decodeState(bytes: Uint8Array): P2PClientData {
     uid: view.getUint32(26, true),
     h: bytes[30],
     phy: bytes[31],
+    ageScale: bytes.length > LEGACY_STATE_BYTES && bytes[32] > 0 ? bytes[32] / 100 : 1,
+    gender: bytes.length > 33
+      ? ({ 1: 'masculino', 2: 'feminino', 3: 'outro' } as Record<number, string>)[bytes[33]] || 'nao_informado'
+      : 'nao_informado',
   };
 }

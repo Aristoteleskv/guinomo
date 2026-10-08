@@ -369,6 +369,8 @@ export class Characters extends CharacterSkinnedMesh {
     const physiques = ['default', 'heroic', 'stylized', 'curvy', 'slim_long', 'dynamic', 'athletic'];
     this._dataUpdate.phy = physiques.indexOf(this._localObject.userData.physique || 'default');
     if (this._dataUpdate.phy === -1) this._dataUpdate.phy = 0;
+    this._dataUpdate.ageScale = this._localObject.userData.ageScale ?? 1;
+    this._dataUpdate.gender = this._localObject.userData.gender ?? 'nao_informado';
 
     if (this._connection) {
       (this._connection as any)._data = this._dataUpdate;
@@ -444,7 +446,8 @@ export class Characters extends CharacterSkinnedMesh {
         default: [1, 1, 1]
       };
       const s = scales[pName];
-      remote.scale.set(s[0] * spawn, s[1] * spawn, s[2] * spawn);
+      const ageScale = remote.userData.ageScale ?? 1;
+      remote.scale.set(s[0] * spawn * ageScale, s[1] * spawn * ageScale, s[2] * spawn * ageScale);
 
       remote.updateMatrix();
       this.setMatrixAt(instance++, remote.matrix);

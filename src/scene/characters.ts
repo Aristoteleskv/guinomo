@@ -14,7 +14,7 @@ export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
 
-  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean }>();
+  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string }>();
   private _nameTags = new Map<string, HTMLDivElement>();
   private _nameTagsContainer: HTMLDivElement | null = null;
   private _localNameTagColor: string | null = null;
@@ -31,6 +31,8 @@ export class CharactersModule extends SceneModule {
       userData.hatVisible = data.hatVisible ?? data.h ?? 1;
       userData.h = data.h ?? data.hatVisible ?? 1;
       userData.isOwner = data.isOwner;
+      userData.ageScale = data.ageScale;
+      userData.gender = data.gender;
       this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid);
       return;
     }
@@ -53,6 +55,8 @@ export class CharactersModule extends SceneModule {
 
       const hatVisible = dna['hat-visible'] !== undefined ? (dna['hat-visible'] ? 1 : 0) : 1;
       const physique = dna['physique'] || 'default';
+      const ageScales: Record<string, number> = { child: 0.82, teen: 0.93, adult: 1, senior: 0.98 };
+      const ageScale = ageScales[dna['age_group']] || 1;
 
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
@@ -62,7 +66,9 @@ export class CharactersModule extends SceneModule {
         hatVisible,
         h: hatVisible,
         isOwner: dna['is_owner'] || false,
-        physique: physique
+        physique: physique,
+        ageScale: ageScale,
+        gender: typeof dna['gender_category'] === 'string' ? dna['gender_category'] : 'nao_informado',
       };
 
       this._avatarCache.set(uid, data);
@@ -73,6 +79,8 @@ export class CharactersModule extends SceneModule {
       userData.h = data.h;
       userData.isOwner = data.isOwner;
       userData.physique = data.physique;
+      userData.ageScale = data.ageScale;
+      userData.gender = data.gender;
 
       // Aplicar escala física baseada no biótipo
       this.applyPhysiqueScale(userData);
@@ -93,6 +101,8 @@ export class CharactersModule extends SceneModule {
       userData.hatVisible = 1;
       userData.h = 1;
       userData.isOwner = false;
+      userData.ageScale = 1;
+      userData.gender = 'nao_informado';
       this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299', uid);
     }
   }

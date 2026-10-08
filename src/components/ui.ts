@@ -1,4 +1,5 @@
 import { events } from '../core/events';
+import { DEFAULT_WORLD_ID, getWorldId, WORLDS } from '../core/worlds';
 
 const speakerIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M10.189 0.228 6.13 3.332H4.168c-.512 0-.938.41-.938.938v4.384c0 .165.043.321.118.457L.816 10.907a1 1 0 1 0 1.157 1.631l4.153-2.946h.021l.026.02 5.756-4.082v-.054l3.694-2.62a1 1 0 0 0-1.157-1.631l-2.537 1.8V1.08c-.017-.904-1.041-1.399-1.74-.853Z" fill="#716C66"/></svg>';
 const mutedIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M6.96.228 2.9 3.332H.938A.94.94 0 0 0 0 4.27v4.384c0 .511.41.938.938.938h1.979l4.042 3.104a1 1 0 0 0 1.74-.853V1.08C8.682.177 7.659-.318 6.96.228Z" fill="#716C66"/></svg>';
@@ -45,6 +46,7 @@ export class UiController {
   private totalEasterEggs = 0;
   private overlayOpen = false;
   private secretTimer = 0;
+  private notificationIds = new Set<number>();
 
   constructor(root: HTMLElement) {
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
@@ -144,6 +146,7 @@ export class UiController {
     });
 
     this.createSocialSidebar(root, appPath);
+    this.startNotificationToasts(appPath);
 
     this.secretModal = document.createElement('div');
     this.secretModal.id = 'modal';
@@ -203,7 +206,6 @@ export class UiController {
       { label: language === 'en' ? 'Map' : 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
       { label: language === 'en' ? 'Friends' : 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
       { label: language === 'en' ? 'Messages' : 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
-      { label: language === 'en' ? 'Notifications' : 'Notificações', href: `${appPath}/notificacoes`, icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>' },
     ];
     const sidebar = document.createElement('aside');
     sidebar.id = 'noop-social-sidebar';
@@ -233,6 +235,68 @@ export class UiController {
       sidebar.append(link);
     });
 
+    const worldControls = document.createElement('div');
+    worldControls.className = 'world-controls';
+    const worldSelect = document.createElement('select');
+    worldSelect.className = 'world-select';
+    worldSelect.setAttribute('aria-label', language === 'en' ? 'Choose a world' : 'Escolher mundo');
+    worldSelect.title = language === 'en' ? 'Choose a world' : 'Escolher mundo';
+    WORLDS.forEach((world) => {
+      const option = document.createElement('option');
+      option.value = world.id;
+      option.textContent = world.label[language === 'en' ? 'en' : 'pt'];
+      worldSelect.append(option);
+    });
+    const params = new URLSearchParams(window.location.search);
+    worldSelect.value = getWorldId(params.get('world'));
+    worldSelect.addEventListener('change', () => {
+      const next = new URL(window.location.href);
+      if (worldSelect.value === DEFAULT_WORLD_ID) next.searchParams.delete('world');
+      else next.searchParams.set('world', worldSelect.value);
+      window.location.assign(next.toString());
+    });
+    worldControls.append(worldSelect);
+
+    const inviteButton = document.createElement('button');
+    inviteButton.className = 'world-invite';
+    inviteButton.type = 'button';
+    inviteButton.textContent = language === 'en' ? 'Invite friends' : 'Convidar amigos';
+    inviteButton.title = language === 'en' ? 'Copy a link to meet in this world' : 'Copiar link para encontrar amigos neste mundo';
+    inviteButton.addEventListener('click', async () => {
+      const inviteUrl = new URL(window.location.href);
+      let roomCode = inviteUrl.searchParams.get('room');
+      if (!roomCode) {
+        const bytes = new Uint8Array(8);
+        window.crypto.getRandomValues(bytes);
+        roomCode = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+        inviteUrl.searchParams.set('room', roomCode);
+      }
+      const worldId = getWorldId(inviteUrl.searchParams.get('world'));
+      if (worldId === DEFAULT_WORLD_ID) inviteUrl.searchParams.delete('world');
+      else inviteUrl.searchParams.set('world', worldId);
+
+      try {
+        await navigator.clipboard.writeText(inviteUrl.toString());
+      } catch (error) {
+        console.warn('Unable to copy Guinomo invite link:', error);
+        window.prompt(
+          language === 'en' ? 'Copy this world invite link:' : 'Copie este link de convite para o mundo:',
+          inviteUrl.toString(),
+        );
+      }
+
+      if (!params.get('room')) {
+        window.location.assign(inviteUrl.toString());
+        return;
+      }
+      inviteButton.textContent = language === 'en' ? 'Link copied!' : 'Link copiado!';
+      window.setTimeout(() => {
+        inviteButton.textContent = language === 'en' ? 'Invite friends' : 'Convidar amigos';
+      }, 2200);
+    });
+    worldControls.append(inviteButton);
+    sidebar.append(worldControls);
+
     const skyTheme = document.createElement('button');
     skyTheme.className = 'social-link sky-theme-toggle';
     skyTheme.type = 'button';
@@ -245,9 +309,97 @@ export class UiController {
     root.append(sidebar);
   }
 
+  private startNotificationToasts(appPath: string) {
+    if (!window.GUINOMO_PROFILE) return;
+
+    const language = window.GUINOMO_PROFILE.language || document.documentElement.lang.slice(0, 2);
+    const container = document.createElement('div');
+    container.id = 'guinomo-notification-toasts';
+    container.setAttribute('aria-live', 'polite');
+    container.setAttribute('aria-label', language === 'en' ? 'Notifications' : 'Notificações');
+    document.body.append(container);
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`${appPath}/php/notificacoes_action.php?action=recent&limit=5`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!response.ok) throw new Error(`Notification request failed (${response.status})`);
+        const payload: { itens?: Array<{ id?: number; titulo?: string; texto?: string; link?: string; avatar?: string; tempo?: string }> } = await response.json();
+        if (!Array.isArray(payload.itens)) throw new Error('Notification response has an invalid shape');
+
+        for (const item of [...payload.itens].reverse()) {
+          const id = Number(item.id);
+          if (!Number.isInteger(id) || id <= 0 || this.notificationIds.has(id)) continue;
+          this.notificationIds.add(id);
+          this.showNotificationToast(container, item);
+        }
+      } catch (error) {
+        console.warn('Unable to load Guinomo notifications:', error);
+      }
+    };
+
+    void poll();
+    window.setInterval(() => void poll(), 15_000);
+  }
+
+  private showNotificationToast(
+    container: HTMLElement,
+    item: { titulo?: string; texto?: string; link?: string; avatar?: string; tempo?: string },
+  ) {
+    const toast = document.createElement('a');
+    toast.className = 'guinomo-notification-toast';
+    toast.href = '#';
+    if (item.link) {
+      try {
+        const destination = new URL(item.link, window.location.origin);
+        if (destination.origin === window.location.origin) toast.href = destination.toString();
+      } catch {
+        toast.href = '#';
+      }
+    }
+
+    if (item.avatar) {
+      const avatar = document.createElement('img');
+      avatar.className = 'notification-avatar';
+      avatar.src = item.avatar;
+      avatar.alt = '';
+      avatar.loading = 'lazy';
+      toast.append(avatar);
+    }
+
+    const content = document.createElement('span');
+    content.className = 'notification-content';
+    const title = document.createElement('strong');
+    title.textContent = item.titulo || (window.GUINOMO_PROFILE?.language === 'en' ? 'Notification' : 'Notificação');
+    const message = document.createElement('span');
+    message.textContent = item.texto || '';
+    content.append(title, message);
+    toast.append(content);
+    if (item.tempo) {
+      const time = document.createElement('small');
+      time.textContent = item.tempo;
+      toast.append(time);
+    }
+
+    toast.addEventListener('click', (event) => {
+      if (toast.getAttribute('href') === '#') event.preventDefault();
+      toast.classList.add('leaving');
+      window.setTimeout(() => toast.remove(), 220);
+    });
+    container.append(toast);
+    while (container.children.length > 4) container.firstElementChild?.remove();
+    window.setTimeout(() => {
+      toast.classList.add('leaving');
+      window.setTimeout(() => toast.remove(), 220);
+    }, 6500);
+  }
+
   private openChatOverlay(appPath: string) {
     if (this.chatOverlay) {
       this.chatOverlay.classList.add('open');
+      document.documentElement.classList.add('guinomo-chat-open');
       return;
     }
 
@@ -290,13 +442,18 @@ export class UiController {
     frame.src = `${appPath}/index.php?open=chat`;
     overlay.querySelector<HTMLButtonElement>('.chat-overlay-close')!.addEventListener('click', () => {
       overlay.classList.remove('open');
+      document.documentElement.classList.remove('guinomo-chat-open');
     });
     document.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') overlay.classList.remove('open');
+      if (event.key === 'Escape') {
+        overlay.classList.remove('open');
+        document.documentElement.classList.remove('guinomo-chat-open');
+      }
     });
 
     document.body.append(overlay);
     this.chatOverlay = overlay;
+    document.documentElement.classList.add('guinomo-chat-open');
     requestAnimationFrame(() => overlay.classList.add('open'));
   }
 

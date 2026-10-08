@@ -367,7 +367,7 @@ nav {
   align-content: stretch;
   position: absolute;
   top: 35px;
-  right: 35px;
+  right: 90px;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
   -webkit-user-select: none;
   user-select: none;
@@ -499,12 +499,47 @@ nav .cnt {
 #noop-social-sidebar {
   position: fixed;
   z-index: 20;
-  top: 50%;
-  right: 20px;
+  top: 92px;
+  right: 35px;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 9px;
-  transform: translateY(-50%);
+  width: 46px;
+  transition: opacity 160ms ease;
+}
+html.guinomo-chat-open #noop-social-sidebar {
+  opacity: 0;
+  pointer-events: none;
+}
+#noop-social-sidebar .world-controls {
+  display: grid;
+  gap: 6px;
+  width: 138px;
+  margin-bottom: 2px;
+}
+#noop-social-sidebar .world-select,
+#noop-social-sidebar .world-invite {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  border-radius: 9px;
+  background: rgba(249, 239, 220, 0.94);
+  box-shadow: 2px 2px rgba(113, 108, 102, 0.5);
+  color: #514d48;
+  font: 600 11px Arial, sans-serif;
+}
+#noop-social-sidebar .world-select {
+  cursor: pointer;
+}
+#noop-social-sidebar .world-invite {
+  cursor: pointer;
+}
+#noop-social-sidebar .world-select:focus-visible,
+#noop-social-sidebar .world-invite:focus-visible {
+  outline: 2px solid #716c66;
+  outline-offset: 2px;
 }
 #noop-social-sidebar .social-link {
   position: relative;
@@ -648,20 +683,65 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   font: 13px Arial, sans-serif;
   text-align: center;
 }
-
-.cinematic-portal {
+#guinomo-notification-toasts {
   position: fixed;
-  z-index: 1500;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 1;
+  z-index: 2147483000;
+  top: 20px;
+  right: 88px;
+  display: grid;
+  width: min(340px, calc(100vw - 110px));
+  gap: 9px;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(20, 24, 54, 0.12), rgba(4, 6, 15, 0.54));
-  transition: opacity 500ms ease;
 }
-.cinematic-portal.leaving {
+.guinomo-notification-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 11px 13px;
+  border: 1px solid rgba(255, 250, 240, 0.35);
+  border-radius: 13px;
+  background: rgba(28, 30, 35, 0.88);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(14px);
+  color: #fffaf0;
+  font: 12px Arial, sans-serif;
+  text-decoration: none;
+  pointer-events: auto;
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+.guinomo-notification-toast.leaving {
   opacity: 0;
+  transform: translateY(-5px);
+}
+.guinomo-notification-toast .notification-avatar {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.guinomo-notification-toast .notification-content {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+.guinomo-notification-toast strong,
+.guinomo-notification-toast .notification-content > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.guinomo-notification-toast .notification-content > span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.guinomo-notification-toast small {
+  flex: 0 0 auto;
+  margin-left: auto;
+  color: rgba(255, 250, 240, 0.68);
 }
 
 #name-tags-container .character-name-tag {
@@ -751,17 +831,18 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
 }
 @media (max-width: 640px) {
   #noop-social-sidebar {
-    top: auto;
-    right: 50%;
-    bottom: 14px;
-    flex-direction: row;
+    top: 150px;
+    right: 58px;
     gap: 6px;
-    transform: translateX(50%);
+  }
+  #noop-social-sidebar .world-controls {
+    width: 122px;
+    margin-right: 0;
   }
   #noop-social-sidebar .social-link {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
   }
   #noop-social-sidebar .social-link::after {
     top: auto;
@@ -775,9 +856,9 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   }
   #noop-chat-overlay {
     top: 12px;
-    right: 58px;
+    right: 112px;
     bottom: auto;
-    width: min(300px, calc(100vw - 80px));
+    width: min(300px, calc(100vw - 134px));
     height: min(320px, 38dvh, calc(100dvh - 130px));
     transform: translateY(-12px);
   }
@@ -792,6 +873,13 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   }
   #noop-chat-overlay.open {
     transform: translateY(0);
+  }
+  #guinomo-notification-toasts {
+    top: auto;
+    right: auto;
+    bottom: 12px;
+    left: 12px;
+    width: min(280px, calc(100vw - 76px));
   }
   .character-tooltip-card { width: min(220px, calc(100vw - 32px)); }
 }

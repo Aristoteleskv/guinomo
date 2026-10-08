@@ -10,6 +10,7 @@ import { geometryLoader } from '../engine/loaders/geometries';
 import { globalUniforms } from '../engine/globals';
 import { createParticles, type ParticlesGPU } from '../engine/particles';
 import { SceneModule } from './SceneModule';
+import type { EnvironmentScene } from './environmentScene';
 import sinenoiseGLSL from './glsl/sinenoise.glsl?raw';
 import fitGLSL from './glsl/fit.glsl?raw';
 import colorutilsGLSL from './glsl/colorutils.glsl?raw';
@@ -280,6 +281,10 @@ export class Birds extends SceneModule {
     };
 
     this.scene.add(this.mesh);
+    const environment = this.scene as EnvironmentScene;
+    this.scene.beforeRenderCbs.push(() => {
+      this.mesh.visible = environment.sky.nightIntensity < 0.6;
+    });
     this.ready.resolve();
   }
 

@@ -107,6 +107,7 @@ export interface CharacterOptions {
   lookatMeshOffset?: Vector3;
   skinShadows?: boolean;
   initialData?: Record<string, unknown>;
+  roomSeed?: Uint8Array; // Semente da sala P2P
   positionCharLerp?: number;
   rotationCharLerp?: number;
   animationCharLerp?: number;
@@ -320,6 +321,7 @@ export class Characters extends CharacterSkinnedMesh {
         // Join the dynamic P2P room based on URL world parameter
         this._connection = new P2PConnection({
           data: this._dataUpdate,
+          roomSeed: options.roomSeed,
           onConnect: () => this.connected.resolve(),
           addClient: (id, data) => this._addCharacter(id, data),
           removeClient: (id) => this._removeCharacter(id),
@@ -361,6 +363,13 @@ export class Characters extends CharacterSkinnedMesh {
     this._dataUpdate.a = this._localObject.userData.a;
     this._dataUpdate.uid = this._localObject.userData.uid;
     this._dataUpdate.seed = this._localObject.userData.seed;
+    this._dataUpdate.h = this._localObject.userData.hatVisible ?? this._localObject.userData.h ?? 1;
+
+    // Mapeamento de biótipo para índice (0-6)
+    const physiques = ['default', 'heroic', 'stylized', 'curvy', 'slim_long', 'dynamic', 'athletic'];
+    this._dataUpdate.phy = physiques.indexOf(this._localObject.userData.physique || 'default');
+    if (this._dataUpdate.phy === -1) this._dataUpdate.phy = 0;
+
     if (this._connection) {
       (this._connection as any)._data = this._dataUpdate;
     }
@@ -417,6 +426,26 @@ export class Characters extends CharacterSkinnedMesh {
         : true;
       this._collisionPhysics.boundingSphere.center.copy(this._collisionPhysics.boundingSphereOriginalCenter);
       this._customAttribUpdate?.(remote, id, instance, visible, animLerp);
+
+      // Aplicação da Escala (Biótipo + Animação de Spawn)
+      const pIdx = remote.userData.phy ?? 0;
+      const spawn = remote.userData.spawnScale ?? 1;
+      const physiques = ['default', 'heroic', 'stylized', 'curvy', 'slim_long', 'dynamic', 'athletic'];
+      const pName = physiques[pIdx] || 'default';
+
+      // Matriz de escalas [x, y, z]
+      const scales: Record<string, number[]> = {
+        heroic: [1.1, 1.15, 1.05],
+        stylized: [0.9, 0.9, 0.9],
+        curvy: [1.05, 0.95, 1.1],
+        slim_long: [0.85, 1.15, 0.85],
+        dynamic: [1.0, 1.05, 1.0],
+        athletic: [1.08, 1.08, 1.02],
+        default: [1, 1, 1]
+      };
+      const s = scales[pName];
+      remote.scale.set(s[0] * spawn, s[1] * spawn, s[2] * spawn);
+
       remote.updateMatrix();
       this.setMatrixAt(instance++, remote.matrix);
       this._updateAnimations(remote, animLerp);
@@ -462,10 +491,11 @@ export class Characters extends CharacterSkinnedMesh {
     this._charactersObjects.set(id, remote);
     this._updateCharacterIDs();
     this.count++;
-    gsap.fromTo(
-      remote.scale,
-      { x: 0, y: 0, z: 0 },
-      { x: 1, y: 1, z: 1, ease: 'power2.out', duration: 0.35 },
+
+    remote.userData.spawnScale = 0;
+    gsap.to(
+      remote.userData,
+      { spawnScale: 1, ease: 'power2.out', duration: 0.35 },
     );
   }
 

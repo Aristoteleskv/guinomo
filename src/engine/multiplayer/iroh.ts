@@ -5,7 +5,7 @@
 // public relays — still e2e encrypted, no app server. Frames are signed
 // (ed25519) + sequenced in Rust.
 //
-// State encoding (31 bytes):
+// State encoding (32 bytes):
 //   [0]      u8   version (2)
 //   [1..13]  p    3 × f32 LE
 //   [13..21] r    2 × f32 LE
@@ -13,6 +13,7 @@
 //   [22..26] seed f32 LE
 //   [26..30] uid  u32 LE
 //   [30]     u8   h (hat visible)
+//   [31]     u8   phy (physique index)
 
 import { SummerNode, type RoomChannel } from 'guinomo-browser';
 
@@ -25,11 +26,13 @@ export interface P2PClientData {
   seed?: number;
   uid?: number;
   h?: number; // hat visible (1) or hidden (0)
+  phy?: number; // physique index
   [key: string]: any;
 }
 
 interface P2POptions {
   data: P2PData;
+  roomSeed?: Uint8Array; // Semente da sala para isolar mundos/perfis
   updateRate?: number;
   addClient?: (id: string, data: P2PClientData) => void;
   removeClient?: (id: string) => void;
@@ -39,7 +42,9 @@ interface P2POptions {
 }
 
 const STATE_VERSION = 2;
-const STATE_BYTES = 31;
+const STATE_BYTES = 32;
+const DEFAULT_ROOM_SEED = new Uint8Array(32);
+DEFAULT_ROOM_SEED.set(new TextEncoder().encode('guinomo-p2p-room-v1'));
 /** Remove remotes that stopped sending this long ago (they left or hid). */
 const REMOTE_TIMEOUT_MS = 10_000;
 /** Full-state heartbeat: newcomers can always bootstrap from us. */
@@ -94,15 +99,15 @@ export class P2PConnection {
     this._onConnect = options.onConnect ?? noop;
     this._onDisconnect = options.onDisconnect ?? noop;
     this._onRemoveAllClients();
-    void this._init();
+    void this._init(options.roomSeed);
   }
 
-  /** Spawns the iroh node and joins the room; retries until it succeeds. */
-  private async _init() {
+  /** Spawns the iroh node and joins its world room; retries until it succeeds. */
+  private async _init(roomSeed?: Uint8Array) {
     try {
       const node = await SummerNode.spawn();
       this._node = node;
-      const channel = await node.join_room();
+      const channel = await node.join_room(roomSeed ?? DEFAULT_ROOM_SEED);
       if (this._closed) return;
       this._channel = channel;
       this._reader = channel.receiver.getReader() as ReadableStreamDefaultReader<P2PEvent>;
@@ -118,7 +123,7 @@ export class P2PConnection {
       console.warn('[p2p] join failed, retrying in 5s', err);
       this._teardown();
       if (!this._closed) {
-        this._retryTimeout = setTimeout(() => void this._init(), 5000);
+        this._retryTimeout = setTimeout(() => void this._init(roomSeed), 5000);
       }
     }
   }
@@ -270,6 +275,7 @@ function encodeState(data: P2PData): Uint8Array {
   view.setFloat32(22, (data.seed as number) ?? 0, true);
   view.setUint32(26, (data.uid as number) ?? 0, true);
   out[30] = (data.h as number) ?? 1; // Default hat visible
+  out[31] = (data.phy as number) ?? 0; // Default physique
   return out;
 }
 
@@ -285,5 +291,6 @@ function decodeState(bytes: Uint8Array): P2PClientData {
     seed: view.getFloat32(22, true),
     uid: view.getUint32(26, true),
     h: bytes[30],
+    phy: bytes[31],
   };
 }

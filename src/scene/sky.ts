@@ -14,6 +14,7 @@ import { geometryLoader } from '../engine/loaders/geometries';
 import { textureLoader } from '../engine/loaders/textures';
 import { globalUBO } from '../engine/globals';
 import { events } from '../core/events';
+import { getWorldId } from '../core/worlds';
 import { SceneModule } from './SceneModule';
 import easesGLSL from './glsl/eases.glsl?raw';
 import flowmapGLSL from './glsl/flowmap.glsl?raw';
@@ -36,6 +37,10 @@ export class Sky extends SceneModule {
   }
 
   protected async init() {
+    if (getWorldId(new URLSearchParams(window.location.search).get('world')) === 'alien') {
+      this.theme = 'alien';
+    }
+
     const dome = await geometryLoader.load('skydome.bin');
     const material = new ShaderMaterial({
       uniformsGroups: [globalUBO],

@@ -3,14 +3,14 @@
 //! API surface (see the generated `pkg/*.d.ts`):
 //!   - `SummerNode.spawn()`        → node (connects to relays on bind)
 //!   - `node.endpoint_id()`        → hex id of this node
-//!   - `node.join_room()`          → `RoomChannel` for the single room
+//!   - `node.join_room(seed)`    → `RoomChannel` for the selected room
 //!   - `channel.sender.broadcast(bytes)` → signed gossip broadcast
 //!   - `channel.receiver`          → ReadableStream of `Event` objects
 //!   - `channel.close()`           → leave the room
 
 use anyhow::Result;
 use n0_future::StreamExt;
-use summer_shared::{RoomSender as SharedSender, SummerNode as SharedNode};
+use guinomo_shared::{RoomSender as SharedSender, SummerNode as SharedNode};
 use tracing::level_filters::LevelFilter;
 use tracing_subscriber_wasm::MakeConsoleWriter;
 use wasm_bindgen::{JsError, JsValue, prelude::wasm_bindgen};

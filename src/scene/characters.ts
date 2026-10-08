@@ -8,6 +8,7 @@ import { Characters } from '../engine/characters';
 import { depthCharsMaterial, phongMaterial } from './materials';
 import { SceneModule } from './SceneModule';
 import { appEndpointUrl } from '../core/assets';
+import { getWorldId, getWorldRoomSeed } from '../core/worlds';
 
 export class CharactersModule extends SceneModule {
   declare mesh: Characters;
@@ -226,6 +227,8 @@ export class CharactersModule extends SceneModule {
 
     const urlParams = new URLSearchParams(window.location.search);
     const uid = window.GUINOMO_UID || parseInt(urlParams.get('uid') || '0', 10);
+    const worldId = getWorldId(urlParams.get('world'));
+    const roomSeed = await getWorldRoomSeed(worldId, urlParams.get('room'));
 
     const [skinned, clips, colliderGeometry] = await Promise.all([
       geometryLoader.skin('kid.bin', 'kid-bones.bin'),
@@ -254,13 +257,6 @@ export class CharactersModule extends SceneModule {
     events.on('webgl_character_toggle_hat', this.toggleHat);
 
     const colliderMesh = new Mesh(colliderGeometry);
-
-    // Gerar Room Seed baseado no contexto (Ex: mundo ou perfil) para isolar salas P2P
-    const roomName = urlParams.get('room') || 'default_lobby';
-    const encoder = new TextEncoder();
-    const roomSeed = new Uint8Array(32);
-    const hash = encoder.encode(roomName);
-    roomSeed.set(hash.slice(0, 32));
 
     this.mesh = new Characters(skinned, clips, {
       animationsOptions: [{ speed: 1 }, { speed: 1.1 }, { speed: 1 }, { speed: 1 }],

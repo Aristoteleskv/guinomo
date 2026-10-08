@@ -8,6 +8,10 @@ declare global {
       username: string;
       avatarUrl: string;
       profileUrl: string;
+      nameTagColor?: string;
+    };
+    NoopPageTransition?: {
+      cover: (duration?: number) => Promise<void>;
     };
   }
 }

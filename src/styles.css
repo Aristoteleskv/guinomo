@@ -483,3 +483,129 @@ nav .cnt {
 
 .button:hover { transform: rotate(10deg) translateY(-2px); }
 .button:active, .button-close:active { transform: rotate(10deg) translateY(2px); box-shadow: 1px 1px #716c66; }
+
+.name-tag-color-button {
+  color: #716c66;
+  font: 700 12px Arial, sans-serif;
+  border: 1px solid rgba(113, 108, 102, 0.45);
+}
+.name-tag-color-input {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+#noop-social-sidebar {
+  position: fixed;
+  z-index: 20;
+  top: 50%;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  transform: translateY(-50%);
+}
+#noop-social-sidebar .social-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 46px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  border-radius: 12px;
+  background: rgba(249, 239, 220, 0.94);
+  box-shadow: 2px 2px rgba(113, 108, 102, 0.68);
+  color: #514d48;
+  font: 600 12px Arial, sans-serif;
+  text-decoration: none;
+  transition: transform 160ms ease, background-color 160ms ease;
+}
+#noop-social-sidebar .social-link:hover,
+#noop-social-sidebar .social-link:focus-visible {
+  background: #fffaf0;
+  transform: translateX(-3px);
+}
+#noop-social-sidebar .social-link:focus-visible,
+.name-tag-color-button:focus-visible {
+  outline: 2px solid #716c66;
+  outline-offset: 3px;
+}
+#noop-social-sidebar svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+#noop-social-sidebar img {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(113, 108, 102, 0.45);
+  border-radius: 50%;
+  object-fit: cover;
+}
+#noop-social-sidebar .social-link span {
+  white-space: nowrap;
+}
+#noop-social-sidebar .social-link::after {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 8px);
+  padding: 6px 9px;
+  border-radius: 7px;
+  background: rgba(34, 31, 28, 0.94);
+  color: #fff;
+  content: attr(title);
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(4px, -50%);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+#noop-social-sidebar .social-link:hover::after,
+#noop-social-sidebar .social-link:focus-visible::after {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+@media (max-width: 640px) {
+  #noop-social-sidebar {
+    top: auto;
+    right: 50%;
+    bottom: 14px;
+    flex-direction: row;
+    gap: 6px;
+    transform: translateX(50%);
+  }
+  #noop-social-sidebar .social-link {
+    width: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+    padding: 0;
+  }
+  #noop-social-sidebar .social-link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  #noop-social-sidebar .social-link::after {
+    top: auto;
+    right: 50%;
+    bottom: calc(100% + 7px);
+    transform: translate(50%, 4px);
+  }
+  #noop-social-sidebar .social-link:hover::after,
+  #noop-social-sidebar .social-link:focus-visible::after {
+    transform: translate(50%, 0);
+  }
+}

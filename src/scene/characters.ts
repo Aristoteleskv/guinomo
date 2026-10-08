@@ -13,9 +13,10 @@ export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
 
-  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, hatVisible: number, isOwner: boolean }>();
+  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, isOwner: boolean }>();
   private _nameTags = new Map<string, HTMLDivElement>();
   private _nameTagsContainer: HTMLDivElement | null = null;
+  private _localNameTagColor: string | null = null;
 
   /** Fetches avatar data from PHP and updates a specific character instance */
   private async updateCharacterColors(uid: number, userData: any, clientId: string) {
@@ -28,7 +29,7 @@ export class CharactersModule extends SceneModule {
       userData.name = data.name;
       userData.hatVisible = data.hatVisible;
       userData.isOwner = data.isOwner;
-      this.ensureNameTag(clientId, data.name);
+      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor);
       return;
     }
 
@@ -41,13 +42,18 @@ export class CharactersModule extends SceneModule {
       const dna = await response.json();
 
       const shirt = new Color(dna['shirt-hex'] || '#4c80e5');
-      const skin = new Color(dna['skin-hex'] || '#e5b299');
+      const skinHex = dna['skin-hex'] || '#e5b299';
+      const skin = new Color(skinHex);
       const name = dna['username'] || (clientId === 'local' ? window.GUINOMO_PROFILE?.username : '') || `User ${uid}`;
+      const nameTagColor = clientId === 'local' && this._localNameTagColor
+        ? this._localNameTagColor
+        : this.isValidNameTagColor(dna['name-tag-color']) ? dna['name-tag-color'] : skinHex;
 
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
         skin: [skin.r, skin.g, skin.b],
         name: name,
+        nameTagColor,
         hatVisible: dna['hat-visible'] !== undefined ? (dna['hat-visible'] ? 1 : 0) : 1,
         isOwner: dna['is_owner'] || false
       };
@@ -58,7 +64,7 @@ export class CharactersModule extends SceneModule {
       userData.name = data.name;
       userData.hatVisible = data.hatVisible;
       userData.isOwner = data.isOwner;
-      this.ensureNameTag(clientId, name);
+      this.ensureNameTag(clientId, name, nameTagColor);
 
       // Se for o usuário local, avisa a UI para mostrar o botão de chapéu
       if (clientId === 'local' && data.isOwner) {
@@ -73,11 +79,11 @@ export class CharactersModule extends SceneModule {
       userData.name = `User ${uid}`;
       userData.hatVisible = 1;
       userData.isOwner = false;
-      this.ensureNameTag(clientId, userData.name);
+      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299');
     }
   }
 
-  private ensureNameTag(clientId: string, name: string) {
+  private ensureNameTag(clientId: string, name: string, backgroundColor: string) {
     if (!this._nameTagsContainer) {
       this._nameTagsContainer = document.createElement('div');
       this._nameTagsContainer.id = 'name-tags-container';
@@ -88,6 +94,7 @@ export class CharactersModule extends SceneModule {
       this._nameTagsContainer.style.width = '100%';
       this._nameTagsContainer.style.height = '100%';
       this._nameTagsContainer.style.overflow = 'hidden';
+      this._nameTagsContainer.style.zIndex = '1000';
       document.body.appendChild(this._nameTagsContainer);
     }
 
@@ -95,8 +102,6 @@ export class CharactersModule extends SceneModule {
     if (!tag) {
       tag = document.createElement('div');
       tag.style.position = 'absolute';
-      tag.style.background = 'rgba(0, 0, 0, 0.5)';
-      tag.style.color = 'white';
       tag.style.padding = '2px 10px';
       tag.style.borderRadius = '12px';
       tag.style.fontSize = '12px';
@@ -104,14 +109,58 @@ export class CharactersModule extends SceneModule {
       tag.style.fontFamily = 'Arial, sans-serif';
       tag.style.whiteSpace = 'nowrap';
       tag.style.transform = 'translate(-50%, -100%)';
-      tag.style.border = '1px solid rgba(255,255,255,0.2)';
+      tag.style.border = '1px solid rgba(255,255,255,0.65)';
+      tag.style.boxShadow = '0 2px 8px rgba(0,0,0,0.35)';
       this._nameTagsContainer.appendChild(tag);
       this._nameTags.set(clientId, tag);
     }
-    tag.innerText = name;
+    const safeColor = this.isValidNameTagColor(backgroundColor) ? backgroundColor : '#e5b299';
+    tag.style.backgroundColor = safeColor;
+    tag.style.color = this.getReadableTextColor(safeColor);
+    tag.textContent = name;
+    tag.title = name;
+    tag.setAttribute('aria-label', name);
+  }
+
+  private isValidNameTagColor(color: unknown): color is string {
+    return typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color);
+  }
+
+  private getReadableTextColor(hex: string): string {
+    const value = hex.slice(1);
+    const channels = [0, 2, 4].map((offset) => {
+      const channel = parseInt(value.slice(offset, offset + 2), 16) / 255;
+      return channel <= 0.04045 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+    });
+    const luminance = channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+    const blackContrast = (luminance + 0.05) / 0.05;
+    const whiteContrast = 1.05 / (luminance + 0.05);
+    return blackContrast >= whiteContrast ? '#171513' : '#ffffff';
+  }
+
+  private async setLocalNameTagColor(color: unknown) {
+    if (!this.isValidNameTagColor(color)) return;
+
+    this._localNameTagColor = color.toLowerCase();
+    const uid = window.GUINOMO_UID || 0;
+    const cached = this._avatarCache.get(uid);
+    if (cached) cached.nameTagColor = this._localNameTagColor;
+
+    const localTag = this._nameTags.get('local');
+    if (localTag) {
+      localTag.style.backgroundColor = this._localNameTagColor;
+      localTag.style.color = this.getReadableTextColor(this._localNameTagColor);
+    }
+
+    const saved = uid > 0 && await this._saveAvatarConfig(uid, 'name_tag_color', this._localNameTagColor);
+    events.emit('ui_name_tag_color_saved', Boolean(saved));
   }
 
   protected async init() {
+    events.on('webgl_character_set_name_tag_color', (color: string) => {
+      void this.setLocalNameTagColor(color);
+    });
+
     const urlParams = new URLSearchParams(window.location.search);
     const uid = window.GUINOMO_UID || parseInt(urlParams.get('uid') || '0', 10);
 
@@ -226,7 +275,7 @@ export class CharactersModule extends SceneModule {
     await this._saveAvatarConfig(uid, 'hat_visible', nextState === 1);
   };
 
-  private async _saveAvatarConfig(uid: number, key: string, value: any) {
+  private async _saveAvatarConfig(uid: number, key: string, value: string | number | boolean): Promise<boolean> {
     try {
       const formData = new FormData();
       formData.append('uid', uid.toString());
@@ -240,13 +289,16 @@ export class CharactersModule extends SceneModule {
       });
 
       const result = await response.json();
-      if (result.success) {
+      if (response.ok && result.success) {
         console.log(`Configuração ${key} salva com sucesso.`);
+        return true;
       } else {
         console.error('Erro ao salvar:', result.error);
+        return false;
       }
     } catch (e) {
       console.error('Falha na comunicação com o servidor PHP:', e);
+      return false;
     }
   }
 

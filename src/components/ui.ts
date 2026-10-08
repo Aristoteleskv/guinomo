@@ -36,6 +36,7 @@ export class UiController {
   private readonly infoPanel: HTMLElement;
   private readonly secretPanel: HTMLElement;
   private readonly colorSquare: HTMLDivElement;
+  private readonly nameTagColorButton: HTMLButtonElement;
   private readonly soundButton: HTMLButtonElement;
   private readonly hatButton: HTMLButtonElement;
   private readonly count: HTMLDivElement;
@@ -57,12 +58,14 @@ export class UiController {
     this.nav = document.createElement('nav');
     this.nav.setAttribute('aria-label', 'Guinomo controls');
     this.nav.innerHTML = `
-      <a class="button back-button" href="/" aria-label="Voltar para Noop" title="Voltar para Noop">${backIcon}</a>
-      <a class="button profile-avatar" href="/" aria-label="Abrir meu perfil" title="Meu perfil"><img alt=""></a>
-      <button class="button" type="button" aria-label="toggle sound"></button>
+      <a class="button back-button" href="/" aria-label="Voltar para Noop" title="Voltar para Noop" data-spa="false">${backIcon}</a>
+      <a class="button profile-avatar" href="/" aria-label="Abrir meu perfil" title="Meu perfil" data-spa="false"><img alt=""></a>
+      <button class="button sound-button" type="button" aria-label="Alternar som" title="Alternar som"></button>
       <button class="button hat-button" type="button" aria-label="toggle hat" style="display:none;">${hatIcon}</button>
-      <button class="button" type="button" aria-label="randomize character color"><div class="color-square"></div></button>
-      <button class="button" type="button" aria-label="about">${infoIcon}</button>
+      <button class="button color-button" type="button" aria-label="Randomizar cor do avatar" title="Randomizar cor do avatar"><div class="color-square"></div></button>
+      <button class="button name-tag-color-button" type="button" aria-label="Escolher cor do nome" title="Escolher cor do nome">Aa</button>
+      <input class="name-tag-color-input" type="color" aria-label="Cor da etiqueta do nome" tabindex="-1">
+      <button class="button about-button" type="button" aria-label="Sobre o Guinomo" title="Sobre o Guinomo">${infoIcon}</button>
       <div class="cnt">0/0</div>
     `;
     root.append(this.nav);
@@ -71,15 +74,21 @@ export class UiController {
     const backLink = this.nav.querySelector<HTMLAnchorElement>('.back-button')!;
     backLink.href = `${appPath}/`;
     backLink.hidden = !window.APP_URL_PATH;
+    backLink.dataset.transition = 'manual';
     backLink.addEventListener('click', (event) => {
-      if (!document.referrer) return;
-      const previous = new URL(document.referrer);
-      const isNoopPage = previous.origin === window.location.origin
-        && (previous.pathname === appPath || previous.pathname.startsWith(`${appPath}/`));
-      if (isNoopPage) {
-        event.preventDefault();
-        window.history.back();
+      event.preventDefault();
+      let previous;
+      try {
+        previous = document.referrer ? new URL(document.referrer) : null;
+      } catch {
+        previous = null;
       }
+      const isNoopPage = previous?.origin === window.location.origin
+        && (previous.pathname === appPath || previous.pathname.startsWith(`${appPath}/`));
+      const navigate = () => isNoopPage
+        ? window.history.back()
+        : window.location.assign(backLink.href);
+      void (window.NoopPageTransition?.cover() || Promise.resolve()).then(navigate);
     });
 
     const profileLink = this.nav.querySelector<HTMLAnchorElement>('.profile-avatar')!;
@@ -91,19 +100,34 @@ export class UiController {
       profileLink.setAttribute('aria-label', `Abrir perfil de ${profile.username}`);
       profileImage.src = profile.avatarUrl;
       profileImage.alt = `Avatar de ${profile.username}`;
+      profileLink.dataset.spa = 'false';
     } else {
       profileLink.hidden = true;
     }
 
-    const buttons = this.nav.querySelectorAll('button');
-    this.soundButton = buttons[0];
-    this.hatButton = buttons[1];
-    const colorButton = buttons[2];
-    const infoButton = buttons[3];
+    this.soundButton = this.nav.querySelector<HTMLButtonElement>('.sound-button')!;
+    this.hatButton = this.nav.querySelector<HTMLButtonElement>('.hat-button')!;
+    const colorButton = this.nav.querySelector<HTMLButtonElement>('.color-button')!;
+    this.nameTagColorButton = this.nav.querySelector<HTMLButtonElement>('.name-tag-color-button')!;
+    const nameTagColorInput = this.nav.querySelector<HTMLInputElement>('.name-tag-color-input')!;
+    const infoButton = this.nav.querySelector<HTMLButtonElement>('.about-button')!;
 
-    this.colorSquare = colorButton.querySelector('.color-square') as HTMLDivElement;
+    this.colorSquare = colorButton.querySelector('.color-square')!;
     this.count = this.nav.querySelector('.cnt') as HTMLDivElement;
     this.soundButton.innerHTML = speakerIcon;
+    nameTagColorInput.value = window.GUINOMO_PROFILE?.nameTagColor || '#e5b299';
+    this.nameTagColorButton.style.backgroundColor = nameTagColorInput.value;
+    this.nameTagColorButton.addEventListener('click', () => nameTagColorInput.click());
+    nameTagColorInput.addEventListener('change', () => {
+      this.nameTagColorButton.style.backgroundColor = nameTagColorInput.value;
+      events.emit('webgl_character_set_name_tag_color', nameTagColorInput.value);
+    });
+    events.on('ui_name_tag_color_saved', (saved: boolean) => {
+      this.nameTagColorButton.title = saved
+        ? 'Cor do nome salva no perfil'
+        : 'Não foi possível salvar a cor do nome';
+      this.nameTagColorButton.setAttribute('aria-invalid', saved ? 'false' : 'true');
+    });
 
     this.soundButton.addEventListener('click', () => events.emit('webgl_audio_mute_toggle'));
     this.hatButton.addEventListener('click', () => events.emit('webgl_character_toggle_hat'));
@@ -114,6 +138,8 @@ export class UiController {
     events.on('ui_show_hat_button', (show: boolean) => {
       this.hatButton.style.display = show ? 'inline-block' : 'none';
     });
+
+    this.createSocialSidebar(root, appPath, profile?.profileUrl);
 
     this.secretModal = document.createElement('div');
     this.secretModal.id = 'modal';
@@ -165,6 +191,49 @@ export class UiController {
 
   setCharacterColor(color: string) {
     this.colorSquare.style.backgroundColor = color;
+  }
+
+  private createSocialSidebar(root: HTMLElement, appPath: string, profileUrl?: string) {
+    const links = [
+      { label: 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
+      { label: 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
+      { label: 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
+      { label: 'Notificações', href: `${appPath}/notificacoes`, icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>' },
+      { label: 'Perfil', href: profileUrl || `${appPath}/perfil.php`, icon: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>', image: window.GUINOMO_PROFILE?.avatarUrl },
+      { label: 'Descobrir pessoas', href: `${appPath}/descobrir`, icon: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/>' },
+    ];
+    const sidebar = document.createElement('aside');
+    sidebar.id = 'noop-social-sidebar';
+    sidebar.setAttribute('aria-label', 'Atalhos sociais da Noop');
+
+    links.forEach(({ label, href, icon, image }) => {
+      const link = document.createElement('a');
+      link.className = 'social-link';
+      link.href = href;
+      link.title = label;
+      link.setAttribute('aria-label', label);
+      link.dataset.spa = 'false';
+
+      if (image) {
+        const avatar = document.createElement('img');
+        avatar.src = image;
+        avatar.alt = `Avatar de ${window.GUINOMO_PROFILE?.username || 'perfil'}`;
+        link.append(avatar);
+      } else {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('aria-hidden', 'true');
+        svg.innerHTML = icon;
+        link.append(svg);
+      }
+
+      const text = document.createElement('span');
+      text.textContent = label;
+      link.append(text);
+      sidebar.append(link);
+    });
+
+    root.append(sidebar);
   }
 
   closeOverlay() {

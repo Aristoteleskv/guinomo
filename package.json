@@ -9,6 +9,8 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --noEmit",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "build:wasm": "bash scripts/build-wasm.sh"
   },
   "dependencies": {
@@ -22,6 +24,7 @@
     "typescript": "5.9.3",
     "vite": "^5.4.0",
     "vite-plugin-top-level-await": "^1.5.0",
-    "vite-plugin-wasm": "^3.4.1"
+    "vite-plugin-wasm": "^3.4.1",
+    "vitest": "^2.1.9"
   }
 }

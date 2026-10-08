@@ -536,6 +536,10 @@ html.guinomo-chat-open #noop-social-sidebar {
 #noop-social-sidebar .world-invite {
   cursor: pointer;
 }
+#noop-social-sidebar .world-invite:hover {
+  background: #fffaf0;
+  transform: translateX(-3px);
+}
 #noop-social-sidebar .world-select:focus-visible,
 #noop-social-sidebar .world-invite:focus-visible {
   outline: 2px solid #716c66;

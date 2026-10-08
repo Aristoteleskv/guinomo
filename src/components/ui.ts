@@ -260,7 +260,9 @@ export class UiController {
     const inviteButton = document.createElement('button');
     inviteButton.className = 'world-invite';
     inviteButton.type = 'button';
-    inviteButton.textContent = language === 'en' ? 'Invite friends' : 'Convidar amigos';
+    inviteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4.4"/></svg>';
+    const inviteLabel = language === 'en' ? 'Invite friends' : 'Convidar amigos';
+    inviteButton.setAttribute('aria-label', inviteLabel);
     inviteButton.title = language === 'en' ? 'Copy a link to meet in this world' : 'Copiar link para encontrar amigos neste mundo';
     inviteButton.addEventListener('click', async () => {
       const inviteUrl = new URL(window.location.href);
@@ -289,9 +291,12 @@ export class UiController {
         window.location.assign(inviteUrl.toString());
         return;
       }
-      inviteButton.textContent = language === 'en' ? 'Link copied!' : 'Link copiado!';
+      const copiedLabel = language === 'en' ? 'Link copied!' : 'Link copiado!';
+      inviteButton.title = copiedLabel;
+      inviteButton.setAttribute('aria-label', copiedLabel);
       window.setTimeout(() => {
-        inviteButton.textContent = language === 'en' ? 'Invite friends' : 'Convidar amigos';
+        inviteButton.title = language === 'en' ? 'Copy a link to meet in this world' : 'Copiar link para encontrar amigos neste mundo';
+        inviteButton.setAttribute('aria-label', inviteLabel);
       }, 2200);
     });
     worldControls.append(inviteButton);

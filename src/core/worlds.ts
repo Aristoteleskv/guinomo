@@ -11,6 +11,11 @@ export const WORLDS = [
     label: { pt: 'Universo Alienígena', en: 'Alien Universe' },
     description: { pt: 'A cidade sob um céu alienígena.', en: 'The city beneath an alien sky.' },
   },
+  {
+    id: 'forest',
+    label: { pt: 'Bosque Noop', en: 'Noop Forest' },
+    description: { pt: 'Um refúgio verde para explorar com amigos.', en: 'A green retreat to explore with friends.' },
+  },
 ] as const;
 
 export type WorldId = (typeof WORLDS)[number]['id'];

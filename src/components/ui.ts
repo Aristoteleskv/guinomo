@@ -427,6 +427,8 @@ export class UiController {
           if (friend.in_guinomo) {
             const worldName = friend.world === 'alien'
               ? (language === 'en' ? 'Alien Universe' : 'Universo Alienígena')
+              : friend.world === 'forest'
+                ? (language === 'en' ? 'Noop Forest' : 'Bosque Noop')
               : (language === 'en' ? 'Noop City' : 'Cidade Noop');
             status.textContent = language === 'en' ? `In Guinomo · ${worldName}` : `No Guinomo · ${worldName}`;
           } else {

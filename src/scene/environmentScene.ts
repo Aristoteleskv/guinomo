@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { events } from '../core/events';
 import { client } from '../core/client';
+import { getWorldId } from '../core/worlds';
 import { BaseScene } from '../engine/scene';
 import { AudioController } from '../engine/audio';
 import { FollowSunLight } from '../engine/sunlight';
@@ -17,6 +18,7 @@ import { Trees, Bushes, Palmtrees, Rocks1, Rocks2, Grass } from './vegetation';
 import { Houses, Warehouses, Machines, Lightposts, Parasols, Castles, Blockers } from './structures';
 import { UFO, Alien, Cats, Sloth, Sign, Gossip } from './setpieces';
 import { CharactersModule } from './characters';
+import { ForestLife } from './forestLife';
 import type { MainController } from './mainController';
 
 gsap.registerPlugin(CustomEase);
@@ -47,6 +49,7 @@ export class EnvironmentScene extends BaseScene {
   declare sloth: Sloth;
   declare gossip: Gossip;
   declare characters: CharactersModule;
+  declare forestLife: ForestLife;
 
   constructor(_mainController: MainController) {
     super();
@@ -83,6 +86,7 @@ export class EnvironmentScene extends BaseScene {
         ['cats', Cats],
         ['sloth', Sloth],
         ['gossip', Gossip],
+        ['forestLife', ForestLife],
       ];
     await Promise.all(
       modules.map(([name, Module]) => {
@@ -91,9 +95,31 @@ export class EnvironmentScene extends BaseScene {
       }),
     );
 
+    this.configureWorld();
     this.setupLights();
     (this.sea.mesh as any).addReflectedObject(this.sky.mesh);
     this.ready.resolve();
+  }
+
+  private configureWorld() {
+    if (getWorldId(new URLSearchParams(window.location.search).get('world')) !== 'forest') return;
+
+    this.sea.mesh.visible = false;
+    this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.warehouses.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.lightposts.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.lightposts.meshWire.visible = false;
+    this.parasols.mesh.visible = false;
+    this.castles.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.blockers.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.ufo.mesh.visible = false;
+    this.alien.mesh.visible = false;
+    this.sign.mesh.visible = false;
+    this.cats.mesh.visible = false;
+    this.sloth.mesh.visible = false;
+    this.gossip.mesh.visible = false;
   }
 
   private setupCamera() {
@@ -116,12 +142,15 @@ export class EnvironmentScene extends BaseScene {
     const dayGround = new Color('#737575');
     const nightGround = new Color('#20243b');
     const alienGround = new Color('#193d56');
+    const forestSky = new Color('#527d69');
+    const forestGround = new Color('#526b4a');
+    const forest = getWorldId(new URLSearchParams(window.location.search).get('world')) === 'forest';
     this.beforeRenderCbs.push(() => {
       const night = this.sky.nightIntensity;
       const alien = this.sky.alienIntensity;
       hemi.intensity = 0.7 - night * 0.38 + alien * 0.18;
-      hemi.color.copy(daySky).lerp(nightSky, night).lerp(alienSky, alien);
-      hemi.groundColor.copy(dayGround).lerp(nightGround, night).lerp(alienGround, alien);
+      hemi.color.copy(daySky).lerp(forestSky, forest ? 1 : 0).lerp(nightSky, night).lerp(alienSky, alien);
+      hemi.groundColor.copy(dayGround).lerp(forestGround, forest ? 1 : 0).lerp(nightGround, night).lerp(alienGround, alien);
     });
 
     const sun = new FollowSunLight({
@@ -138,6 +167,9 @@ export class EnvironmentScene extends BaseScene {
       skipCSMMeshes: [this.characters.mesh, this.sky.mesh, this.sea.mesh, this.birds.mesh],
     });
     sun.shadow.normalBias = 0.07;
+    this.beforeRenderCbs.push(() => {
+      sun.intensity = 0.2 + (1 - this.sky.nightIntensity) * 0.8;
+    });
     this.add(sun);
   }
 

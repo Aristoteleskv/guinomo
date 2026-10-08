@@ -19,6 +19,7 @@ import { Houses, Warehouses, Machines, Lightposts, Parasols, Castles, Blockers }
 import { UFO, Alien, Cats, Sloth, Sign, Gossip } from './setpieces';
 import { CharactersModule } from './characters';
 import { ForestLife } from './forestLife';
+import { WorldLocations } from './worldLocations';
 import type { MainController } from './mainController';
 
 gsap.registerPlugin(CustomEase);
@@ -50,6 +51,7 @@ export class EnvironmentScene extends BaseScene {
   declare gossip: Gossip;
   declare characters: CharactersModule;
   declare forestLife: ForestLife;
+  declare worldLocations: WorldLocations;
 
   constructor(_mainController: MainController) {
     super();
@@ -87,6 +89,7 @@ export class EnvironmentScene extends BaseScene {
         ['sloth', Sloth],
         ['gossip', Gossip],
         ['forestLife', ForestLife],
+        ['worldLocations', WorldLocations],
       ];
     await Promise.all(
       modules.map(([name, Module]) => {
@@ -102,10 +105,11 @@ export class EnvironmentScene extends BaseScene {
   }
 
   private configureWorld() {
-    if (getWorldId(new URLSearchParams(window.location.search).get('world')) !== 'forest') return;
+    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    if (world === 'lobby' || world === 'alien') return;
 
-    this.sea.mesh.visible = false;
-    this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.sea.mesh.visible = world !== 'forest';
+    if (world !== 'tropical-city') this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
     this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
     this.warehouses.meshes.forEach((mesh) => { mesh.visible = false; });
     this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
@@ -136,21 +140,27 @@ export class EnvironmentScene extends BaseScene {
   private setupLights() {
     const hemi = new HemisphereLight('#33434f', '#737575', 0.7);
     this.add(hemi);
-    const daySky = new Color('#33434f');
     const nightSky = new Color('#111b42');
     const alienSky = new Color('#631aa1');
-    const dayGround = new Color('#737575');
     const nightGround = new Color('#20243b');
     const alienGround = new Color('#193d56');
-    const forestSky = new Color('#527d69');
-    const forestGround = new Color('#526b4a');
-    const forest = getWorldId(new URLSearchParams(window.location.search).get('world')) === 'forest';
+    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    const daySky = world === 'forest' ? new Color('#527d69')
+      : world === 'floating-city' ? new Color('#536b7b')
+        : world === 'tropical-city' ? new Color('#558a83')
+          : world === 'old-town' ? new Color('#806957')
+            : new Color('#33434f');
+    const dayGround = world === 'forest' ? new Color('#526b4a')
+      : world === 'floating-city' ? new Color('#62706d')
+        : world === 'tropical-city' ? new Color('#65845e')
+          : world === 'old-town' ? new Color('#796b57')
+            : new Color('#737575');
     this.beforeRenderCbs.push(() => {
       const night = this.sky.nightIntensity;
       const alien = this.sky.alienIntensity;
       hemi.intensity = 0.7 - night * 0.38 + alien * 0.18;
-      hemi.color.copy(daySky).lerp(forestSky, forest ? 1 : 0).lerp(nightSky, night).lerp(alienSky, alien);
-      hemi.groundColor.copy(dayGround).lerp(forestGround, forest ? 1 : 0).lerp(nightGround, night).lerp(alienGround, alien);
+      hemi.color.copy(daySky).lerp(nightSky, night).lerp(alienSky, alien);
+      hemi.groundColor.copy(dayGround).lerp(nightGround, night).lerp(alienGround, alien);
     });
 
     const sun = new FollowSunLight({

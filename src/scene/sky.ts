@@ -76,6 +76,13 @@ export class Sky extends SceneModule {
 
   protected async init() {
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    const palette = world === 'floating-city'
+      ? { horizon: '#b6d0d8', overlay: '#a2c6d2', sky: '#347a9e', clouds: '#c9e6e8' }
+      : world === 'tropical-city'
+        ? { horizon: '#f0c9a0', overlay: '#ffe0b0', sky: '#36a5a0', clouds: '#fff0cf' }
+        : world === 'old-town'
+          ? { horizon: '#e6cba8', overlay: '#e4c69e', sky: '#729bb0', clouds: '#f2dfc4' }
+          : null;
     if (world === 'alien') {
       this.theme = 'alien';
     }
@@ -86,10 +93,10 @@ export class Sky extends SceneModule {
       uniforms: {
         tMap: { value: textureLoader.load('sky-srgb-highq.png', 'srgb-repeat') },
         tFlow: { value: textureLoader.load('skyflow-highq.ktx2', 'repeat') },
-        uColorHorizon: { value: new Color('#caf0fe') },
-        uColorHorizonOverlay: { value: new Color('#d8eeff') },
-        uColorSky: { value: new Color('#248fd5') },
-        uColorClouds: { value: new Color('#ffe5c4') },
+        uColorHorizon: { value: new Color(palette?.horizon ?? '#caf0fe') },
+        uColorHorizonOverlay: { value: new Color(palette?.overlay ?? '#d8eeff') },
+        uColorSky: { value: new Color(palette?.sky ?? '#248fd5') },
+        uColorClouds: { value: new Color(palette?.clouds ?? '#ffe5c4') },
         uNightBlend: { value: 0 },
         uAlienBlend: { value: 0 },
         uForestBlend: { value: world === 'forest' ? 1 : 0 },

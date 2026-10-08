@@ -28,6 +28,18 @@ const infoContent = {
 
 type InfoName = keyof typeof infoContent;
 
+type GuinomoFriend = {
+  id: number;
+  name: string;
+  username: string;
+  avatar: string;
+  world: string;
+  in_guinomo: boolean;
+  is_online: boolean;
+  room_url: string | null;
+  profile_url: string;
+};
+
 export class UiController {
   readonly webglContainer: HTMLDivElement;
   private readonly loader: HTMLDivElement;
@@ -47,6 +59,8 @@ export class UiController {
   private overlayOpen = false;
   private secretTimer = 0;
   private notificationIds = new Set<number>();
+  private friendsButton: HTMLButtonElement | null = null;
+  private friendsPanel: HTMLElement | null = null;
 
   constructor(root: HTMLElement) {
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
@@ -146,6 +160,8 @@ export class UiController {
     });
 
     this.createSocialSidebar(appPath);
+    this.createFriendsPanel(appPath);
+    this.startPresenceHeartbeat(appPath);
     this.startNotificationToasts(appPath);
 
     this.secretModal = document.createElement('div');
@@ -232,6 +248,21 @@ export class UiController {
       this.nav.insertBefore(link, this.soundButton);
     });
 
+    const friendsButton = document.createElement('button');
+    friendsButton.className = 'button social-link guinomo-friends-button';
+    friendsButton.type = 'button';
+    friendsButton.title = language === 'en' ? 'Friends in Noop' : 'Amigos na Noop';
+    friendsButton.setAttribute('aria-label', language === 'en' ? 'Friends in Noop' : 'Amigos na Noop');
+    friendsButton.setAttribute('aria-expanded', 'false');
+    friendsButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1H3Zm14-10a3 3 0 1 0-1-5.83M18 14a5 5 0 0 1 3 4.58V20h-4"/></svg><span class="guinomo-friends-count" hidden></span>';
+    this.friendsButton = friendsButton;
+    friendsButton.addEventListener('click', () => {
+      const isOpen = this.friendsPanel?.classList.toggle('open') ?? false;
+      friendsButton.setAttribute('aria-expanded', String(isOpen));
+      if (isOpen) void this.refreshGuinomoFriends(appPath);
+    });
+    this.nav.insertBefore(friendsButton, this.soundButton);
+
     const worldControl = document.createElement('label');
     worldControl.className = 'button social-link world-select-control';
     worldControl.title = language === 'en' ? 'Choose a world' : 'Escolher mundo';
@@ -309,6 +340,175 @@ export class UiController {
       skyTheme.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>';
       skyTheme.addEventListener('click', () => events.emit('webgl_sky_theme_cycle'));
       this.nav.insertBefore(skyTheme, this.soundButton);
+  }
+
+  private createFriendsPanel(appPath: string) {
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const panel = document.createElement('aside');
+      panel.id = 'guinomo-friends-panel';
+      panel.setAttribute('aria-label', language === 'en' ? 'Friends on Noop' : 'Amigos na Noop');
+      panel.innerHTML = `
+        <header>
+          <strong>${language === 'en' ? 'Friends on Noop' : 'Amigos na Noop'}</strong>
+          <button type="button" class="guinomo-friends-close" aria-label="${language === 'en' ? 'Close friends' : 'Fechar amigos'}">×</button>
+        </header>
+        <p class="guinomo-friends-summary" aria-live="polite"></p>
+        <div class="guinomo-friends-list" role="list"></div>
+      `;
+      this.friendsPanel = panel;
+      panel.querySelector<HTMLButtonElement>('.guinomo-friends-close')?.addEventListener('click', () => {
+        panel.classList.remove('open');
+        this.friendsButton?.setAttribute('aria-expanded', 'false');
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !panel.classList.contains('open')) return;
+        panel.classList.remove('open');
+        this.friendsButton?.setAttribute('aria-expanded', 'false');
+      });
+      document.body.append(panel);
+      void this.refreshGuinomoFriends(appPath);
+      window.setInterval(() => void this.refreshGuinomoFriends(appPath), 15_000);
+  }
+
+  private async refreshGuinomoFriends(appPath: string) {
+      if (!this.friendsPanel) return;
+
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const summary = this.friendsPanel.querySelector<HTMLElement>('.guinomo-friends-summary')!;
+      const list = this.friendsPanel.querySelector<HTMLElement>('.guinomo-friends-list')!;
+      try {
+        const response = await fetch(`${appPath}/api/guinomo/friends`, {
+          credentials: 'same-origin',
+          cache: 'no-store',
+        });
+        if (!response.ok) throw new Error(`Friends request failed (${response.status})`);
+        const payload: { success?: boolean; friends?: GuinomoFriend[] } = await response.json();
+        if (payload.success !== true || !Array.isArray(payload.friends)) {
+          throw new Error('Friends response has an invalid shape');
+        }
+
+        const friends = payload.friends;
+        const inWorld = friends.filter((friend) => friend.in_guinomo);
+        const onlineCount = friends.filter((friend) => friend.is_online).length;
+        summary.textContent = language === 'en'
+          ? `${inWorld.length} in Guinomo · ${onlineCount} online on Noop`
+          : `${inWorld.length} no Guinomo · ${onlineCount} online na Noop`;
+        list.replaceChildren();
+
+        if (friends.length === 0) {
+          const empty = document.createElement('p');
+          empty.className = 'guinomo-friends-empty';
+          empty.textContent = language === 'en'
+            ? 'No friends to show yet.'
+            : 'Ainda não há amigos para mostrar.';
+          list.append(empty);
+        }
+
+        for (const friend of friends) {
+          const card = document.createElement('article');
+          card.className = 'guinomo-friend-card';
+          card.setAttribute('role', 'listitem');
+
+          const avatar = document.createElement('img');
+          avatar.src = friend.avatar;
+          avatar.alt = '';
+          avatar.loading = 'lazy';
+          avatar.className = 'guinomo-friend-avatar';
+
+          const details = document.createElement('div');
+          details.className = 'guinomo-friend-details';
+          const name = document.createElement('a');
+          name.href = friend.profile_url;
+          name.textContent = friend.name || friend.username;
+          name.title = friend.username ? `@${friend.username}` : name.textContent || '';
+          name.dataset.spa = 'false';
+          const status = document.createElement('span');
+          status.className = `guinomo-friend-status${friend.is_online ? ' online' : ''}`;
+          if (friend.in_guinomo) {
+            const worldName = friend.world === 'alien'
+              ? (language === 'en' ? 'Alien Universe' : 'Universo Alienígena')
+              : (language === 'en' ? 'Noop City' : 'Cidade Noop');
+            status.textContent = language === 'en' ? `In Guinomo · ${worldName}` : `No Guinomo · ${worldName}`;
+          } else {
+            status.textContent = friend.is_online
+              ? (language === 'en' ? 'Online on Noop' : 'Online na Noop')
+              : (language === 'en' ? 'Offline' : 'Offline');
+          }
+          details.append(name, status);
+          card.append(avatar, details);
+
+          if (friend.in_guinomo && friend.room_url) {
+            const join = document.createElement('a');
+            join.className = 'guinomo-friend-join';
+            join.href = friend.room_url;
+            join.textContent = language === 'en' ? 'Join' : 'Encontrar';
+            join.setAttribute('aria-label', language === 'en' ? `Join ${friend.username}` : `Encontrar ${friend.username}`);
+            join.dataset.spa = 'false';
+            card.append(join);
+          }
+          list.append(card);
+        }
+
+        const count = this.friendsButton?.querySelector<HTMLElement>('.guinomo-friends-count');
+        if (count) {
+          count.textContent = inWorld.length > 9 ? '9+' : String(inWorld.length);
+          count.hidden = inWorld.length === 0;
+        }
+      } catch (error) {
+        console.warn('Unable to load Guinomo friends:', error);
+        summary.textContent = language === 'en'
+          ? 'Friends are temporarily unavailable.'
+          : 'Amigos temporariamente indisponíveis.';
+      }
+  }
+
+  private startPresenceHeartbeat(appPath: string) {
+      if (!window.GUINOMO_PROFILE || !window.GUINOMO_UID) return;
+
+      const params = new URLSearchParams(window.location.search);
+      const world = getWorldId(params.get('world'));
+      const rawRoom = params.get('room') || '';
+      const room = /^[a-f\d]{16}$/i.test(rawRoom) ? rawRoom.toLowerCase() : '';
+      const endpoint = `${appPath}/api/guinomo/presence`;
+      const tabId = Array.from(window.crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+        byte.toString(16).padStart(2, '0')).join('');
+      const sendHeartbeat = async (active: boolean) => {
+        const body = new URLSearchParams({
+          csrf_token: window.CSRF_TOKEN || '',
+          world,
+          room,
+          tab_id: tabId,
+          active: active ? '1' : '0',
+        });
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body,
+        });
+        if (!response.ok) throw new Error(`Presence request failed (${response.status})`);
+        const payload: { success?: boolean } = await response.json();
+        if (payload.success !== true) throw new Error('Presence response has an invalid shape');
+      };
+
+      const heartbeat = () => {
+        void sendHeartbeat(true).catch((error) => console.warn('Unable to update Guinomo presence:', error));
+      };
+      heartbeat();
+      window.setInterval(heartbeat, 20_000);
+      window.addEventListener('pagehide', () => {
+        const body = new URLSearchParams({
+          csrf_token: window.CSRF_TOKEN || '',
+          world,
+          room,
+          tab_id: tabId,
+          active: '0',
+        });
+        if (!navigator.sendBeacon(endpoint, body)) {
+          console.warn('Unable to clear Guinomo presence when leaving the page.');
+        }
+      }, { once: true });
   }
 
   private startNotificationToasts(appPath: string) {

@@ -1,6 +1,6 @@
 // The environment: composes every scene module, the sun (CSM), audio, intro.
 
-import { HemisphereLight, Spherical } from 'three';
+import { Color, HemisphereLight, Spherical } from 'three';
 import { gsap } from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { events } from '../core/events';
@@ -110,6 +110,19 @@ export class EnvironmentScene extends BaseScene {
   private setupLights() {
     const hemi = new HemisphereLight('#33434f', '#737575', 0.7);
     this.add(hemi);
+    const daySky = new Color('#33434f');
+    const nightSky = new Color('#111b42');
+    const alienSky = new Color('#631aa1');
+    const dayGround = new Color('#737575');
+    const nightGround = new Color('#20243b');
+    const alienGround = new Color('#193d56');
+    this.beforeRenderCbs.push(() => {
+      const night = this.sky.nightIntensity;
+      const alien = this.sky.alienIntensity;
+      hemi.intensity = 0.7 - night * 0.38 + alien * 0.18;
+      hemi.color.copy(daySky).lerp(nightSky, night).lerp(alienSky, alien);
+      hemi.groundColor.copy(dayGround).lerp(nightGround, night).lerp(alienGround, alien);
+    });
 
     const sun = new FollowSunLight({
       scene: this,

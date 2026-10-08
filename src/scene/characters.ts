@@ -13,7 +13,7 @@ export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
 
-  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, isOwner: boolean }>();
+  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean }>();
   private _nameTags = new Map<string, HTMLDivElement>();
   private _nameTagsContainer: HTMLDivElement | null = null;
   private _localNameTagColor: string | null = null;
@@ -27,9 +27,10 @@ export class CharactersModule extends SceneModule {
       userData.colorShirt = data.shirt;
       userData.colorSkin = data.skin;
       userData.name = data.name;
-      userData.hatVisible = data.hatVisible;
+      userData.hatVisible = data.hatVisible ?? data.h ?? 1;
+      userData.h = data.h ?? data.hatVisible ?? 1;
       userData.isOwner = data.isOwner;
-      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor);
+      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid);
       return;
     }
 
@@ -49,13 +50,18 @@ export class CharactersModule extends SceneModule {
         ? this._localNameTagColor
         : this.isValidNameTagColor(dna['name-tag-color']) ? dna['name-tag-color'] : skinHex;
 
+      const hatVisible = dna['hat-visible'] !== undefined ? (dna['hat-visible'] ? 1 : 0) : 1;
+      const physique = dna['physique'] || 'default';
+
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
         skin: [skin.r, skin.g, skin.b],
         name: name,
         nameTagColor,
-        hatVisible: dna['hat-visible'] !== undefined ? (dna['hat-visible'] ? 1 : 0) : 1,
-        isOwner: dna['is_owner'] || false
+        hatVisible,
+        h: hatVisible,
+        isOwner: dna['is_owner'] || false,
+        physique: physique
       };
 
       this._avatarCache.set(uid, data);
@@ -63,8 +69,14 @@ export class CharactersModule extends SceneModule {
       userData.colorSkin = data.skin;
       userData.name = data.name;
       userData.hatVisible = data.hatVisible;
+      userData.h = data.h;
       userData.isOwner = data.isOwner;
-      this.ensureNameTag(clientId, name, nameTagColor);
+      userData.physique = data.physique;
+
+      // Aplicar escala física baseada no biótipo
+      this.applyPhysiqueScale(userData);
+
+      this.ensureNameTag(clientId, name, nameTagColor, uid);
 
       // Se for o usuário local, avisa a UI para mostrar o botão de chapéu
       if (clientId === 'local' && data.isOwner) {
@@ -78,12 +90,30 @@ export class CharactersModule extends SceneModule {
       userData.colorSkin = [0.9, 0.7, 0.6];
       userData.name = `User ${uid}`;
       userData.hatVisible = 1;
+      userData.h = 1;
       userData.isOwner = false;
-      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299');
+      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299', uid);
     }
   }
 
-  private ensureNameTag(clientId: string, name: string, backgroundColor: string) {
+  private applyPhysiqueScale(userData: any) {
+    const p = userData.physique || 'default';
+    let s = [1, 1, 1]; // [x, y, z]
+
+    switch (p) {
+      case 'heroic':    s = [1.1, 1.15, 1.05]; break;
+      case 'stylized':  s = [0.9, 0.9, 0.9]; break;
+      case 'curvy':     s = [1.05, 0.95, 1.1]; break;
+      case 'slim_long': s = [0.85, 1.1, 0.85]; break;
+      case 'dynamic':   s = [1.0, 1.05, 1.0]; break;
+      case 'athletic':  s = [1.05, 1.05, 1.0]; break;
+      default:          s = [1, 1, 1]; break;
+    }
+
+    userData.baseScale = s;
+  }
+
+  private ensureNameTag(clientId: string, name: string, backgroundColor: string, uid: number) {
     if (!this._nameTagsContainer) {
       this._nameTagsContainer = document.createElement('div');
       this._nameTagsContainer.id = 'name-tags-container';
@@ -101,25 +131,55 @@ export class CharactersModule extends SceneModule {
     let tag = this._nameTags.get(clientId);
     if (!tag) {
       tag = document.createElement('div');
-      tag.style.position = 'absolute';
-      tag.style.padding = '2px 10px';
-      tag.style.borderRadius = '12px';
-      tag.style.fontSize = '12px';
-      tag.style.fontWeight = 'bold';
-      tag.style.fontFamily = 'Arial, sans-serif';
-      tag.style.whiteSpace = 'nowrap';
-      tag.style.transform = 'translate(-50%, -100%)';
-      tag.style.border = '1px solid rgba(255,255,255,0.65)';
-      tag.style.boxShadow = '0 2px 8px rgba(0,0,0,0.35)';
+      tag.className = 'character-name-tag';
+      tag.tabIndex = 0;
+      tag.setAttribute('role', 'group');
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const avatar = document.createElement('img');
+      avatar.className = 'character-tooltip-avatar';
+      avatar.alt = '';
+      avatar.loading = 'lazy';
+      if (clientId === 'local' && window.GUINOMO_PROFILE) {
+        avatar.src = window.GUINOMO_PROFILE.avatarUrl;
+      } else if (uid > 0) {
+        avatar.src = appEndpointUrl(`php/avatar.php?uid=${encodeURIComponent(uid)}`);
+      } else {
+        avatar.classList.add('unavailable');
+      }
+      avatar.addEventListener('error', () => avatar.classList.add('unavailable'), { once: true });
+
+      const details = document.createElement('span');
+      details.className = 'character-tooltip-details';
+      const username = document.createElement('strong');
+      username.className = 'character-tooltip-name';
+      const status = document.createElement('span');
+      status.className = 'character-tooltip-status';
+      status.textContent = language === 'en' ? 'Online' : 'Online';
+      const category = document.createElement('span');
+      category.className = 'character-tooltip-category';
+      category.textContent = language === 'en' ? 'Noop community' : 'Comunidade Noop';
+      details.append(username, status, category);
+
+      const pill = document.createElement('span');
+      pill.className = 'character-name-pill';
+      const label = document.createElement('span');
+      label.className = 'character-name-label';
+      pill.append(label);
+      const tooltip = document.createElement('span');
+      tooltip.className = 'character-tooltip-card';
+      tooltip.append(avatar, details);
+      tag.append(pill, tooltip);
       this._nameTagsContainer.appendChild(tag);
       this._nameTags.set(clientId, tag);
     }
     const safeColor = this.isValidNameTagColor(backgroundColor) ? backgroundColor : '#e5b299';
-    tag.style.backgroundColor = safeColor;
-    tag.style.color = this.getReadableTextColor(safeColor);
-    tag.textContent = name;
+    const pill = tag.querySelector<HTMLElement>('.character-name-pill')!;
+    const label = tag.querySelector<HTMLElement>('.character-name-label')!;
+    pill.style.backgroundColor = safeColor;
+    pill.style.color = this.getReadableTextColor(safeColor);
+    label.textContent = name;
     tag.title = name;
-    tag.setAttribute('aria-label', name);
+    tag.setAttribute('aria-label', `${name} · ${document.documentElement.lang.startsWith('en') ? 'Online, Noop community member' : 'Online, membro da comunidade Noop'}`);
   }
 
   private isValidNameTagColor(color: unknown): color is string {
@@ -148,8 +208,11 @@ export class CharactersModule extends SceneModule {
 
     const localTag = this._nameTags.get('local');
     if (localTag) {
-      localTag.style.backgroundColor = this._localNameTagColor;
-      localTag.style.color = this.getReadableTextColor(this._localNameTagColor);
+      const pill = localTag.querySelector<HTMLElement>('.character-name-pill');
+      if (pill) {
+        pill.style.backgroundColor = this._localNameTagColor;
+        pill.style.color = this.getReadableTextColor(this._localNameTagColor);
+      }
     }
 
     const saved = uid > 0 && await this._saveAvatarConfig(uid, 'name_tag_color', this._localNameTagColor);
@@ -192,6 +255,13 @@ export class CharactersModule extends SceneModule {
 
     const colliderMesh = new Mesh(colliderGeometry);
 
+    // Gerar Room Seed baseado no contexto (Ex: mundo ou perfil) para isolar salas P2P
+    const roomName = urlParams.get('room') || 'default_lobby';
+    const encoder = new TextEncoder();
+    const roomSeed = new Uint8Array(32);
+    const hash = encoder.encode(roomName);
+    roomSeed.set(hash.slice(0, 32));
+
     this.mesh = new Characters(skinned, clips, {
       animationsOptions: [{ speed: 1 }, { speed: 1.1 }, { speed: 1 }, { speed: 1 }],
       colliderMesh,
@@ -204,7 +274,8 @@ export class CharactersModule extends SceneModule {
       camera: this.scene.camera,
       relativeCameraPosition: new Vector3(0, 1, -5.75),
       lookatMeshOffset: new Vector3(0, 1.1, 0.5),
-      initialData: { seed: this.seed, uid },
+      initialData: { seed: this.seed, uid, ...(uid > 0 ? { h: 1 } : {}) },
+      roomSeed, // Passa a semente da sala para o motor P2P
       customAttribUpdate: (local, clientId, instanceId) => {
         const charUid = local.userData.uid || 0;
 
@@ -215,7 +286,7 @@ export class CharactersModule extends SceneModule {
         this.mesh.geometry.attributes.instanceSeed.setX(instanceId, local.userData.seed);
         const shirt = local.userData.colorShirt || [0.3, 0.5, 0.9];
         const skin = local.userData.colorSkin || [0.9, 0.7, 0.6];
-        const hat = local.userData.hatVisible !== undefined ? local.userData.hatVisible : 1;
+        const hat = local.userData.h ?? local.userData.hatVisible ?? 1;
 
         this.mesh.geometry.attributes.instanceColorShirt.setXYZ(instanceId, shirt[0], shirt[1], shirt[2]);
         this.mesh.geometry.attributes.instanceColorSkin.setXYZ(instanceId, skin[0], skin[1], skin[2]);
@@ -265,10 +336,12 @@ export class CharactersModule extends SceneModule {
 
     const nextState = local.userData.hatVisible === 0 ? 1 : 0;
     local.userData.hatVisible = nextState;
+    local.userData.h = nextState;
 
     // Atualiza cache local
     if (this._avatarCache.has(uid)) {
       this._avatarCache.get(uid)!.hatVisible = nextState;
+      this._avatarCache.get(uid)!.h = nextState;
     }
 
     // Salva no banco de dados via endpoint seguro
@@ -322,8 +395,12 @@ export class CharactersModule extends SceneModule {
         tag.style.display = 'block';
         tag.style.left = `${x}px`;
         tag.style.top = `${y}px`;
+        if (id === 'local') {
+          document.documentElement.classList.toggle('guinomo-avatar-right', x > window.innerWidth * 0.5);
+        }
       } else {
         tag.style.display = 'none';
+        if (id === 'local') document.documentElement.classList.remove('guinomo-avatar-right');
       }
     });
   }

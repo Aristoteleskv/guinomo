@@ -4,6 +4,7 @@ import { events } from './core/events';
 import { MainController } from './scene/mainController';
 import { engine } from './engine/globals';
 import { clock } from './engine/clock';
+import { playCinematicPortal } from './components/cinematic-portal';
 import { UiController } from './components/ui';
 import './styles.css';
 
@@ -53,6 +54,8 @@ function start() {
 
   controller.ready.then(() => {
     ui.showExperience();
+    void playCinematicPortal(document.getElementById('app') ?? document.body)
+      .catch((error: unknown) => console.error('Unable to play the Guinomo portal intro:', error));
     engine.initialSceneLoaded.resolve();
   });
 

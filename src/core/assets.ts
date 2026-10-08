@@ -9,6 +9,7 @@ declare global {
       avatarUrl: string;
       profileUrl: string;
       nameTagColor?: string;
+      language?: 'pt' | 'en';
     };
     NoopPageTransition?: {
       cover: (duration?: number) => Promise<void>;

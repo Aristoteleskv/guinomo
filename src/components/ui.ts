@@ -47,6 +47,9 @@ export class UiController {
   private secretTimer = 0;
 
   constructor(root: HTMLElement) {
+    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    if (language === 'pt' || language === 'en') document.documentElement.lang = language;
+
     this.webglContainer = document.createElement('div');
     this.webglContainer.id = 'webgl';
     root.append(this.webglContainer);
@@ -57,16 +60,16 @@ export class UiController {
     root.append(this.loader);
 
     this.nav = document.createElement('nav');
-    this.nav.setAttribute('aria-label', 'Guinomo controls');
+    this.nav.setAttribute('aria-label', language === 'en' ? 'Guinomo controls' : 'Controlos do Guinomo');
     this.nav.innerHTML = `
-      <a class="button back-button" href="/" aria-label="Voltar para Noop" title="Voltar para Noop" data-spa="false">${backIcon}</a>
-      <a class="button profile-avatar" href="/" aria-label="Abrir meu perfil" title="Meu perfil" data-spa="false"><img alt=""></a>
-      <button class="button sound-button" type="button" aria-label="Alternar som" title="Alternar som"></button>
+      <a class="button back-button" href="/" aria-label="${language === 'en' ? 'Back to Noop' : 'Voltar para Noop'}" title="${language === 'en' ? 'Back to Noop' : 'Voltar para Noop'}" data-spa="false">${backIcon}</a>
+      <a class="button profile-avatar" href="/" aria-label="${language === 'en' ? 'Open my profile' : 'Abrir meu perfil'}" title="${language === 'en' ? 'My profile' : 'Meu perfil'}" data-spa="false"><img alt=""></a>
+      <button class="button sound-button" type="button" aria-label="${language === 'en' ? 'Toggle sound' : 'Alternar som'}" title="${language === 'en' ? 'Toggle sound' : 'Alternar som'}"></button>
       <button class="button hat-button" type="button" aria-label="toggle hat" style="display:none;">${hatIcon}</button>
-      <button class="button color-button" type="button" aria-label="Randomizar cor do avatar" title="Randomizar cor do avatar"><div class="color-square"></div></button>
-      <button class="button name-tag-color-button" type="button" aria-label="Escolher cor do nome" title="Escolher cor do nome">Aa</button>
-      <input class="name-tag-color-input" type="color" aria-label="Cor da etiqueta do nome" tabindex="-1">
-      <button class="button about-button" type="button" aria-label="Sobre o Guinomo" title="Sobre o Guinomo">${infoIcon}</button>
+      <button class="button color-button" type="button" aria-label="${language === 'en' ? 'Randomize avatar color' : 'Randomizar cor do avatar'}" title="${language === 'en' ? 'Randomize avatar color' : 'Randomizar cor do avatar'}"><div class="color-square"></div></button>
+      <button class="button name-tag-color-button" type="button" aria-label="${language === 'en' ? 'Choose name color' : 'Escolher cor do nome'}" title="${language === 'en' ? 'Choose name color' : 'Escolher cor do nome'}">Aa</button>
+      <input class="name-tag-color-input" type="color" aria-label="${language === 'en' ? 'Name tag color' : 'Cor da etiqueta do nome'}" tabindex="-1">
+      <button class="button about-button" type="button" aria-label="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}" title="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}">${infoIcon}</button>
       <div class="cnt">0/0</div>
     `;
     root.append(this.nav);
@@ -125,8 +128,8 @@ export class UiController {
     });
     events.on('ui_name_tag_color_saved', (saved: boolean) => {
       this.nameTagColorButton.title = saved
-        ? 'Cor do nome salva no perfil'
-        : 'Não foi possível salvar a cor do nome';
+        ? (language === 'en' ? 'Name color saved to profile' : 'Cor do nome salva no perfil')
+        : (language === 'en' ? 'Unable to save name color' : 'Não foi possível salvar a cor do nome');
       this.nameTagColorButton.setAttribute('aria-invalid', saved ? 'false' : 'true');
     });
 
@@ -195,15 +198,16 @@ export class UiController {
   }
 
   private createSocialSidebar(root: HTMLElement, appPath: string) {
+    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
     const links = [
-      { label: 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
-      { label: 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
-      { label: 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
-      { label: 'Notificações', href: `${appPath}/notificacoes`, icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>' },
+      { label: language === 'en' ? 'Map' : 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
+      { label: language === 'en' ? 'Friends' : 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
+      { label: language === 'en' ? 'Messages' : 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
+      { label: language === 'en' ? 'Notifications' : 'Notificações', href: `${appPath}/notificacoes`, icon: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/>' },
     ];
     const sidebar = document.createElement('aside');
     sidebar.id = 'noop-social-sidebar';
-    sidebar.setAttribute('aria-label', 'Atalhos sociais da Noop');
+    sidebar.setAttribute('aria-label', language === 'en' ? 'Noop social shortcuts' : 'Atalhos sociais da Noop');
 
     links.forEach(({ label, href, icon }) => {
       const link = document.createElement('a');
@@ -219,7 +223,7 @@ export class UiController {
       svg.innerHTML = icon;
       link.append(svg);
 
-      if (label === 'Mensagens' && appPath) {
+      if ((label === 'Mensagens' || label === 'Messages') && appPath) {
         link.dataset.transition = 'manual';
         link.addEventListener('click', (event) => {
           event.preventDefault();
@@ -228,6 +232,15 @@ export class UiController {
       }
       sidebar.append(link);
     });
+
+    const skyTheme = document.createElement('button');
+    skyTheme.className = 'social-link sky-theme-toggle';
+    skyTheme.type = 'button';
+    skyTheme.title = language === 'en' ? 'Cycle day, night, and alien skies' : 'Alternar céu de dia, noite ou alienígena';
+    skyTheme.setAttribute('aria-label', skyTheme.title);
+    skyTheme.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>';
+    skyTheme.addEventListener('click', () => events.emit('webgl_sky_theme_cycle'));
+    sidebar.append(skyTheme);
 
     root.append(sidebar);
   }
@@ -241,14 +254,16 @@ export class UiController {
     const overlay = document.createElement('section');
     overlay.id = 'noop-chat-overlay';
     overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-label', 'Mensagens da Noop');
+    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const title = language === 'en' ? 'Messages' : 'Mensagens';
+    overlay.setAttribute('aria-label', language === 'en' ? 'Noop messages' : 'Mensagens da Noop');
     overlay.innerHTML = `
       <header class="chat-overlay-header">
-        <span>Mensagens</span>
-        <button type="button" class="chat-overlay-close" aria-label="Fechar mensagens" title="Fechar">${closeIcon}</button>
+        <span>${title}</span>
+        <button type="button" class="chat-overlay-close" aria-label="${language === 'en' ? 'Close messages' : 'Fechar mensagens'}" title="${language === 'en' ? 'Close' : 'Fechar'}">${closeIcon}</button>
       </header>
-      <iframe title="Conversas da Noop" referrerpolicy="same-origin"></iframe>
-      <p class="chat-overlay-error" hidden>Não foi possível carregar o chat.</p>
+      <iframe title="${language === 'en' ? 'Noop conversations' : 'Conversas da Noop'}" referrerpolicy="same-origin"></iframe>
+      <p class="chat-overlay-error" hidden>${language === 'en' ? 'Unable to load messages.' : 'Não foi possível carregar o chat.'}</p>
     `;
 
     const frame = overlay.querySelector<HTMLIFrameElement>('iframe')!;

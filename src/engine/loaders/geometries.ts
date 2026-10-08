@@ -2,6 +2,7 @@
 // loading with all scene entry points (plain/instanced/patched/skinned/curves).
 
 import { BufferGeometry, BoxGeometry } from 'three';
+import { assetUrl } from '../../core/assets';
 import { parseBin, decodeGeometry, TYPED_ARRAYS, type TypedArrayName } from './bin';
 import {
   createCurves,
@@ -33,7 +34,7 @@ function initLoad<T>(key: string, load: () => Promise<T>): Promise<T> {
 const createFallbackGeometry = () => { const g = new BoxGeometry(1, 1, 1); (g as any)._fallback = true; return g; };
 
 async function loadBin(url: string): Promise<GeometryWithData> {
-  const response = await fetch(new URL('assets/geometries/' + url, window.location.href));
+  const response = await fetch(assetUrl(`assets/geometries/${url}`));
   if (!response.ok) throw new Error(`${url} could not be loaded (${response.status})`);
   const buffer = await response.arrayBuffer();
   const { header, payload } = parseBin(buffer);

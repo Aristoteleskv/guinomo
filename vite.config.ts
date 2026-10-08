@@ -3,10 +3,30 @@ import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
 
 export default defineConfig({
-  plugins: [wasm(), topLevelAwait()],
-  // The P2P wasm package must not be pre-bundled by Vite's dep optimizer.
+  base: './',
+  plugins: [
+    wasm(),
+    topLevelAwait(),
+    {
+      name: 'allow-iframe-plugin',
+      configureServer(server) {
+        server.middlewares.use((_req, res, next) => {
+          res.removeHeader('X-Frame-Options');
+          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://localhost:* http://127.0.0.1:*");
+          next();
+        });
+      },
+      configurePreviewServer(server) {
+        server.middlewares.use((_req, res, next) => {
+          res.removeHeader('X-Frame-Options');
+          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://localhost:* http://127.0.0.1:*");
+          next();
+        });
+      }
+    }
+  ],
   optimizeDeps: {
-    exclude: ['guinomo-iroh'],
+    exclude: ['guinomo-browser'],
   },
   publicDir: 'public',
   build: {
@@ -15,10 +35,11 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5173,
-  },
-  preview: {
-    host: true,
-    port: 4173,
-  },
+    port: 8081,
+    strictPort: true,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      // Não use DENY ou SAMEORIGIN aqui
+    }
+  }
 });

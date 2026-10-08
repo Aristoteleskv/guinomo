@@ -65,7 +65,7 @@ export class RoomSender {
 }
 
 /**
- * P2P node for the Guinomo room.
+ * P2P node for the SummerTime room.
  */
 export class SummerNode {
     private constructor();
@@ -76,10 +76,10 @@ export class SummerNode {
      */
     endpoint_id(): string;
     /**
-     * Joins a specific room based on a 32-byte seed. The returned channel
-     * carries a sender for broadcasting and a ReadableStream of events.
+     * Joins the single hardcoded room. The returned channel carries a
+     * sender for broadcasting and a ReadableStream of events.
      */
-    join_room(seed: Uint8Array): Promise<RoomChannel>;
+    join_room(): Promise<RoomChannel>;
     /**
      * Spawns the iroh endpoint + gossip protocol.
      */

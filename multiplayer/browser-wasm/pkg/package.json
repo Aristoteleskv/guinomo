@@ -11,7 +11,7 @@
   "main": "guinomo_browser.js",
   "types": "guinomo_browser.d.ts",
   "sideEffects": [
-    "./summer_browser.js",
+    "./guinomo_browser.js",
     "./snippets/*"
   ]
 }

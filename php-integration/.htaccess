@@ -1,0 +1,5 @@
+<IfModule mod_headers.c>
+    Header always unset X-Frame-Options
+    Header set X-Frame-Options "ALLOWALL"
+    Header set Content-Security-Policy "frame-ancestors 'self' *"
+</IfModule>

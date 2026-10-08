@@ -7,6 +7,7 @@
 
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import type { BufferGeometry } from 'three';
+import { assetUrl } from '../../core/assets';
 
 /** TypedArray constructor names, the DRACOLoader worker resolves them via
  *  `self[name]`, and only strings survive postMessage. */
@@ -52,7 +53,7 @@ export interface DecodeOptions {
 
 export type TypedArrayName = (typeof TYPED_ARRAYS)[number];
 
-export const decoder = new DRACOLoader().setDecoderPath('/assets/libs/draco/').preload();
+export const decoder = new DRACOLoader().setDecoderPath(assetUrl('assets/libs/draco/')).preload();
 
 export function decodeGeometry(buffer: ArrayBuffer, options: DecodeOptions): Promise<BufferGeometry> {
   const { attributeIDs, attributeTypes } = options;

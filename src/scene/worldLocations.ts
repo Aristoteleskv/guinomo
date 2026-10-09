@@ -29,6 +29,9 @@ export class WorldLocations extends SceneModule {
   declare private down: Vector3;
   declare private restButton: HTMLButtonElement | null;
 
+  /** Current secret to point the HUD compass at (empty when the world has none). */
+  secretTargets: Array<{ id: string; position: Vector3 }> = [];
+
   protected async init() {
     this.worldId = getWorldId(new URLSearchParams(window.location.search).get('world'));
     this.raycaster = new Raycaster();
@@ -81,7 +84,9 @@ export class WorldLocations extends SceneModule {
     const { ufo, alien, cats, sloth, gossip } = this.scene;
 
     // Default: hide all, then enable based on world context
-    [ufo, alien, cats, sloth, gossip].forEach(s => { if (s?.mesh) s.mesh.visible = false; });
+    [ufo, alien, cats, sloth, gossip].forEach((s) => {
+      if (s?.mesh) s.mesh.visible = false;
+    });
 
     if (world === 'lobby') {
       // UFO appearing in the distance in the main lobby
@@ -103,6 +108,10 @@ export class WorldLocations extends SceneModule {
       alien.mesh.visible = true;
       alien.mesh.position.set(60.14, 0.1, 40.6); // Original alien spot
     }
+
+    // Point the compass HUD at whichever set piece is active in this world.
+    const secret = [ufo, alien, cats, sloth, gossip].find((piece) => piece?.mesh?.visible);
+    this.secretTargets = secret?.mesh ? [{ id: world, position: secret.mesh.position.clone() }] : [];
   }
 
   private groundAt(x: number, z: number): number {
@@ -218,8 +227,12 @@ export class WorldLocations extends SceneModule {
 
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
     const label = sleeping
-      ? (language === 'en' ? 'Wake up' : 'Acordar')
-      : (language === 'en' ? 'Rest · press E' : 'Descansar · tecla E');
+      ? language === 'en'
+        ? 'Wake up'
+        : 'Acordar'
+      : language === 'en'
+        ? 'Rest · press E'
+        : 'Descansar · tecla E';
     if (button.textContent !== label) button.textContent = label;
     button.setAttribute('aria-label', label);
     button.setAttribute('aria-pressed', String(sleeping));
@@ -269,7 +282,14 @@ export class WorldLocations extends SceneModule {
     ];
     towers.forEach(({ x, z, width, height }) => {
       const tower = this.groundGroup(x, z);
-      this.add(tower, new BoxGeometry(width, height, width), this.standard('#425d70', 0.32), 0, height / 2, 0);
+      this.add(
+        tower,
+        new BoxGeometry(width, height, width),
+        this.standard('#425d70', 0.32),
+        0,
+        height / 2,
+        0,
+      );
       this.add(tower, new CylinderGeometry(width * 0.6, width * 0.8, 0.4, 8), cap, 0, height + 0.2, 0);
       this.add(tower, new CylinderGeometry(width * 0.3, width * 0.3, 0.1, 8), glow, 0, height + 0.4, 0);
     });
@@ -305,8 +325,22 @@ export class WorldLocations extends SceneModule {
     ];
     domes.forEach(({ x, z, radius, height }) => {
       const dome = this.groundGroup(x, z);
-      this.add(dome, new CylinderGeometry(radius, radius * 1.1, height, 10), this.standard('#d8c8a0'), 0, height / 2, 0);
-      this.add(dome, new SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), this.standard('#2e8f85', 0.22), 0, height, 0);
+      this.add(
+        dome,
+        new CylinderGeometry(radius, radius * 1.1, height, 10),
+        this.standard('#d8c8a0'),
+        0,
+        height / 2,
+        0,
+      );
+      this.add(
+        dome,
+        new SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        this.standard('#2e8f85', 0.22),
+        0,
+        height,
+        0,
+      );
     });
   }
 

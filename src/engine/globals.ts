@@ -139,6 +139,7 @@ class Engine {
   clearColor = new Color('#000000');
   clearAlpha = 1;
   initialSceneLoaded: Deferred<void> = deferred();
+  private _pendingCapture: Deferred<HTMLCanvasElement> | null = null;
 
   get DPR(): number {
     return this.baseDPR * this.adaptiveMultiplier;
@@ -162,7 +163,7 @@ class Engine {
     (this as any).touchController = initTouches({ element: webglContainer, fingers, contextMenu });
     initKeys();
     initTextureLoader(this.renderer);
-    events.on('resize', this.resize); 
+    events.on('resize', this.resize);
     if (useAdaptive) {
       this.initialSceneLoaded.then(() => adaptiveDPR.start());
     }
@@ -182,8 +183,10 @@ class Engine {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
     this.renderer.info.autoReset = false;
-    (this.renderer.capabilities as any).floatRenderTarget = !!this.renderer.extensions.has('EXT_color_buffer_float');
-    (this.renderer.capabilities as any).floatLinearFiltering = !!this.renderer.extensions.has('OES_texture_float_linear');
+    (this.renderer.capabilities as any).floatRenderTarget =
+      !!this.renderer.extensions.has('EXT_color_buffer_float');
+    (this.renderer.capabilities as any).floatLinearFiltering =
+      !!this.renderer.extensions.has('OES_texture_float_linear');
 
     const el = this.renderer.domElement;
     el.style.display = 'block';
@@ -249,6 +252,29 @@ class Engine {
     this.renderer.info.reset();
     for (const cb of this.mainScene.beforeRenderCbs) cb();
     this.composer.render(delta);
+    // A pending frame capture resolves right here, while the freshly drawn
+    // frame is still in the drawing buffer (works without preserveDrawingBuffer).
+    if (this._pendingCapture) {
+      const pending = this._pendingCapture;
+      this._pendingCapture = null;
+      pending.resolve(this._snapshotCanvas());
+    }
+  }
+
+  /** Resolves with a 2D copy of the next rendered frame (poster/photo mode). */
+  requestFrameCapture(): Promise<HTMLCanvasElement> {
+    const pending = deferred<HTMLCanvasElement>();
+    this._pendingCapture = pending;
+    return pending;
+  }
+
+  private _snapshotCanvas(): HTMLCanvasElement {
+    const source = this.renderer.domElement;
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    canvas.getContext('2d')?.drawImage(source, 0, 0);
+    return canvas;
   }
 }
 

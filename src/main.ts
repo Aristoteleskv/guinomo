@@ -5,9 +5,11 @@ import { MainController } from './scene/mainController';
 import { engine } from './engine/globals';
 import { clock } from './engine/clock';
 import { UiController } from './components/ui';
+import { mountPosterButton } from './engine/photo';
 import './styles.css';
 
 const ui = new UiController(document.getElementById('app') ?? document.body);
+mountPosterButton();
 
 CustomEase.create('inOut1', 'M0,0 C0.5,0 0.1,1 1,1');
 CustomEase.create('inOut2', 'M0,0 C0.56,0 0,1 1,1');
@@ -82,14 +84,18 @@ function start() {
     engine.initialSceneLoaded.resolve();
   });
 
-  window.addEventListener('beforeunload', () => {
-    stopClock();
-    events.off('webgl_increase_easter_count', onEasterEgg);
-    events.off('webgl_show_modal', onSecret);
-    events.off('webgl_audio_update_mute', onMute);
-    events.off('webgl_character_update_color', onColor);
-    events.off('keyup', onKeyUp);
-  }, { once: true });
+  window.addEventListener(
+    'beforeunload',
+    () => {
+      stopClock();
+      events.off('webgl_increase_easter_count', onEasterEgg);
+      events.off('webgl_show_modal', onSecret);
+      events.off('webgl_audio_update_mute', onMute);
+      events.off('webgl_character_update_color', onColor);
+      events.off('keyup', onKeyUp);
+    },
+    { once: true },
+  );
 }
 
 start();

@@ -1,0 +1,81 @@
+/* Secret compass HUD. Fixed overlay: it never participates in layout. */
+
+#compass {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transform: translateX(-50%);
+  font-family: var(--default-font);
+}
+
+#compass[hidden] {
+  display: none;
+}
+
+#compass .compass-needle {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, #fffaf0 0%, #f3e7cf 100%);
+  border: 1px solid rgba(113, 108, 102, 0.42);
+  box-shadow: 2px 2px rgba(113, 108, 102, 0.55);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* Two-tone diamond needle, pointing up at 0deg. */
+#compass .compass-needle::before {
+  content: '';
+  position: absolute;
+  inset: 7px;
+  background: linear-gradient(to bottom, #e2574c 0 50%, #7c766e 50% 100%);
+  clip-path: polygon(50% 0%, 67% 50%, 50% 100%, 33% 50%);
+}
+
+/* Centre pin. */
+#compass .compass-needle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #fffaf0;
+  border: 1px solid rgba(113, 108, 102, 0.55);
+}
+
+#compass .compass-label {
+  padding: 2px 11px;
+  border-radius: 999px;
+  background: rgba(249, 239, 220, 0.94);
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  box-shadow: 1px 1px rgba(113, 108, 102, 0.5);
+  color: #514d48;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  #compass {
+    top: 18px;
+  }
+
+  #compass .compass-needle {
+    width: 40px;
+    height: 40px;
+  }
+}

@@ -20,6 +20,8 @@ import { UFO, Alien, Cats, Sloth, Sign, Gossip } from './setpieces';
 import { CharactersModule } from './characters';
 import { ForestLife } from './forestLife';
 import { WorldLocations } from './worldLocations';
+import { Notes } from './notes';
+import { mountCompass } from '../components/compass';
 import type { MainController } from './mainController';
 
 gsap.registerPlugin(CustomEase);
@@ -52,6 +54,7 @@ export class EnvironmentScene extends BaseScene {
   declare characters: CharactersModule;
   declare forestLife: ForestLife;
   declare worldLocations: WorldLocations;
+  declare notes: Notes;
 
   constructor(_mainController: MainController) {
     super();
@@ -64,33 +67,34 @@ export class EnvironmentScene extends BaseScene {
 
     type ModuleCtor = new (scene: EnvironmentScene) => SceneModule;
     const modules: Array<[string, ModuleCtor]> = [
-        ['characters', CharactersModule],
-        ['sky', Sky],
-        ['terrain', Terrain],
-        ['sea', Sea],
-        ['birds', Birds],
-        ['trees', Trees],
-        ['bushes', Bushes],
-        ['lightposts', Lightposts],
-        ['palmtrees', Palmtrees],
-        ['houses', Houses],
-        ['warehouses', Warehouses],
-        ['machines', Machines],
-        ['rocks1', Rocks1],
-        ['rocks2', Rocks2],
-        ['parasols', Parasols],
-        ['castles', Castles],
-        ['grass', Grass],
-        ['blockers', Blockers],
-        ['ufo', UFO],
-        ['alien', Alien],
-        ['sign', Sign],
-        ['cats', Cats],
-        ['sloth', Sloth],
-        ['gossip', Gossip],
-        ['forestLife', ForestLife],
-        ['worldLocations', WorldLocations],
-      ];
+      ['characters', CharactersModule],
+      ['sky', Sky],
+      ['terrain', Terrain],
+      ['sea', Sea],
+      ['birds', Birds],
+      ['trees', Trees],
+      ['bushes', Bushes],
+      ['lightposts', Lightposts],
+      ['palmtrees', Palmtrees],
+      ['houses', Houses],
+      ['warehouses', Warehouses],
+      ['machines', Machines],
+      ['rocks1', Rocks1],
+      ['rocks2', Rocks2],
+      ['parasols', Parasols],
+      ['castles', Castles],
+      ['grass', Grass],
+      ['blockers', Blockers],
+      ['ufo', UFO],
+      ['alien', Alien],
+      ['sign', Sign],
+      ['cats', Cats],
+      ['sloth', Sloth],
+      ['gossip', Gossip],
+      ['forestLife', ForestLife],
+      ['worldLocations', WorldLocations],
+      ['notes', Notes],
+    ];
     await Promise.all(
       modules.map(([name, Module]) => {
         (this as any)[name] = new Module(this);
@@ -98,6 +102,7 @@ export class EnvironmentScene extends BaseScene {
       }),
     );
 
+    mountCompass(this);
     this.configureWorld();
     this.setupLights();
     (this.sea.mesh as any).addReflectedObject(this.sky.mesh);
@@ -122,24 +127,36 @@ export class EnvironmentScene extends BaseScene {
     const isSpecial = isCity || world === 'lobby' || world === 'alien';
 
     if (world !== 'tropical-city') {
-      this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.palmtrees.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
     }
 
     // Cities and special areas use houses and infrastructure
     if (!isSpecial) {
-      this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
-      this.lightposts.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.houses.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
+      this.lightposts.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
       this.lightposts.meshWire.visible = false;
     }
 
     // Specific asset rules
     if (world !== 'floating-city' && world !== 'alien') {
-      this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.machines.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
     }
 
     if (world !== 'old-town') {
-      this.castles.meshes.forEach((mesh) => { mesh.visible = false; });
-      this.warehouses.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.castles.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
+      this.warehouses.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
     }
 
     if (world !== 'tropical-city') {
@@ -147,7 +164,9 @@ export class EnvironmentScene extends BaseScene {
     }
 
     // Always keep gameplay/secret assets active to allow WorldLocations/setupSecrets to manage them
-    this.blockers.meshes.forEach((mesh) => { mesh.visible = isCity || world === 'lobby'; });
+    this.blockers.meshes.forEach((mesh) => {
+      mesh.visible = isCity || world === 'lobby';
+    });
     this.ufo.mesh.visible = true;
     this.alien.mesh.visible = true;
     this.sign.mesh.visible = true;
@@ -175,16 +194,26 @@ export class EnvironmentScene extends BaseScene {
     const nightGround = new Color('#20243b');
     const alienGround = new Color('#193d56');
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
-    const daySky = world === 'forest' ? new Color('#527d69')
-      : world === 'floating-city' ? new Color('#536b7b')
-        : world === 'tropical-city' ? new Color('#558a83')
-          : world === 'old-town' ? new Color('#806957')
-            : new Color('#33434f');
-    const dayGround = world === 'forest' ? new Color('#526b4a')
-      : world === 'floating-city' ? new Color('#62706d')
-        : world === 'tropical-city' ? new Color('#65845e')
-          : world === 'old-town' ? new Color('#796b57')
-            : new Color('#737575');
+    const daySky =
+      world === 'forest'
+        ? new Color('#527d69')
+        : world === 'floating-city'
+          ? new Color('#536b7b')
+          : world === 'tropical-city'
+            ? new Color('#558a83')
+            : world === 'old-town'
+              ? new Color('#806957')
+              : new Color('#33434f');
+    const dayGround =
+      world === 'forest'
+        ? new Color('#526b4a')
+        : world === 'floating-city'
+          ? new Color('#62706d')
+          : world === 'tropical-city'
+            ? new Color('#65845e')
+            : world === 'old-town'
+              ? new Color('#796b57')
+              : new Color('#737575');
     this.beforeRenderCbs.push(() => {
       const night = this.sky.nightIntensity;
       const alien = this.sky.alienIntensity;
@@ -201,7 +230,8 @@ export class EnvironmentScene extends BaseScene {
       shadowMapSize: 2048,
       shadowSize: 12,
       csm: true,
-      csmBoundingSphere: (this.characters.mesh._collisionPhysics as any)._colliderMesh?.geometry?.boundingSphere,
+      csmBoundingSphere: (this.characters.mesh._collisionPhysics as any)._colliderMesh?.geometry
+        ?.boundingSphere,
       csmNear: 50,
       csmLODLevel: client.oldIphone ? 1 : 3,
       skipCSMMeshes: [this.characters.mesh, this.sky.mesh, this.sea.mesh, this.birds.mesh],

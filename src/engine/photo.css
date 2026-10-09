@@ -1,0 +1,8 @@
+/* Poster/photo mode (Dev B). Own this file; do not edit styles.css. */
+
+#poster-btn {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 40;
+}

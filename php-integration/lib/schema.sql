@@ -24,3 +24,16 @@ CREATE TABLE IF NOT EXISTS guinomo_hmac_nonces (
 );
 
 CREATE INDEX IF NOT EXISTS idx_guinomo_hmac_nonces_ts ON guinomo_hmac_nonces (ts);
+
+-- World notes: terrain-anchored messages, one set per world (api/guinomo/notes.php).
+CREATE TABLE IF NOT EXISTS guinomo_notes (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    uid        INT          NOT NULL DEFAULT 0,
+    world      VARCHAR(32)  NOT NULL,
+    x          DOUBLE       NOT NULL,
+    y          DOUBLE       NOT NULL,
+    z          DOUBLE       NOT NULL,
+    text       VARCHAR(200) NOT NULL,
+    created_at BIGINT       NOT NULL,
+    INDEX idx_guinomo_notes_world (world, created_at)
+);

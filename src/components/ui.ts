@@ -14,11 +14,11 @@ const chatIcon = '<svg viewBox="0 0 24 24" style="width:17px;height:17px;" aria-
 
 const infoContent = {
   about: {
-    title: 'Noop SummerTime',
+    title: 'Guinomo',
     paragraphs: [
-      'Bem-vindo ao SummerTime, um espaço relaxante da comunidade Noop. Explore, descanse e descubra os segredos escondidos nestes mundos procedurais.',
+      'Bem-vindo ao Guinomo, um espaço relaxante da comunidade Noop. Explore, descanse e descubra os segredos escondidos nestes mundos procedurais.',
       'Existem 5 segredos espalhados pelos diferentes mundos. Consegues encontrar todos?',
-      'Desenvolvido com ❤️ pela equipa Noop.',
+      'Dica: abre o Mapa de Mundos para veres a pista de cada cidade.',
     ],
   },
   congrats: {
@@ -44,9 +44,9 @@ const guideContent = {
       '<kbd>H</kbd> — mostra ou esconde o teu chapéu',
       '<kbd>Shift</kbd> — corre; o rato (ou o toque) roda a câmara',
       '<kbd>Esc</kbd> — fecha esta janela e as outras',
-      '🎁 Há um segredo escondido em cada mundo — encontra os 6 para ganhares o crachá dourado.',
+      '🎁 Há segredos escondidos nos mundos — encontra os 5 para ganhares o crachá dourado. O Mapa de Mundos tem uma pista para cada cidade.',
     ],
-    multi: '👥 <b>Multiplayer:</b> cria uma sala com o botão de convite e partilha o link; vê quem está online no painel de amigos.',
+    multi: '👥 <b>Multiplayer:</b> partilha o link desta página para encontrar os teus amigos no mesmo mundo e conversa com eles no chat do mundo.',
     map: '🗺️ <b>Mapa:</b> viaja entre os 6 mundos e escolhe o teu papel no mapa de mundos.',
   },
   en: {
@@ -57,9 +57,9 @@ const guideContent = {
       '<kbd>H</kbd> — toggle your hat',
       '<kbd>Shift</kbd> — run; the mouse (or touch) rotates the camera',
       '<kbd>Esc</kbd> — closes this and other windows',
-      '🎁 There is a hidden secret in every world — find all 6 to earn your golden badge.',
+      '🎁 There are hidden secrets in the worlds — find all 5 to earn your golden badge. The World Map has a hint for every city.',
     ],
-    multi: '👥 <b>Multiplayer:</b> create a room with the invite button and share the link; see who is online from the friends panel.',
+    multi: '👥 <b>Multiplayer:</b> share a link to this page to meet your friends in the same world and talk with them in the world chat.',
     map: '🗺️ <b>Map:</b> travel between the 6 worlds and pick your role from the world map.',
   },
 } as const;
@@ -76,23 +76,10 @@ const avatarRoles = [
 
 type InfoName = keyof typeof infoContent;
 
-type GuinomoFriend = {
-  id: number;
-  name: string;
-  username: string;
-  avatar: string;
-  world: string;
-  in_guinomo: boolean;
-  is_online: boolean;
-  room_url: string | null;
-  profile_url: string;
-};
-
-/** Localized label for any declared world id (falls back to the default city). */
-function getWorldLabel(worldId: string, language: string): string {
-  const world = WORLDS.find((entry) => entry.id === worldId);
-  if (!world) return language === 'en' ? 'Noop City' : 'Cidade Noop';
-  return world.label[language === 'en' ? 'en' : 'pt'];
+/** Default language is Portuguese; only an explicit profile `'en'` switches the
+ *  interface to English. */
+function getLanguage(): 'pt' | 'en' {
+  return window.GUINOMO_PROFILE?.language === 'en' ? 'en' : 'pt';
 }
 
 export class UiController {
@@ -108,6 +95,8 @@ export class UiController {
   private readonly soundButton: HTMLButtonElement;
   private readonly hatButton: HTMLButtonElement;
   private readonly count: HTMLDivElement;
+  /** Left-side identity card: photo + username + elements found. */
+  private readonly badge: HTMLDivElement;
   private chatOverlay: HTMLElement | null = null;
   private easterEggs = 0;
   private totalEasterEggs = 0;
@@ -117,15 +106,13 @@ export class UiController {
   private pendingOnboardingToast = false;
   private secretTimer = 0;
   private notificationIds = new Set<number>();
-  private friendsButton: HTMLButtonElement | null = null;
-  private friendsPanel: HTMLElement | null = null;
   private chatButton: HTMLButtonElement | null = null;
   private chatPanel: HTMLElement | null = null;
   private chatUnread = 0;
   private chatTypingTimer = 0;
 
   constructor(root: HTMLElement) {
-    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     if (language === 'pt' || language === 'en') document.documentElement.lang = language;
 
     this.webglContainer = document.createElement('div');
@@ -141,7 +128,6 @@ export class UiController {
     this.nav.setAttribute('aria-label', language === 'en' ? 'Guinomo controls' : 'Controlos do Guinomo');
     this.nav.innerHTML = `
       <a class="button back-button" href="/" aria-label="${language === 'en' ? 'Back to Noop' : 'Voltar para Noop'}" title="${language === 'en' ? 'Back to Noop' : 'Voltar para Noop'}" data-spa="false">${backIcon}</a>
-      <a class="button profile-avatar" href="/" aria-label="${language === 'en' ? 'Open my profile' : 'Abrir meu perfil'}" title="${language === 'en' ? 'My profile' : 'Meu perfil'}" data-spa="false"><img alt=""></a>
       <button class="button sound-button" type="button" aria-label="${language === 'en' ? 'Toggle sound' : 'Alternar som'}" title="${language === 'en' ? 'Toggle sound' : 'Alternar som'}"></button>
       <button class="button hat-button" type="button" aria-label="toggle hat" style="display:none;">${hatIcon}</button>
       <button class="button color-button" type="button" aria-label="${language === 'en' ? 'Randomize avatar color' : 'Randomizar cor do avatar'}" title="${language === 'en' ? 'Randomize avatar color' : 'Randomizar cor do avatar'}"><div class="color-square"></div></button>
@@ -150,7 +136,6 @@ export class UiController {
       <button class="button about-button" type="button" aria-label="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}" title="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}">${infoIcon}</button>
       <button class="button guide-button" type="button" aria-label="${language === 'en' ? 'Help and guide' : 'Ajuda e guia'}" title="${language === 'en' ? 'Help and guide' : 'Ajuda e guia'}">${guideIcon}</button>
       <button class="button map-button" type="button" aria-label="${language === 'en' ? 'World map' : 'Mapa de mundos'}" title="${language === 'en' ? 'World map' : 'Mapa de mundos'}">${mapIcon}</button>
-      <div class="cnt">0/0</div>
     `;
     root.append(this.nav);
 
@@ -175,18 +160,41 @@ export class UiController {
       void (window.NoopPageTransition?.cover() || Promise.resolve()).then(navigate);
     });
 
-    const profileLink = this.nav.querySelector<HTMLAnchorElement>('.profile-avatar')!;
-    const profileImage = profileLink.querySelector('img')!;
     const profile = window.GUINOMO_PROFILE;
+
+    // Identity card on the left: photo, username, and the number of elements
+    // (secrets) found. Falls back to the module-level counter target.
+    const badge = document.createElement('div');
+    badge.className = 'guinomo-badge';
+    badge.innerHTML = `
+      <a class="guinomo-badge-avatar" data-spa="false"><img alt=""></a>
+      <div class="guinomo-badge-meta">
+        <a class="guinomo-badge-name" data-spa="false"></a>
+        <span class="guinomo-badge-count">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.4 5.2 5.6.7-4.1 3.9 1 5.7-4.9-2.7-4.9 2.7 1-5.7L4 8.9l5.6-.7L12 3Z" fill="#716C66"/></svg>
+          <span class="cnt">0/0</span>
+          <em>${language === 'en' ? 'elements' : 'elementos'}</em>
+        </span>
+      </div>
+    `;
+    root.append(badge);
+    this.badge = badge;
+    this.count = badge.querySelector<HTMLDivElement>('.cnt')!;
     if (profile) {
-      profileLink.href = profile.profileUrl;
-      profileLink.title = profile.username;
-      profileLink.setAttribute('aria-label', `Abrir perfil de ${profile.username}`);
-      profileImage.src = profile.avatarUrl;
-      profileImage.alt = `Avatar de ${profile.username}`;
-      profileLink.dataset.spa = 'false';
+      const avatar = badge.querySelector<HTMLAnchorElement>('.guinomo-badge-avatar')!;
+      const image = avatar.querySelector('img')!;
+      const name = badge.querySelector<HTMLAnchorElement>('.guinomo-badge-name')!;
+      avatar.href = profile.profileUrl;
+      avatar.title = profile.username;
+      image.src = profile.avatarUrl;
+      image.alt = `Avatar de ${profile.username}`;
+      name.href = profile.profileUrl;
+      name.textContent = `@${profile.username}`;
+      name.title = profile.username;
+      badge.hidden = false;
     } else {
-      profileLink.hidden = true;
+      badge.hidden = true;
+      badge.style.display = 'none';
     }
 
     this.soundButton = this.nav.querySelector<HTMLButtonElement>('.sound-button')!;
@@ -197,7 +205,6 @@ export class UiController {
     const infoButton = this.nav.querySelector<HTMLButtonElement>('.about-button')!;
 
     this.colorSquare = colorButton.querySelector('.color-square')!;
-    this.count = this.nav.querySelector('.cnt') as HTMLDivElement;
     this.soundButton.innerHTML = speakerIcon;
     nameTagColorInput.value = window.GUINOMO_PROFILE?.nameTagColor || '#e5b299';
     this.nameTagColorButton.style.backgroundColor = nameTagColorInput.value;
@@ -228,7 +235,6 @@ export class UiController {
     });
 
     this.createSocialSidebar(appPath);
-    this.createFriendsPanel(appPath);
     this.startPresenceHeartbeat(appPath);
     this.startNotificationToasts(appPath);
 
@@ -259,6 +265,7 @@ export class UiController {
   showExperience() {
     this.loader.remove();
     this.nav.classList.add('visible');
+    this.badge.classList.add('visible');
 
     // First-time visitors get the full guide overlay instead of the toast; the
     // toast is deferred until the guide is dismissed. The ?audit hook is left
@@ -290,7 +297,7 @@ export class UiController {
   }
 
   private showOnboardingToast() {
-    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     const toast = document.createElement('div');
     toast.className = 'guinomo-onboarding-toast';
     toast.textContent = onboardingContent[language === 'pt' ? 'pt' : 'en'];
@@ -351,10 +358,8 @@ export class UiController {
   }
 
   private createSocialSidebar(appPath: string) {
-    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     const links = [
-      { label: language === 'en' ? 'Map' : 'Mapa', href: `${appPath}/mapa`, icon: '<path d="M12 22s8-5.4 8-12a8 8 0 1 0-16 0c0 6.6 8 12 8 12Z"/><circle cx="12" cy="10" r="2.5"/>' },
-      { label: language === 'en' ? 'Friends' : 'Amigos', href: `${appPath}/index.php?open=chat`, icon: '<path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>' },
       { label: language === 'en' ? 'Messages' : 'Mensagens', href: `${appPath}/index.php?open=chat&view=messages`, icon: '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z"/>' },
     ];
 
@@ -382,21 +387,6 @@ export class UiController {
       this.nav.insertBefore(link, this.soundButton);
     });
 
-    const friendsButton = document.createElement('button');
-    friendsButton.className = 'button social-link guinomo-friends-button';
-    friendsButton.type = 'button';
-    friendsButton.title = language === 'en' ? 'Friends in Noop' : 'Amigos na Noop';
-    friendsButton.setAttribute('aria-label', language === 'en' ? 'Friends in Noop' : 'Amigos na Noop');
-    friendsButton.setAttribute('aria-expanded', 'false');
-    friendsButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-1a6 6 0 0 1 12 0v1H3Zm14-10a3 3 0 1 0-1-5.83M18 14a5 5 0 0 1 3 4.58V20h-4"/></svg><span class="guinomo-friends-count" hidden></span>';
-    this.friendsButton = friendsButton;
-    friendsButton.addEventListener('click', () => {
-      const isOpen = this.friendsPanel?.classList.toggle('open') ?? false;
-      friendsButton.setAttribute('aria-expanded', String(isOpen));
-      if (isOpen) void this.refreshGuinomoFriends(appPath);
-    });
-    this.nav.insertBefore(friendsButton, this.soundButton);
-
     const chatLabel = language === 'en' ? 'World chat' : 'Chat do mundo';
     const chatButton = document.createElement('button');
     chatButton.className = 'button social-link guinomo-chat-button';
@@ -409,76 +399,7 @@ export class UiController {
     this.nav.insertBefore(chatButton, this.soundButton);
     this.createChatPanel();
 
-    const worldControl = document.createElement('label');
-    worldControl.className = 'button social-link world-select-control';
-    worldControl.title = language === 'en' ? 'Choose a world' : 'Escolher mundo';
-    worldControl.setAttribute('aria-label', worldControl.title);
-    worldControl.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>';
-    const worldSelect = document.createElement('select');
-    worldSelect.className = 'world-select';
-    worldSelect.setAttribute('aria-label', language === 'en' ? 'Choose a world' : 'Escolher mundo');
-    WORLDS.forEach((world) => {
-      const option = document.createElement('option');
-      option.value = world.id;
-      option.textContent = world.label[language === 'en' ? 'en' : 'pt'];
-      worldSelect.append(option);
-    });
-    const params = new URLSearchParams(window.location.search);
-    worldSelect.value = getWorldId(params.get('world'));
-    worldSelect.addEventListener('change', () => {
-      const next = new URL(window.location.href);
-      if (worldSelect.value === DEFAULT_WORLD_ID) next.searchParams.delete('world');
-      else next.searchParams.set('world', worldSelect.value);
-      window.location.assign(next.toString());
-    });
-    worldControl.append(worldSelect);
-    this.nav.insertBefore(worldControl, this.soundButton);
-
-    const inviteButton = document.createElement('button');
-    inviteButton.className = 'button social-link world-invite';
-    inviteButton.type = 'button';
-    inviteButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4m-6.6 7 6.6 4.4"/></svg>';
-    const inviteLabel = language === 'en' ? 'Invite friends' : 'Convidar amigos';
-    inviteButton.setAttribute('aria-label', inviteLabel);
-    inviteButton.title = language === 'en' ? 'Copy a link to meet in this world' : 'Copiar link para encontrar amigos neste mundo';
-    inviteButton.addEventListener('click', async () => {
-      const inviteUrl = new URL(window.location.href);
-      let roomCode = inviteUrl.searchParams.get('room');
-      if (!roomCode) {
-        const bytes = new Uint8Array(8);
-        window.crypto.getRandomValues(bytes);
-        roomCode = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-        inviteUrl.searchParams.set('room', roomCode);
-      }
-      const worldId = getWorldId(inviteUrl.searchParams.get('world'));
-      if (worldId === DEFAULT_WORLD_ID) inviteUrl.searchParams.delete('world');
-      else inviteUrl.searchParams.set('world', worldId);
-
-      try {
-        await navigator.clipboard.writeText(inviteUrl.toString());
-      } catch (error) {
-        console.warn('Unable to copy Guinomo invite link:', error);
-        window.prompt(
-          language === 'en' ? 'Copy this world invite link:' : 'Copie este link de convite para o mundo:',
-          inviteUrl.toString(),
-        );
-      }
-
-      if (!params.get('room')) {
-        window.location.assign(inviteUrl.toString());
-        return;
-      }
-      const copiedLabel = language === 'en' ? 'Link copied!' : 'Link copiado!';
-      inviteButton.title = copiedLabel;
-      inviteButton.setAttribute('aria-label', copiedLabel);
-      window.setTimeout(() => {
-        inviteButton.title = language === 'en' ? 'Copy a link to meet in this world' : 'Copiar link para encontrar amigos neste mundo';
-        inviteButton.setAttribute('aria-label', inviteLabel);
-      }, 2200);
-      });
-      this.nav.insertBefore(inviteButton, this.soundButton);
-
-      const skyTheme = document.createElement('button');
+    const skyTheme = document.createElement('button');
       skyTheme.className = 'button social-link sky-theme-toggle';
       skyTheme.type = 'button';
       skyTheme.title = language === 'en' ? 'Cycle day, night, and alien skies' : 'Alternar céu de dia, noite ou alienígena';
@@ -488,126 +409,8 @@ export class UiController {
       this.nav.insertBefore(skyTheme, this.soundButton);
   }
 
-  private createFriendsPanel(appPath: string) {
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
-      const panel = document.createElement('aside');
-      panel.id = 'guinomo-friends-panel';
-      panel.setAttribute('aria-label', language === 'en' ? 'Friends on Noop' : 'Amigos na Noop');
-      panel.innerHTML = `
-        <header>
-          <strong>${language === 'en' ? 'Friends on Noop' : 'Amigos na Noop'}</strong>
-          <button type="button" class="guinomo-friends-close" aria-label="${language === 'en' ? 'Close friends' : 'Fechar amigos'}">×</button>
-        </header>
-        <p class="guinomo-friends-summary" aria-live="polite"></p>
-        <div class="guinomo-friends-list" role="list"></div>
-      `;
-      this.friendsPanel = panel;
-      panel.querySelector<HTMLButtonElement>('.guinomo-friends-close')?.addEventListener('click', () => {
-        panel.classList.remove('open');
-        this.friendsButton?.setAttribute('aria-expanded', 'false');
-      });
-      document.addEventListener('keydown', (event) => {
-        if (event.key !== 'Escape' || !panel.classList.contains('open')) return;
-        panel.classList.remove('open');
-        this.friendsButton?.setAttribute('aria-expanded', 'false');
-      });
-      document.body.append(panel);
-      void this.refreshGuinomoFriends(appPath);
-      window.setInterval(() => void this.refreshGuinomoFriends(appPath), 15_000);
-  }
-
-  private async refreshGuinomoFriends(appPath: string) {
-      if (!this.friendsPanel) return;
-
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
-      const summary = this.friendsPanel.querySelector<HTMLElement>('.guinomo-friends-summary')!;
-      const list = this.friendsPanel.querySelector<HTMLElement>('.guinomo-friends-list')!;
-      try {
-        const response = await fetch(`${appPath}/api/guinomo/friends`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-        });
-        if (!response.ok) throw new Error(`Friends request failed (${response.status})`);
-        const payload: { success?: boolean; friends?: GuinomoFriend[] } = await response.json();
-        if (payload.success !== true || !Array.isArray(payload.friends)) {
-          throw new Error('Friends response has an invalid shape');
-        }
-
-        const friends = payload.friends;
-        const inWorld = friends.filter((friend) => friend.in_guinomo);
-        const onlineCount = friends.filter((friend) => friend.is_online).length;
-        summary.textContent = language === 'en'
-          ? `${inWorld.length} in Guinomo · ${onlineCount} online on Noop`
-          : `${inWorld.length} no Guinomo · ${onlineCount} online na Noop`;
-        list.replaceChildren();
-
-        if (friends.length === 0) {
-          const empty = document.createElement('p');
-          empty.className = 'guinomo-friends-empty';
-          empty.textContent = language === 'en'
-            ? 'No friends to show yet.'
-            : 'Ainda não há amigos para mostrar.';
-          list.append(empty);
-        }
-
-        for (const friend of friends) {
-          const card = document.createElement('article');
-          card.className = 'guinomo-friend-card';
-          card.setAttribute('role', 'listitem');
-
-          const avatar = document.createElement('img');
-          avatar.src = friend.avatar;
-          avatar.alt = '';
-          avatar.loading = 'lazy';
-          avatar.className = 'guinomo-friend-avatar';
-
-          const details = document.createElement('div');
-          details.className = 'guinomo-friend-details';
-          const name = document.createElement('a');
-          name.href = friend.profile_url;
-          name.textContent = friend.name || friend.username;
-          name.title = friend.username ? `@${friend.username}` : name.textContent || '';
-          name.dataset.spa = 'false';
-          const status = document.createElement('span');
-          status.className = `guinomo-friend-status${friend.is_online ? ' online' : ''}`;
-          if (friend.in_guinomo) {
-            const worldName = getWorldLabel(friend.world, language);
-            status.textContent = language === 'en' ? `In Guinomo · ${worldName}` : `No Guinomo · ${worldName}`;
-          } else {
-            status.textContent = friend.is_online
-              ? (language === 'en' ? 'Online on Noop' : 'Online na Noop')
-              : (language === 'en' ? 'Offline' : 'Offline');
-          }
-          details.append(name, status);
-          card.append(avatar, details);
-
-          if (friend.in_guinomo && friend.room_url) {
-            const join = document.createElement('a');
-            join.className = 'guinomo-friend-join';
-            join.href = friend.room_url;
-            join.textContent = language === 'en' ? 'Join' : 'Encontrar';
-            join.setAttribute('aria-label', language === 'en' ? `Join ${friend.username}` : `Encontrar ${friend.username}`);
-            join.dataset.spa = 'false';
-            card.append(join);
-          }
-          list.append(card);
-        }
-
-        const count = this.friendsButton?.querySelector<HTMLElement>('.guinomo-friends-count');
-        if (count) {
-          count.textContent = inWorld.length > 9 ? '9+' : String(inWorld.length);
-          count.hidden = inWorld.length === 0;
-        }
-      } catch (error) {
-        console.warn('Unable to load Guinomo friends:', error);
-        summary.textContent = language === 'en'
-          ? 'Friends are temporarily unavailable.'
-          : 'Amigos temporariamente indisponíveis.';
-      }
-  }
-
   private createChatPanel() {
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const language = getLanguage();
       const panel = document.createElement('section');
       panel.id = 'guinomo-room-chat';
       panel.setAttribute('role', 'dialog');
@@ -675,7 +478,7 @@ export class UiController {
 
   private receiveChatMessage(chat: { uid?: number; name?: string; text?: string }) {
       if (!this.chatPanel) return;
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const language = getLanguage();
       const name = (chat.name || '').trim() || (language === 'en' ? 'Guest' : 'Visitante');
       const text = (chat.text || '').trim();
       if (!text) return;
@@ -706,7 +509,7 @@ export class UiController {
 
   private sendChatMessage() {
       if (!this.chatPanel) return;
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const language = getLanguage();
       const input = this.chatPanel.querySelector<HTMLInputElement>('.guinomo-chat-input');
       if (!input) return;
       const text = input.value.replace(/\s+/g, ' ').trim();
@@ -722,7 +525,7 @@ export class UiController {
       if (!this.chatPanel) return;
       const typing = this.chatPanel.querySelector<HTMLElement>('.guinomo-chat-typing');
       if (!typing) return;
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const language = getLanguage();
       const clean = name.trim() || (language === 'en' ? 'Someone' : 'Alguém');
       typing.textContent = `${clean} ${language === 'en' ? 'is typing…' : 'está a escrever…'}`;
       typing.hidden = false;
@@ -735,7 +538,7 @@ export class UiController {
 
   private setChatStatus(ready: boolean) {
       if (!this.chatPanel) return;
-      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const language = getLanguage();
       const status = this.chatPanel.querySelector<HTMLElement>('.guinomo-chat-status');
       if (!status) return;
       status.textContent = ready
@@ -804,7 +607,7 @@ export class UiController {
   private startNotificationToasts(appPath: string) {
     if (!window.GUINOMO_PROFILE) return;
 
-    const language = window.GUINOMO_PROFILE.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     const container = document.createElement('div');
     container.id = 'guinomo-notification-toasts';
     container.setAttribute('aria-live', 'polite');
@@ -898,7 +701,7 @@ export class UiController {
     const overlay = document.createElement('section');
     overlay.id = 'noop-chat-overlay';
     overlay.setAttribute('role', 'dialog');
-    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     const title = language === 'en' ? 'Messages' : 'Mensagens';
     overlay.setAttribute('aria-label', language === 'en' ? 'Noop messages' : 'Mensagens da Noop');
     overlay.innerHTML = `
@@ -955,6 +758,7 @@ export class UiController {
     playSfx('close');
     this.infoModal.classList.remove('visible');
     this.nav.classList.add('visible');
+    this.badge.classList.add('visible');
     events.emit('webgl_overlay_animation', 0);
     events.emit('webgl_overlay_volume', 1);
     events.emit('webgl_character_controls_enable', true);
@@ -972,6 +776,7 @@ export class UiController {
     this.overlayOpen = true;
     this.secretModal.classList.remove('visible');
     this.nav.classList.remove('visible');
+    this.badge.classList.remove('visible');
     this.infoPanel.innerHTML = html;
     this.infoModal.classList.add('visible');
     events.emit('webgl_overlay_animation', 1);
@@ -982,12 +787,15 @@ export class UiController {
   private toggleOverlay(name: InfoName) {
     const content = infoContent[name];
     playSfx('open');
-    this.showInfoPanel(`<h1>${content.title}</h1>${content.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')}`);
+    const paragraphs = name === 'about'
+      ? [...content.paragraphs, `Desenvolvido com ❤️ pela equipa Noop e @${window.GUINOMO_PROFILE?.username || 'Noop'}.`]
+      : content.paragraphs;
+    this.showInfoPanel(`<h1>${content.title}</h1>${paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')}`);
   }
 
   private openGuide() {
     playSfx('guide');
-    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     const text = guideContent[language === 'pt' ? 'pt' : 'en'];
     const steps = text.steps.map((step) => `<p class="guide-step">${step}</p>`).join('');
     this.showInfoPanel(
@@ -997,7 +805,7 @@ export class UiController {
 
   private openWorldMap() {
     playSfx('open');
-    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const language = getLanguage();
     const lang = language === 'en' ? 'en' : 'pt';
     const currentWorld = getWorldId(new URLSearchParams(window.location.search).get('world'));
     const cards = WORLDS.map((world) => {

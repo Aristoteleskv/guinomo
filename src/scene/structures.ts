@@ -78,6 +78,10 @@ export class Lightposts extends SceneModule {
       maxDistance: 30,
     });
     const material = phongMaterial({ isLightPost: true });
+    // The lamps light up as the sky gets dark (night factor from the sky).
+    this.scene.beforeRenderCbs.push(() => {
+      material.uniforms.uNight.value = this.scene.sky.nightIntensity;
+    });
     this.meshes = patches.map((geometry, i) => {
       const mesh = makeInstanced(geometry, material, 'lightposts');
       (mesh as any).ignore = i !== 0;

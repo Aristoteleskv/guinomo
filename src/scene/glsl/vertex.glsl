@@ -85,6 +85,8 @@
         varying vec3 vColorShirt;
         varying vec3 vColorSkin;
         varying float vHatVisible;
+        varying vec3 vLocalPos;
+        varying vec3 vLocalNormal;
     #endif
 
     #include <shadowmap_pars_vertex>
@@ -104,6 +106,8 @@
             vColorShirt = instanceColorShirt;
             vColorSkin = instanceColorSkin;
             vHatVisible = instanceHatVisible;
+            vLocalPos = transformed;
+            vLocalNormal = normalize(objectNormal);
         #endif
 
         #ifdef RANDOM_ATTRIB

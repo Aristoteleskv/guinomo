@@ -102,13 +102,10 @@ export class EnvironmentScene extends BaseScene {
     this.setupLights();
     (this.sea.mesh as any).addReflectedObject(this.sky.mesh);
 
-    // P1.1: Force world-specific sky themes
+    // Day, afternoon, and night follow the user's local timezone in every city
+    // world; only the alien world keeps its alien sky as an identity.
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
-    if (world === 'floating-city') {
-      this.sky.setTheme('alien');
-    } else if (world === 'old-town') {
-      this.sky.setTheme('night');
-    } else if (world === 'alien') {
+    if (world === 'alien') {
       this.sky.setTheme('alien');
     }
 

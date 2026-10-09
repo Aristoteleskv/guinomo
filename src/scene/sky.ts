@@ -28,7 +28,13 @@ import fitGLSL from './glsl/fit.glsl?raw';
 import falloffGLSL from './glsl/falloff.glsl?raw';
 import { globalUBODeclaration } from './materials';
 
-const DAY_NIGHT_PERIOD_MS = 240_000;
+// The daylight cycle follows the user's local time (their timezone), not an
+// artificial timer: 06:00 → sunrise (angle 0), 12:00 → solar noon (π/2),
+// 18:00 → sunset (π), 00:00 → midnight (3π/2).
+function localSolarAngle(date: Date = new Date()): number {
+  const minutesOfDay = date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+  return (minutesOfDay / 1440 - 0.25) * Math.PI * 2;
+}
 
 function createGlow(color: string, size: number): Sprite {
   const canvas = document.createElement('canvas');
@@ -219,7 +225,7 @@ export class Sky extends SceneModule {
       const cameraPosition = this.scene.camera.position;
       this.mesh.position.copy(cameraPosition);
       if (this.stars) this.stars.position.copy(cameraPosition);
-      const angle = (Date.now() % DAY_NIGHT_PERIOD_MS) / DAY_NIGHT_PERIOD_MS * Math.PI * 2;
+      const angle = localSolarAngle();
       const sunHeight = Math.sin(angle);
       const daylightProgress = Math.min(1, Math.max(0, (sunHeight + 0.12) / 0.24));
       const daylight = daylightProgress * daylightProgress * (3 - 2 * daylightProgress);

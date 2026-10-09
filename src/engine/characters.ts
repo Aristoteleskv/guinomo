@@ -286,14 +286,11 @@ export class Characters extends CharacterSkinnedMesh {
     this._camera = options.camera;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const worldName = urlParams.get('world') || 'lobby';
     const uid = parseInt(urlParams.get('uid') || '0', 10);
 
-    // Derive a 32-byte seed from the world name for the P2P room
-    const encoder = new TextEncoder();
-    const worldData = encoder.encode(worldName.padEnd(32, '\0').substring(0, 32));
-    const roomSeed = new Uint8Array(32);
-    roomSeed.set(worldData);
+    // The world room seed is derived once by the caller (`getWorldRoomSeed`,
+    // hashed per world + invite code) and arrives via `options.roomSeed`, so it
+    // is the single source of truth for the P2P room identity.
 
     this._localObject = new Object3D() as CharacterLocal;
     this._localObject.instanceID = 0;
@@ -350,6 +347,7 @@ export class Characters extends CharacterSkinnedMesh {
       this._connection = new P2PConnection({
         data: this._dataUpdate,
         roomSeed: options.roomSeed,
+        maxClients: MAX_CHARS - 1,
         onConnect: () => {
           this.connected.resolve();
           events.emit('p2p_ready', true);
@@ -518,6 +516,11 @@ export class Characters extends CharacterSkinnedMesh {
   }
 
   private _addCharacter(id: string, data: P2PClientData) {
+    // `local` already occupies one slot, so only MAX_CHARS - 1 remotes fit.
+    if (this._charactersObjects.size >= MAX_CHARS) {
+      console.warn(`[characters] room full (${MAX_CHARS}); ignoring ${id}`);
+      return;
+    }
     const remote = new Object3D() as CharacterLocal;
     remote.spherical = new Spherical(1, HALF_PI);
     remote.targetPosition = new Vector3();

@@ -37,6 +37,7 @@ interface P2POptions {
   data: P2PData;
   roomSeed?: Uint8Array; // Semente da sala para isolar mundos/perfis
   updateRate?: number;
+  maxClients?: number; // Máximo de remotos rastreados em simultâneo
   addClient?: (id: string, data: P2PClientData) => void;
   removeClient?: (id: string) => void;
   removeAllClients?: () => void;
@@ -75,6 +76,7 @@ export class P2PConnection {
   _data: P2PData;
   private _lastSeen = new Map<string, number>();
   private _updateRate: number;
+  private _maxClients: number;
   private _prevData = '{}';
   private _lastFullSent = 0;
   private _connected = false;
@@ -98,6 +100,7 @@ export class P2PConnection {
   constructor(options: P2POptions) {
     this._data = options.data;
     this._updateRate = options.updateRate ?? 35;
+    this._maxClients = options.maxClients ?? Infinity;
     this._onAddClient = options.addClient ?? noop;
     this._onRemoveClient = options.removeClient ?? noop;
     this._onRemoveAllClients = options.removeAllClients ?? noop;
@@ -170,7 +173,7 @@ export class P2PConnection {
             if (Array.isArray(state[key]) && state[key].length === 0) continue;
             existing[key] = state[key];
           }
-        } else {
+        } else if (this._clients.size < this._maxClients) {
           this._clients.set(from, { ...this._data, ...state });
           this._onAddClient(from, { ...this._data, ...state });
         }

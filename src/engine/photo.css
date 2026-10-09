@@ -1,8 +1,37 @@
-/* Poster/photo mode (Dev B). Own this file; do not edit styles.css. */
+/* Poster/photo mode button. Own this file; do not edit styles.css. */
 
 #poster-btn {
   position: fixed;
   right: 16px;
   bottom: 16px;
   z-index: 40;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(20, 28, 32, 0.55);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+
+#poster-btn:hover {
+  transform: scale(1.08);
+  background: rgba(20, 28, 32, 0.75);
+}
+
+#poster-btn:active {
+  transform: scale(0.96);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #poster-btn {
+    transition: none;
+  }
 }

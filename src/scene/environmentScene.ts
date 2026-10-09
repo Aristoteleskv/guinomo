@@ -101,6 +101,17 @@ export class EnvironmentScene extends BaseScene {
     this.configureWorld();
     this.setupLights();
     (this.sea.mesh as any).addReflectedObject(this.sky.mesh);
+
+    // P1.1: Force world-specific sky themes
+    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    if (world === 'floating-city') {
+      this.sky.setTheme('alien');
+    } else if (world === 'old-town') {
+      this.sky.setTheme('night');
+    } else if (world === 'alien') {
+      this.sky.setTheme('alien');
+    }
+
     this.ready.resolve();
   }
 
@@ -109,21 +120,43 @@ export class EnvironmentScene extends BaseScene {
     if (world === 'lobby' || world === 'alien') return;
 
     this.sea.mesh.visible = world !== 'forest';
-    if (world !== 'tropical-city') this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.warehouses.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.lightposts.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.lightposts.meshWire.visible = false;
-    this.parasols.mesh.visible = false;
-    this.castles.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.blockers.meshes.forEach((mesh) => { mesh.visible = false; });
-    this.ufo.mesh.visible = false;
-    this.alien.mesh.visible = false;
-    this.sign.mesh.visible = false;
-    this.cats.mesh.visible = false;
-    this.sloth.mesh.visible = false;
-    this.gossip.mesh.visible = false;
+
+    // World-specific asset visibility
+    const isCity = ['floating-city', 'tropical-city', 'old-town'].includes(world);
+
+    if (world !== 'tropical-city') {
+      this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
+    }
+
+    // Cities use houses and infrastructure
+    if (!isCity) {
+      this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.lightposts.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.lightposts.meshWire.visible = false;
+    }
+
+    // Specific asset rules
+    if (world !== 'floating-city') {
+      this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
+    }
+
+    if (world !== 'old-town') {
+      this.castles.meshes.forEach((mesh) => { mesh.visible = false; });
+      this.warehouses.meshes.forEach((mesh) => { mesh.visible = false; });
+    }
+
+    if (world !== 'tropical-city') {
+      this.parasols.mesh.visible = false;
+    }
+
+    // Always keep gameplay/secret assets active in cities for B to place them
+    this.blockers.meshes.forEach((mesh) => { mesh.visible = isCity; });
+    this.ufo.mesh.visible = true; // B will position these as secrets
+    this.alien.mesh.visible = true;
+    this.sign.mesh.visible = true;
+    this.cats.mesh.visible = true;
+    this.sloth.mesh.visible = true;
+    this.gossip.mesh.visible = true;
   }
 
   private setupCamera() {

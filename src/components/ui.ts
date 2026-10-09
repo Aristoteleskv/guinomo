@@ -10,21 +10,26 @@ const backIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4 6
 
 const infoContent = {
   about: {
-    title: 'Guinomo',
+    title: 'Noop SummerTime',
     paragraphs: [
-      'This is a web experiment I made to practice some procedural 3D art. There are 5 secrets hidden across it. I hope you can find them!',
-      'Thanks to Ana and Michael for their tips.',
-      '<a href="https://vlucendo.com" rel="noreferrer" target="_blank" class="link2">Vicente</a>',
+      'Bem-vindo ao SummerTime, um espaço relaxante da comunidade Noop. Explore, descanse e descubra os segredos escondidos nestes mundos procedurais.',
+      'Existem 5 segredos espalhados pelos diferentes mundos. Consegues encontrar todos?',
+      'Desenvolvido com ❤️ pela equipa Noop.',
     ],
   },
   congrats: {
-    title: 'You found all 5 secrets!',
+    title: 'Parabéns! Encontraste os 5 segredos!',
     paragraphs: [
-      "(I hope that didn't take too long)",
-      "I don't have anything to give you other than my thanks for exploring this experiment, inspired by those calm summer days where life just passes by... ☀️",
+      "Exploraste todos os cantos deste experimento. Como recompensa, o teu avatar agora tem acesso a cores exclusivas (verifica o painel de cores!).",
+      "Obrigado por fazeres parte da Noop. Aproveita o pôr do sol! ☀️",
     ],
   },
 } as const;
+
+const onboardingContent = {
+  en: 'Use WASD to move, E to rest, and H for your hat! 🏖️',
+  pt: 'Usa WASD para andar, E para descansar e H para o chapéu! 🏖️',
+};
 
 type InfoName = keyof typeof infoContent;
 
@@ -39,6 +44,13 @@ type GuinomoFriend = {
   room_url: string | null;
   profile_url: string;
 };
+
+/** Localized label for any declared world id (falls back to the default city). */
+function getWorldLabel(worldId: string, language: string): string {
+  const world = WORLDS.find((entry) => entry.id === worldId);
+  if (!world) return language === 'en' ? 'Noop City' : 'Cidade Noop';
+  return world.label[language === 'en' ? 'en' : 'pt'];
+}
 
 export class UiController {
   readonly webglContainer: HTMLDivElement;
@@ -191,6 +203,21 @@ export class UiController {
   showExperience() {
     this.loader.remove();
     this.nav.classList.add('visible');
+
+    // P2.1: Onboarding Toast
+    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const toast = document.createElement('div');
+    toast.className = 'guinomo-onboarding-toast';
+    toast.textContent = onboardingContent[language === 'pt' ? 'pt' : 'en'];
+    document.body.append(toast);
+
+    setTimeout(() => {
+      toast.classList.add('visible');
+      setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 500);
+      }, 8000);
+    }, 2000);
   }
 
   showSecret(message: string) {
@@ -425,11 +452,7 @@ export class UiController {
           const status = document.createElement('span');
           status.className = `guinomo-friend-status${friend.is_online ? ' online' : ''}`;
           if (friend.in_guinomo) {
-            const worldName = friend.world === 'alien'
-              ? (language === 'en' ? 'Alien Universe' : 'Universo Alienígena')
-              : friend.world === 'forest'
-                ? (language === 'en' ? 'Noop Forest' : 'Bosque Noop')
-              : (language === 'en' ? 'Noop City' : 'Cidade Noop');
+            const worldName = getWorldLabel(friend.world, language);
             status.textContent = language === 'en' ? `In Guinomo · ${worldName}` : `No Guinomo · ${worldName}`;
           } else {
             status.textContent = friend.is_online
@@ -690,6 +713,9 @@ export class UiController {
   private closeSecret() {
     if (!this.secretModal.classList.contains('visible')) return;
     this.secretModal.classList.remove('visible');
-    if (this.easterEggs >= this.totalEasterEggs) this.toggleOverlay('congrats');
+    if (this.easterEggs >= this.totalEasterEggs) {
+      this.toggleOverlay('congrats');
+      events.emit('webgl_all_secrets_found');
+    }
   }
 }

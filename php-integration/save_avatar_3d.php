@@ -23,6 +23,19 @@ if ($uid_request === null || (int)$id_sessao !== (int)$uid_request) {
     exit;
 }
 
+// Verificação HMAC opcional — ativada definindo GUINOMO_HMAC_SECRET.
+// É aditiva: sem segredo, o endpoint funciona exatamente como antes.
+$hmacSecret = (string)(getenv('GUINOMO_HMAC_SECRET') ?: '');
+if ($hmacSecret !== '') {
+    require_once __DIR__ . '/lib/hmac.php';
+    $rawBody = (string)file_get_contents('php://input');
+    if (!guinomo_hmac_verify_request($hmacSecret, $rawBody)) {
+        header('HTTP/1.1 401 Unauthorized');
+        echo json_encode(['success' => false, 'error' => 'Assinatura inválida']);
+        exit;
+    }
+}
+
 $autoload = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($autoload)) {
     require_once $autoload;

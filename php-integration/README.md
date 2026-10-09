@@ -31,3 +31,58 @@ a stub (see the guard that requires `../src/Services/AvatarService.php`).
 `avatar.php` uses `$_SESSION['hashtag_uid']` like the real app, falling back to
 `1` so the mocks are usable out of the box. `save_avatar_3d.php` still returns
 `401` without a session, matching production behavior.
+
+## Presence is persisted (mocks, but stateful)
+
+`presence.php` is no longer a no-op: it writes to the file-backed store in
+`lib/presence.php` (`.presence.json`, gitignored, 45s TTL, refreshed by the
+client's 20s heartbeat). `friends.php` reads that store and overlays
+`in_guinomo`, `world` and `room_url` onto its mocked relationship list, so the
+friends panel in the 3D client reflects who is really inside a world. The TTL
+is deliberately short: a tab that stops heartbeating (closed/crashed) drops out
+on its own. Swap `guinomo_presence_read/write` for the production database to
+go live.
+
+### Storage drivers (file → database)
+
+Both stores pick their driver automatically from the environment, so the mocks
+stay zero-config by default and become production-ready without code changes:
+
+| Env | Effect |
+|---|---|
+| `GUINOMO_DB_DSN` (+ `GUINOMO_DB_USER` / `GUINOMO_DB_PASS`) | Use PDO. Examples: `mysql:host=127.0.0.1;dbname=guinomo;charset=utf8mb4`, `sqlite:/var/lib/guinomo/app.sqlite`. Tables are created on connect. |
+| unset | JSON file fallback (`GUINOMO_PRESENCE_FILE`, `GUINOMO_HMAC_NONCE_FILE`). |
+
+`lib/schema.sql` provisions `guinomo_presence` and `guinomo_hmac_nonces` ahead
+of time (`mysql -u user -p guinomo < lib/schema.sql`). `lib/db.php` is the
+shared factory and migration. When `GUINOMO_DB_DSN` is set the nonce guard
+moves into the database too — required for running behind multiple PHP workers.
+
+## HMAC (optional, additive)
+
+`lib/hmac.php` implements the contract in `docs/HMAC_AUTH.md`
+(canonical string + `hash_equals` verify + nonce replay guard, file or PDO).
+The browser signer lives in `src/core/hmac.ts` and is **inert unless**
+`window.GUINOMO_HMAC_KEY` is set to a short-lived key — never bundle a secret.
+To test end-to-end locally:
+
+1. Set `GUINOMO_HMAC_SECRET=dev-secret` in the PHP environment (the endpoint
+   verifies only when this is non-empty).
+2. Inject `window.GUINOMO_HMAC_KEY = 'dev-secret'` before the app bundle runs
+   (and `window.GUINOMO_HMAC_PATH` if the request path differs from the
+   document root).
+
+The golden vector lives in `tests/fixtures/hmac-vector.json` and is asserted on
+**both sides**: `tests/hmac.test.ts` (browser signer) and `tests/php/run.php`
+(PHP verifier), so the two implementations cannot drift.
+
+Rejected requests are logged to `.hmac-failures.log` (gitignored) as
+`time uid method path reason ip` and mirrored to the PHP error log; the
+signature is never written.
+
+## Tests
+
+`php tests/php/run.php` (or `bun run test:php`) runs the store/HMAC suite
+against both the file driver and a throwaway SQLite database. It is wired into
+CI (`.github/workflows/ci.yml`, `platform` job).
+

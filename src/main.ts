@@ -31,7 +31,7 @@ function start() {
   });
   engine.active = true;
 
-  const onEasterEgg = () => ui.incrementEasterEggs();
+  const onEasterEgg = (found: boolean) => ui.incrementEasterEggs(found);
   const onSecret = (message: string) => ui.showSecret(message);
   const onMute = (muted: boolean) => ui.setMuted(muted);
   const onColor = (color: string) => ui.setCharacterColor(color);
@@ -39,7 +39,7 @@ function start() {
     if (event.code === 'Escape') ui.closeOverlay();
   };
 
-  events.on('webgl_increase_easer_count', onEasterEgg);
+  events.on('webgl_increase_easter_count', onEasterEgg);
   events.on('webgl_show_modal', onSecret);
   events.on('webgl_audio_update_mute', onMute);
   events.on('webgl_character_update_color', onColor);
@@ -47,7 +47,33 @@ function start() {
 
   const controller = new MainController();
   if (new URLSearchParams(window.location.search).has('audit')) {
-    (window as any).__summerAudit = { engine, controller };
+    // Runtime inspection hook for smoke/audit tests. `environment` is private at
+    // the type level but present at runtime; the snapshot is intentionally plain
+    // JSON so it can cross the Playwright boundary.
+    const audit = {
+      engine,
+      controller,
+      ready: controller.ready,
+      snapshot: () => {
+        const environment = (controller as unknown as { environment?: Record<string, any> }).environment;
+        const ids = ['ufo', 'alien', 'cats', 'sloth', 'gossip'] as const;
+        const secretVisibility: Record<string, boolean> = {};
+        for (const id of ids) {
+          const mesh = environment?.[id]?.mesh;
+          if (mesh) secretVisibility[id] = Boolean(mesh.visible);
+        }
+        const params = new URLSearchParams(window.location.search);
+        return {
+          world: params.get('world') || 'lobby',
+          room: params.get('room'),
+          secretVisibility,
+          secretsVisible: Object.keys(secretVisibility).filter((id) => secretVisibility[id]),
+          restAvailable: Boolean(environment?.worldLocations?.restButton),
+          skyTheme: environment?.sky?.theme ?? null,
+        };
+      },
+    };
+    (window as any).__summerAudit = audit;
   }
   const stopClock = clock.start((time, delta) => engine.render(time, delta));
 
@@ -58,7 +84,7 @@ function start() {
 
   window.addEventListener('beforeunload', () => {
     stopClock();
-    events.off('webgl_increase_easer_count', onEasterEgg);
+    events.off('webgl_increase_easter_count', onEasterEgg);
     events.off('webgl_show_modal', onSecret);
     events.off('webgl_audio_update_mute', onMute);
     events.off('webgl_character_update_color', onColor);

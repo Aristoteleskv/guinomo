@@ -20,7 +20,7 @@ const infoContent = {
   congrats: {
     title: 'Parabéns! Encontraste os 5 segredos!',
     paragraphs: [
-      "Exploraste todos os cantos deste experimento. Como recompensa, o teu avatar agora tem acesso a cores exclusivas (verifica o painel de cores!).",
+      "Exploraste todos os cantos deste experimento. Como recompensa, o teu nome agora tem um crachá dourado.",
       "Obrigado por fazeres parte da Noop. Aproveita o pôr do sol! ☀️",
     ],
   },
@@ -68,6 +68,8 @@ export class UiController {
   private chatOverlay: HTMLElement | null = null;
   private easterEggs = 0;
   private totalEasterEggs = 0;
+  private rewardGranted = false;
+  private congratsShown = false;
   private overlayOpen = false;
   private secretTimer = 0;
   private notificationIds = new Set<number>();
@@ -227,12 +229,33 @@ export class UiController {
     this.count.textContent = this.easterEggs + '/' + this.totalEasterEggs;
     window.clearTimeout(this.secretTimer);
     this.secretTimer = window.setTimeout(() => this.closeSecret(), 10000);
-    window.setTimeout(() => { this.easterEggs = Math.min(this.totalEasterEggs, this.easterEggs + 1); this.count.textContent = this.easterEggs + '/' + this.totalEasterEggs; }, 750);
+    window.setTimeout(() => {
+      this.easterEggs = Math.min(this.totalEasterEggs, this.easterEggs + 1);
+      this.count.textContent = this.easterEggs + '/' + this.totalEasterEggs;
+      this.maybeGrantReward(false);
+    }, 750);
   }
 
-  incrementEasterEggs() {
+  incrementEasterEggs(alreadyFound = false) {
     this.totalEasterEggs += 1;
+    if (alreadyFound) this.easterEggs += 1;
     this.count.textContent = `${this.easterEggs}/${this.totalEasterEggs}`;
+    // Secrets found in earlier sessions are restored from localStorage, so the
+    // reward must be re-applied on load instead of only when a modal closes.
+    this.maybeGrantReward(false);
+  }
+
+  /** Applies the all-secrets reward once, and the congrats overlay at most once. */
+  private maybeGrantReward(showCongrats: boolean) {
+    if (this.totalEasterEggs <= 0 || this.easterEggs < this.totalEasterEggs) return;
+    if (!this.rewardGranted) {
+      this.rewardGranted = true;
+      events.emit('webgl_all_secrets_found');
+    }
+    if (showCongrats && !this.congratsShown) {
+      this.congratsShown = true;
+      this.toggleOverlay('congrats');
+    }
   }
 
   setMuted(muted: boolean) {
@@ -713,9 +736,6 @@ export class UiController {
   private closeSecret() {
     if (!this.secretModal.classList.contains('visible')) return;
     this.secretModal.classList.remove('visible');
-    if (this.easterEggs >= this.totalEasterEggs) {
-      this.toggleOverlay('congrats');
-      events.emit('webgl_all_secrets_found');
-    }
+    this.maybeGrantReward(true);
   }
 }

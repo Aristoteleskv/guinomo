@@ -30,30 +30,32 @@ export class WorldLocations extends SceneModule {
 
   protected async init() {
     this.worldId = getWorldId(new URLSearchParams(window.location.search).get('world'));
-    if (!CITY_WORLDS.includes(this.worldId as CityWorld)) {
-      this.ready.resolve();
-      return;
-    }
-
     this.raycaster = new Raycaster();
     this.down = new Vector3(0, -1, 0);
-    this.restPosition = new Vector3();
+    this.restPosition = new Vector3(0, -999, 0); // Default far away
     this.restButton = this.createRestButton();
-    await this.scene.terrain.ready;
-    this.scene.terrain.mesh.updateMatrixWorld(true);
 
-    const restGround = this.groundAt(REST_X, REST_Z);
-    this.restPosition.set(REST_X, restGround + 0.2, REST_Z);
-    this.createRestArea(restGround);
+    if (CITY_WORLDS.includes(this.worldId as CityWorld)) {
+      await this.scene.terrain.ready;
+      this.scene.terrain.mesh.updateMatrixWorld(true);
 
-    if (this.worldId === 'floating-city') this.createFloatingCity();
-    else if (this.worldId === 'tropical-city') this.createTropicalCity();
-    else if (this.worldId === 'old-town') this.createOldTown();
+      const restGround = this.groundAt(REST_X, REST_Z);
+      this.restPosition.set(REST_X, restGround + 0.2, REST_Z);
+      this.createRestArea(restGround);
+
+      if (this.worldId === 'floating-city') this.createFloatingCity();
+      else if (this.worldId === 'tropical-city') this.createTropicalCity();
+      else if (this.worldId === 'old-town') this.createOldTown();
+    }
 
     this.scene.ready.then(() => this.setupSecrets());
 
-    this.scene.beforeRenderCbs.push(this.updateRestButton);
-    events.on('world_rest_toggle', this.toggleRest);
+    // `updateRestButton`/`toggleRest` are class-field arrows, which are only
+    // assigned after `super()` returns. `SceneModule` calls `init()` from its
+    // constructor, so for worlds without an await above we must read the fields
+    // lazily (at call time) instead of capturing them as `undefined` here.
+    this.scene.beforeRenderCbs.push(() => this.updateRestButton());
+    events.on('world_rest_toggle', () => this.toggleRest());
     this.ready.resolve();
   }
 
@@ -67,9 +69,10 @@ export class WorldLocations extends SceneModule {
       local.userData.a = 0; // Back to idle
     } else {
       const dist = Math.hypot(local.position.x - this.restPosition.x, local.position.z - this.restPosition.z);
+      // Universal rest logic: if near a rest zone, snap to it. Otherwise, rest in place.
+      local.userData.worldAction = 'sleep';
+      local.userData.a = 2; // Sitting/Rest animation
       if (dist <= REST_RADIUS) {
-        local.userData.worldAction = 'sleep';
-        local.userData.a = 2; // Bored/Rest animation
         this.scene.characters.mesh.snap(this.restPosition.toArray());
       }
     }
@@ -79,23 +82,28 @@ export class WorldLocations extends SceneModule {
     const world = this.worldId;
     const { ufo, alien, cats, sloth, gossip } = this.scene;
 
-    // Hide all by default, then show one per world
+    // Default: hide all, then enable based on world context
     [ufo, alien, cats, sloth, gossip].forEach(s => { if (s?.mesh) s.mesh.visible = false; });
 
-    if (world === 'forest') {
+    if (world === 'lobby') {
+      // UFO appearing in the distance in the main lobby
+      ufo.mesh.visible = true;
+      ufo.mesh.position.set(-60, 5, 30);
+    } else if (world === 'forest') {
       sloth.mesh.visible = true;
       sloth.mesh.position.set(-15, 4, -40);
     } else if (world === 'floating-city') {
       ufo.mesh.visible = true;
-      ufo.mesh.position.set(12, 10, -58); // Above plaza
+      ufo.mesh.position.set(12, 10, -58); // Floating above the city plaza
     } else if (world === 'tropical-city') {
       cats.mesh.visible = true;
-      cats.mesh.position.set(12, 0.5, -50); // Near plaza
+      cats.mesh.position.set(12, 0.5, -50); // Near the futuristic domes
     } else if (world === 'old-town') {
       gossip.mesh.visible = true;
-      gossip.mesh.position.set(35, 0.5, -60);
+      gossip.mesh.position.set(35, 0.5, -60); // Tucked away in the stone village
     } else if (world === 'alien') {
       alien.mesh.visible = true;
+      alien.mesh.position.set(60.14, 0.1, 40.6); // Original alien spot
     }
   }
 
@@ -177,8 +185,9 @@ export class WorldLocations extends SceneModule {
     if (!button || !local) return;
 
     const sleeping = local.userData.worldAction === 'sleep';
-    const nearby = Math.hypot(local.position.x - this.restPosition.x, local.position.z - this.restPosition.z) <= REST_RADIUS;
-    button.hidden = !nearby && !sleeping;
+    const isIdle = local.velocityHorizontal < 0.01;
+    // Button is visible if we're sleeping (to wake up) or if we're standing still (to sit down)
+    button.hidden = !isIdle && !sleeping;
     if (button.hidden) return;
 
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);

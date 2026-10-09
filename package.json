@@ -11,7 +11,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:php": "php tests/php/run.php",
+    "test:e2e": "playwright test",
     "lint": "eslint . --ext .ts,.mjs,.js",
+    "check:bundle": "node scripts/check-bundle-size.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "build:wasm": "bash scripts/build-wasm.sh"
@@ -23,6 +26,7 @@
     "three-mesh-bvh": "0.5.24"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.0",
     "@types/three": "0.148.0",
     "@typescript-eslint/eslint-plugin": "^8.71.1",
     "@typescript-eslint/parser": "^8.71.1",

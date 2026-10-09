@@ -1,0 +1,27 @@
+[
+  {
+    "label": "app entry (index-*.js)",
+    "include": ["assets/index-*.js"],
+    "maxBytes": 1450000
+  },
+  {
+    "label": "app chunks (entry + bvh worker + lazy iroh)",
+    "include": ["assets/*.js"],
+    "maxBytes": 1550000
+  },
+  {
+    "label": "iroh p2p wasm (lazy, never in initial load)",
+    "include": ["assets/guinomo_browser_bg-*.wasm"],
+    "maxBytes": 3400000
+  },
+  {
+    "label": "web font (woff2 only; woff fallback removed)",
+    "include": ["assets/fonts/*"],
+    "maxBytes": 1000000
+  },
+  {
+    "label": "sea clouds -highq (ktx2 only; the 2.9 MB png stays out)",
+    "include": ["assets/images/clouds_top-highq.*"],
+    "maxBytes": 1300000
+  }
+]

@@ -54,7 +54,9 @@ export class MainController {
     this.environmentComposer.addPass(new RenderPass(this.environment, this.environment.camera));
     this.environmentComposer.setSize(engine.renderer.domElement.width, engine.renderer.domElement.height);
 
-    events.on('resize', this.resizeEnvironment);
+    // Read the class-field arrow lazily: `init()` runs from the constructor
+    // before field initializers, so capturing it here would pass `undefined`.
+    events.on('resize', () => this.resizeEnvironment());
     await Promise.all([
       this.environment.uploaded,
       this.loaded(this.introMaterial.uniforms.tIntro.value),

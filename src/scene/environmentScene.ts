@@ -117,26 +117,26 @@ export class EnvironmentScene extends BaseScene {
 
   private configureWorld() {
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
-    if (world === 'lobby' || world === 'alien') return;
 
     this.sea.mesh.visible = world !== 'forest';
 
     // World-specific asset visibility
     const isCity = ['floating-city', 'tropical-city', 'old-town'].includes(world);
+    const isSpecial = isCity || world === 'lobby' || world === 'alien';
 
     if (world !== 'tropical-city') {
       this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
     }
 
-    // Cities use houses and infrastructure
-    if (!isCity) {
+    // Cities and special areas use houses and infrastructure
+    if (!isSpecial) {
       this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
       this.lightposts.meshes.forEach((mesh) => { mesh.visible = false; });
       this.lightposts.meshWire.visible = false;
     }
 
     // Specific asset rules
-    if (world !== 'floating-city') {
+    if (world !== 'floating-city' && world !== 'alien') {
       this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
     }
 
@@ -149,9 +149,9 @@ export class EnvironmentScene extends BaseScene {
       this.parasols.mesh.visible = false;
     }
 
-    // Always keep gameplay/secret assets active in cities for B to place them
-    this.blockers.meshes.forEach((mesh) => { mesh.visible = isCity; });
-    this.ufo.mesh.visible = true; // B will position these as secrets
+    // Always keep gameplay/secret assets active to allow WorldLocations/setupSecrets to manage them
+    this.blockers.meshes.forEach((mesh) => { mesh.visible = isCity || world === 'lobby'; });
+    this.ufo.mesh.visible = true;
     this.alien.mesh.visible = true;
     this.sign.mesh.visible = true;
     this.cats.mesh.visible = true;

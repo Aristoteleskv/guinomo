@@ -35,7 +35,7 @@ export class Sea extends SceneModule {
         tMap1: { value: textureLoader.load('sea1-normal-highq.ktx2', 'repeat') },
         uColor: { value: new Color(waterColor) },
         uColorFoam: { value: new Color('#ffffff') },
-        tCloudsTop: { value: textureLoader.load('clouds_top-highq.png', 'repeat') },
+        tCloudsTop: { value: textureLoader.load('clouds_top-highq.ktx2', 'repeat') },
         tReflection: { value: null },
         textureMatrix: { value: new Matrix4() },
         uReflectionResolution: { value: new Vector2() },

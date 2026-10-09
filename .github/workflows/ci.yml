@@ -1,0 +1,66 @@
+name: ci
+
+# Front-end quality gate. The wasm package has its own workflow
+# (build-wasm.yml); this one never touches Rust and runs on every push/PR so a
+# broken typecheck, lint, test or build can never reach main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun run test
+
+      - name: Build
+        run: bun run build
+
+      # Fails the job if the production bundle outgrows the budgets in
+      # bundle-size.json — keeps lazy-loading and code-splitting honest.
+      - name: Check bundle size
+        run: bun run check:bundle
+
+  platform:
+    name: php stores · hmac contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: pdo, pdo_sqlite
+
+      # Runs the presence/HMAC stores against both drivers (file + SQLite) and
+      # cross-checks the HMAC golden vector shared with the browser suite.
+      - name: Run PHP store + HMAC tests
+        run: php tests/php/run.php

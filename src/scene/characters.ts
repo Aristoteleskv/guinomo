@@ -192,6 +192,17 @@ export class CharactersModule extends SceneModule {
     label.textContent = name;
     tag.title = name;
     tag.setAttribute('aria-label', `${name} · ${document.documentElement.lang.startsWith('en') ? 'Online, Noop community member' : 'Online, membro da comunidade Noop'}`);
+
+    // Golden name tag for secret hunters
+    if (backgroundColor === '#ffd700') {
+      pill.classList.add('golden-name-tag');
+      pill.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.6)';
+      pill.style.border = '1px solid #ffffff';
+    } else {
+      pill.classList.remove('golden-name-tag');
+      pill.style.boxShadow = '';
+      pill.style.border = '';
+    }
   }
 
   private isValidNameTagColor(color: unknown): color is string {
@@ -267,7 +278,8 @@ export class CharactersModule extends SceneModule {
     events.on('webgl_character_controls_enable', this.enableControls);
     events.on('webgl_character_toggle_hat', this.toggleHat);
     events.on('webgl_all_secrets_found', () => {
-      if (this.mesh) {
+      // Guard so the reward is applied (and persisted) only once.
+      if (this.mesh && !this.mesh._localObject.userData.hasAllSecrets) {
         this.mesh._localObject.userData.hasAllSecrets = true;
         void this.setLocalNameTagColor('#ffd700'); // Recompensa: Nome Dourado
       }

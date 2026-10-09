@@ -150,7 +150,21 @@ sig        = HMAC-SHA256(canonical, secret)  // lowercase hex
 ## Rollout checklist
 
 1. Add the helpers to a shared `App\Core\Auth` module (not yet present).
+   - Implemented here in `php-integration/lib/hmac.php`; copy it into the real
+     app as `App\Core\Auth\Hmac` when wiring production.
 2. Persist nonces for the skew window; reject duplicates.
+   - Implemented: `guinomo_hmac_nonce_claim()` uses the shared PDO store when
+     `GUINOMO_DB_DSN` is set (necessary behind multiple workers), otherwise a
+     file store. (It also fixes a latent bug where the file was opened
+     write-only, so the replay guard silently never matched.)
 3. Add the client signer behind a flag; keep sending the existing CSRF token.
+   - Implemented: `src/core/hmac.ts`, inert unless `window.GUINOMO_HMAC_KEY` is
+     set; `save_avatar_3d.php` verifies only when `GUINOMO_HMAC_SECRET` is set.
+   - Golden vector asserted in `tests/hmac.test.ts`.
 4. Log verification failures without leaking the signature.
+   - Implemented: `guinomo_hmac_log_failure()` writes `time uid method path
+     reason ip` to `.hmac-failures.log` (gitignored) and mirrors it to the PHP
+     error log; the signature is never logged.
 5. Only then make verification mandatory on the mocks and the real endpoint.
+   - TODO: fail closed once the client is guaranteed to sign.
+

@@ -3,6 +3,7 @@ import {
   ConeGeometry,
   CylinderGeometry,
   Group,
+  InstancedMesh,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -135,6 +136,34 @@ export class WorldLocations extends SceneModule {
     return mesh;
   }
 
+  // The authored .bin geometries carry the original map's world offset baked
+  // into the vertices (e.g. houses[0] lives at ~x=31, z=8). Re-centering the
+  // asset (x/z) makes `mesh.position` control the real spot, so the city
+  // layouts below land exactly where they are assigned.
+  private recenter(mesh: Mesh) {
+    const geometry = mesh.geometry;
+    geometry.computeBoundingBox();
+    const bb = geometry.boundingBox;
+    if (!bb) return;
+    geometry.translate(-(bb.min.x + bb.max.x) / 2, 0, -(bb.min.z + bb.max.z) / 2);
+  }
+
+  // Instanced patches (machines) carry their world spots in the per-instance
+  // matrices. Shift those so the first instance sits at the origin; the public
+  // mesh.position then places the whole patch where the city wants it.
+  private recenterInstanced(mesh: InstancedMesh) {
+    const array = mesh.instanceMatrix.array as Float32Array;
+    const tx = array[12];
+    const ty = array[13];
+    const tz = array[14];
+    for (let i = 0; i < mesh.count; i++) {
+      array[i * 16 + 12] -= tx;
+      array[i * 16 + 13] -= ty;
+      array[i * 16 + 14] -= tz;
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+  }
+
   private standard(color: string, metalness = 0.08): MeshStandardMaterial {
     return new MeshStandardMaterial({ color, roughness: 0.78, metalness, flatShading: true });
   }
@@ -205,20 +234,31 @@ export class WorldLocations extends SceneModule {
     this.add(plaza, new CylinderGeometry(12, 13, 0.45, 12), stone, 0, 0.24, 0);
     this.add(plaza, new CylinderGeometry(7.4, 7.4, 0.12, 12), cap, 0, 0.53, 0);
 
-    // Integrar Machines autorais na cidade flutuante
+    // Integrar Machines autorais na cidade flutuante. As instâncias vêm com as
+    // posições do mapa original baked; recentra-se cada patch e distribuem-se
+    // as três máquinas por spots distintos em torno da praça.
     this.scene.ready.then(() => {
       if (this.scene.machines?.meshes.length) {
+        const spots = [
+          { x: -10, z: -68 },
+          { x: 26, z: -42 },
+          { x: 44, z: -52 },
+        ];
         this.scene.machines.meshes.forEach((mesh, i) => {
           mesh.visible = true;
-          const x = i === 0 ? -10 : 35;
-          const z = -65;
-          mesh.position.set(x, this.groundAt(x, z), z);
+          this.recenterInstanced(mesh);
+          const spot = spots[i % spots.length];
+          mesh.position.set(spot.x, this.groundAt(spot.x, spot.z), spot.z);
+          mesh.updateMatrixWorld(true);
         });
       }
 
       this.scene.blockers.meshes.forEach((mesh, i) => {
         mesh.visible = true;
-        mesh.position.set(12 + (i * 5), this.groundAt(12 + (i * 5), -70), -70);
+        this.recenter(mesh);
+        const x = 12 + i * 5;
+        mesh.position.set(x, this.groundAt(x, -70), -70);
+        mesh.updateMatrixWorld(true);
       });
     });
 
@@ -245,11 +285,16 @@ export class WorldLocations extends SceneModule {
     this.scene.ready.then(() => {
       if (this.scene.parasols?.mesh) {
         this.scene.parasols.mesh.visible = true;
+        this.recenter(this.scene.parasols.mesh);
         this.scene.parasols.mesh.position.set(25, this.groundAt(25, -45), -45);
+        this.scene.parasols.mesh.updateMatrixWorld(true);
       }
       this.scene.castles.meshes.forEach((mesh, i) => {
         mesh.visible = true;
-        mesh.position.set(5 + i * 15, this.groundAt(5 + i * 15, -40), -40);
+        this.recenter(mesh);
+        const x = 5 + i * 15;
+        mesh.position.set(x, this.groundAt(x, -40), -40);
+        mesh.updateMatrixWorld(true);
       });
     });
 
@@ -282,15 +327,17 @@ export class WorldLocations extends SceneModule {
       this.scene.houses.meshes.forEach((mesh, i) => {
         const pos = positions[i % positions.length];
         mesh.visible = true;
+        this.recenter(mesh);
         mesh.position.set(pos.x, this.groundAt(pos.x, pos.z), pos.z);
         mesh.rotation.y = pos.rot;
         mesh.updateMatrixWorld(true);
       });
 
       this.scene.warehouses.meshes.forEach((mesh, i) => {
-        const x = i === 0 ? -15 : 30;
+        const x = i === 0 ? -15 : i === 1 ? 10 : 35;
         const z = -40;
         mesh.visible = true;
+        this.recenter(mesh);
         mesh.position.set(x, this.groundAt(x, z), z);
         mesh.updateMatrixWorld(true);
       });

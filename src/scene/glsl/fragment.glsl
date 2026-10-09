@@ -225,8 +225,12 @@
                     diffuseSpecular = texture2D(tRamp, vec2(_shadow0, getRamp(rampID))).rgb;
                     diffuseSpecular *= fit(vUv.y, 0.0, 0.75, 1.0, 1.25);
                 #elif defined(IS_CHARACTER)
-                    // Hat removal logic: Part 76 is usually the hat in the kid model
-                    if (vColorInfo.y < 0.01 && abs(vColorInfo.r - 76.0) < 0.5 && vHatVisible < 0.5) {
+                    // Remoção do chapéu: partes 75 (aba+topo) e 77 (decoração do
+                    // topo) no modelo kid.bin (verificado por análise da geometria;
+                    // a parte 76 é o cabelo e deve permanecer visível).
+                    if (vColorInfo.y < 0.01
+                        && (abs(vColorInfo.r - 75.0) < 0.5 || abs(vColorInfo.r - 77.0) < 0.5)
+                        && vHatVisible < 0.5) {
                         discard;
                     }
 

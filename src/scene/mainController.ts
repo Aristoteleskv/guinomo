@@ -40,7 +40,9 @@ export class MainController {
     this.mainMesh = createFullscreenTriangle();
     this.mainMesh.frustumCulled = false;
     this.mainMesh.name = 'Main triangle mesh';
-    void this.init();
+    // Defer like SceneModule so class-field initializers (e.g.
+    // `resizeEnvironment`) exist before `init()` runs.
+    queueMicrotask(() => void this.init());
   }
 
   private async init() {

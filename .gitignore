@@ -95,6 +95,17 @@ dist
 multiplayer/target/
 multiplayer/**/target/
 
+# Guinomo mock runtime state (written at request time by presence/HMAC stores)
+php-integration/.presence.json
+php-integration/.hmac-nonces.json
+php-integration/.hmac-failures.log
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+.playwright/
+
 # Gatsby files
 .cache/
 # Comment in the public line in if your project uses Gatsby and not Next.js

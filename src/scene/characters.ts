@@ -8,6 +8,7 @@ import { Characters } from '../engine/characters';
 import { depthCharsMaterial, phongMaterial } from './materials';
 import { SceneModule } from './SceneModule';
 import { appEndpointUrl } from '../core/assets';
+import { signIfEnabled } from '../core/hmac';
 import { getWorldId, getWorldRoomSeed } from '../core/worlds';
 
 export class CharactersModule extends SceneModule {
@@ -112,12 +113,12 @@ export class CharactersModule extends SceneModule {
     let s = [1, 1, 1]; // [x, y, z]
 
     switch (p) {
-      case 'heroic':    s = [1.1, 1.15, 1.05]; break;
-      case 'stylized':  s = [0.9, 0.9, 0.9]; break;
-      case 'curvy':     s = [1.05, 0.95, 1.1]; break;
-      case 'slim_long': s = [0.85, 1.1, 0.85]; break;
-      case 'dynamic':   s = [1.0, 1.05, 1.0]; break;
-      case 'athletic':  s = [1.05, 1.05, 1.0]; break;
+      case 'heroic':    s = [1.15, 1.2, 1.1]; break;   // Mais alto e largo
+      case 'stylized':  s = [0.85, 0.85, 0.85]; break; // Pequeno e cartunesco
+      case 'curvy':     s = [1.1, 0.95, 1.15]; break;  // Mais baixo e largo
+      case 'slim_long': s = [0.8, 1.25, 0.8]; break;   // Muito alto e magro
+      case 'dynamic':   s = [1.0, 1.1, 1.0]; break;
+      case 'athletic':  s = [1.1, 1.05, 1.05]; break;
       default:          s = [1, 1, 1]; break;
     }
 
@@ -191,6 +192,17 @@ export class CharactersModule extends SceneModule {
     label.textContent = name;
     tag.title = name;
     tag.setAttribute('aria-label', `${name} · ${document.documentElement.lang.startsWith('en') ? 'Online, Noop community member' : 'Online, membro da comunidade Noop'}`);
+
+    // Golden name tag for secret hunters
+    if (backgroundColor === '#ffd700') {
+      pill.classList.add('golden-name-tag');
+      pill.style.boxShadow = '0 0 10px rgba(255, 215, 0, 0.6)';
+      pill.style.border = '1px solid #ffffff';
+    } else {
+      pill.classList.remove('golden-name-tag');
+      pill.style.boxShadow = '';
+      pill.style.border = '';
+    }
   }
 
   private isValidNameTagColor(color: unknown): color is string {
@@ -265,6 +277,13 @@ export class CharactersModule extends SceneModule {
     events.on('webgl_character_randomize_color', this.changeColor);
     events.on('webgl_character_controls_enable', this.enableControls);
     events.on('webgl_character_toggle_hat', this.toggleHat);
+    events.on('webgl_all_secrets_found', () => {
+      // Guard so the reward is applied (and persisted) only once.
+      if (this.mesh && !this.mesh._localObject.userData.hasAllSecrets) {
+        this.mesh._localObject.userData.hasAllSecrets = true;
+        void this.setLocalNameTagColor('#ffd700'); // Recompensa: Nome Dourado
+      }
+    });
 
     const colliderMesh = new Mesh(colliderGeometry);
 
@@ -356,15 +375,26 @@ export class CharactersModule extends SceneModule {
 
   private async _saveAvatarConfig(uid: number, key: string, value: string | number | boolean): Promise<boolean> {
     try {
-      const formData = new FormData();
-      formData.append('uid', uid.toString());
-      formData.append('key', key);
-      formData.append('value', value.toString());
-      formData.append('csrf_token', window.CSRF_TOKEN || '');
+      const endpoint = appEndpointUrl('php/save_avatar_3d.php');
+      // application/x-www-form-urlencoded (not FormData) so the exact bytes can
+      // be signed, and so it matches PHP's $_POST parsing.
+      const body = new URLSearchParams({
+        uid: uid.toString(),
+        key,
+        value: value.toString(),
+        csrf_token: window.CSRF_TOKEN || '',
+      });
+      const rawBody = body.toString();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      };
+      // Additive HMAC signing: inert unless a runtime key is configured.
+      Object.assign(headers, await signIfEnabled('POST', endpoint, rawBody));
 
-      const response = await fetch(appEndpointUrl('php/save_avatar_3d.php'), {
+      const response = await fetch(endpoint, {
         method: 'POST',
-        body: formData,
+        headers,
+        body: rawBody,
       });
 
       const result = await response.json();

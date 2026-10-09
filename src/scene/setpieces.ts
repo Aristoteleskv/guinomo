@@ -10,6 +10,18 @@ import { geometryLoader } from '../engine/loaders/geometries';
 import { phongMaterial } from './materials';
 import { SceneModule } from './SceneModule';
 
+const SECRETS_STORAGE_KEY = 'guinomo_secrets';
+
+/** Reads the persisted secret ids, tolerating absent or corrupted storage. */
+function readFoundSecrets(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SECRETS_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 /** An easter egg: when the player gets close enough, show its text modal. */
 export class Secret {
   completed = false;
@@ -23,14 +35,26 @@ export class Secret {
     this._player = options.player;
     this._distance = options.distance;
     this._text = options.text;
-    events.emit('webgl_increase_easer_count');
+
+    // Check if already found in localStorage
+    if (readFoundSecrets().includes(this._text)) {
+      this.completed = true;
+    }
+
+    events.emit('webgl_increase_easter_count', this.completed);
   }
 
   check() {
     if (this.completed) return;
     if (this._mesh.position.distanceTo(this._player.position) < this._distance) {
       this.completed = true;
+      const found = readFoundSecrets();
+      if (!found.includes(this._text)) {
+        found.push(this._text);
+        localStorage.setItem(SECRETS_STORAGE_KEY, JSON.stringify(found));
+      }
       events.emit('webgl_show_modal', this._text);
+      events.emit('webgl_secret_found');
     }
   }
 }

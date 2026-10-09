@@ -74,6 +74,11 @@ export class Sky extends SceneModule {
     return this.theme === 'alien' ? 1 : 0;
   }
 
+  /** Forces a sky theme; used by per-world presets. */
+  setTheme(theme: 'cycle' | 'night' | 'alien'): void {
+    this.theme = theme;
+  }
+
   protected async init() {
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
     const palette = world === 'floating-city'

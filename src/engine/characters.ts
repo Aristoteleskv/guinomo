@@ -460,14 +460,14 @@ export class Characters extends CharacterSkinnedMesh {
       const physiques = ['default', 'heroic', 'stylized', 'curvy', 'slim_long', 'dynamic', 'athletic'];
       const pName = physiques[pIdx] || 'default';
 
-      // Matriz de escalas [x, y, z]
+      // Matriz de escalas [x, y, z] - Sincronizado com Dev B (Scene)
       const scales: Record<string, number[]> = {
-        heroic: [1.1, 1.15, 1.05],
-        stylized: [0.9, 0.9, 0.9],
-        curvy: [1.05, 0.95, 1.1],
-        slim_long: [0.85, 1.15, 0.85],
-        dynamic: [1.0, 1.05, 1.0],
-        athletic: [1.08, 1.08, 1.02],
+        heroic: [1.15, 1.2, 1.1],
+        stylized: [0.85, 0.85, 0.85],
+        curvy: [1.1, 0.95, 1.15],
+        slim_long: [0.8, 1.25, 0.8],
+        dynamic: [1.0, 1.1, 1.0],
+        athletic: [1.1, 1.05, 1.05],
         default: [1, 1, 1]
       };
       const s = scales[pName];

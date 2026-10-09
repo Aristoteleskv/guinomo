@@ -150,20 +150,36 @@ export class AudioController {
   updatePlayerPosition(position: number[] = [0, 0, 0], speed = 0, onFloor = true) {
     if (!this._hasLoaded || !this._visibleState) return;
     this._syncAudioWithGsap();
-    this._audios.song?.setVolume(0.5 * this._multiplierVolume);
 
-    // crossfade forest ↔ beach by world X position
-    const blend = fit(position[0], 35, 65, 0, 1);
-    (['forest', 'beach'] as const).forEach((name, i) => {
+    const world = new URLSearchParams(window.location.search).get('world') || 'lobby';
+    const isSpecialWorld = ['floating-city', 'tropical-city', 'old-town', 'alien'].includes(world);
+
+    this._audios.song?.setVolume((world === 'alien' ? 0.8 : 0.4) * this._multiplierVolume);
+
+    if (isSpecialWorld) {
+      // In special worlds, we set fixed ambient levels instead of the forest/beach crossfade
+      const volumes: Record<string, { forest: number, beach: number }> = {
+        'floating-city': { forest: 0, beach: 0.3 },
+        'tropical-city': { forest: 0, beach: 0.8 },
+        'old-town': { forest: 0.2, beach: 0 },
+        'alien': { forest: 0, beach: 0 },
+      };
+      const v = volumes[world] || { forest: 0, beach: 0 };
+      this._audios.forest?.setVolume(v.forest * this._multiplierVolume);
+      this._audios.beach?.setVolume(v.beach * this._multiplierVolume);
+    } else {
+      // Original forest ↔ beach crossfade for the main island
+      const blend = fit(position[0], 35, 65, 0, 1);
+      this._audios.forest?.setVolume((1 - blend) * this._multiplierVolume);
+      this._audios.beach?.setVolume(blend * this._multiplierVolume);
+    }
+
+    // Play/Pause based on volume to save resources
+    (['forest', 'beach'] as const).forEach((name) => {
       const audio = this._audios[name];
-      const volume = (i === 0 ? 1 - blend : blend) * this._multiplierVolume;
       if (!audio) return;
-      audio.setVolume(volume);
-      if (volume === 0) {
-        if (audio.isPlaying) audio.pause();
-      } else if (!audio.isPlaying) {
-        audio.play();
-      }
+      if (audio.getVolume() <= 0 && audio.isPlaying) audio.pause();
+      else if (audio.getVolume() > 0 && !audio.isPlaying) audio.play();
     });
 
     this._audios.steps?.setVolume(

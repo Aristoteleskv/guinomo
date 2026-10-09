@@ -1,0 +1,10 @@
+{
+  "secret": "dev-secret",
+  "method": "POST",
+  "path": "/php/save_avatar_3d.php",
+  "timestamp": 1700000000,
+  "nonce": "0123456789abcdef0123456789abcdef",
+  "body": "{\"uid\":1,\"key\":\"name_tag_color\",\"value\":\"#e5b299\"}",
+  "bodyHash": "45191e96c99536b8d53dfae8b4297d66e932645c384b882b5df65239667e9efb",
+  "signature": "ea3eca019beb40286967c9d07d3b753a506bc8c6a3cebee3d7b2a94f47340222"
+}

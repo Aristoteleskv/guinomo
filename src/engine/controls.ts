@@ -234,11 +234,18 @@ export class Controls {
       case 'Space':
         this._requestJump(down);
         break;
+      case 'KeyE':
+        if (down) events.emit('world_rest_toggle');
+        break;
     }
   };
 
   private _requestJump(down: boolean) {
     if (down) {
+      if (this._characters._localObject.userData.worldAction === 'sleep') {
+        events.emit('world_rest_toggle');
+        return;
+      }
       if (this._jumpKeyLocked) return;
       this._jumpKeyLocked = true;
       this._characters._localObject.jumpRequested = true;
@@ -305,6 +312,11 @@ export class Controls {
     this.circles.update(this._touchDelta, this._isTouching);
     this._v.setScalar(0);
     if (!this._browserActive) return this._v;
+
+    const hasMoveInput = this._moveKeysPressed.includes(true) || this._touchDelta.length() > 0.1;
+    if (hasMoveInput && this._characters._localObject.userData.worldAction === 'sleep') {
+      events.emit('world_rest_toggle');
+    }
 
     if (this._moveKeysPressed.includes(true)) {
       if (this._moveKeysPressed[0]) this._v.z += 1;

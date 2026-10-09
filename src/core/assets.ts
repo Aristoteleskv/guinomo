@@ -3,6 +3,10 @@ declare global {
     APP_URL_PATH?: string;
     CSRF_TOKEN?: string;
     GUINOMO_ASSET_BASE?: string;
+    /** Short-lived HMAC key; when absent request signing is disabled. */
+    GUINOMO_HMAC_KEY?: string;
+    /** Canonical path override for HMAC signing (defaults to the URL pathname). */
+    GUINOMO_HMAC_PATH?: string;
     GUINOMO_UID?: number;
     GUINOMO_PROFILE?: {
       username: string;

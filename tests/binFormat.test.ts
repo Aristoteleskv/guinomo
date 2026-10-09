@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  encodeBin,
-  parseBin,
-  TYPED_ARRAYS,
-  type BinHeader,
-} from '../src/engine/loaders/binFormat';
+import { encodeBin, parseBin, TYPED_ARRAYS, type BinHeader } from '../src/engine/loaders/binFormat';
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
@@ -12,7 +7,13 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 
 describe('custom .bin container', () => {
   it('parses a hand-built header', () => {
-    const header: BinHeader = { type: 0, attributes: [['position', 7], ['index', 4]] };
+    const header: BinHeader = {
+      type: 0,
+      attributes: [
+        ['position', 7],
+        ['index', 4],
+      ],
+    };
     const headerJson = new TextEncoder().encode(JSON.stringify(header));
     const lengthText = new TextEncoder().encode(String(headerJson.length).padStart(10, '0'));
     const payload = new Uint8Array([1, 2, 3, 4]);

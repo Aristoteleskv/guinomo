@@ -12,11 +12,14 @@ export default defineConfig({
       configureServer(server) {
         server.middlewares.use((_req, res, next) => {
           res.removeHeader('X-Frame-Options');
-          res.setHeader('Content-Security-Policy', "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*");
+          res.setHeader(
+            'Content-Security-Policy',
+            "frame-ancestors 'self' http://localhost http://127.0.0.1 http://localhost:* http://127.0.0.1:*",
+          );
           next();
         });
-      }
-    }
+      },
+    },
   ],
   optimizeDeps: {
     exclude: ['guinomo-browser'],
@@ -31,6 +34,6 @@ export default defineConfig({
     host: true,
     port: 5173,
     strictPort: true,
-    cors: true
-  }
+    cors: true,
+  },
 });

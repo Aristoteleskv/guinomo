@@ -95,7 +95,9 @@ export function readGlb(buffer) {
     if (chunkEnd > end) throw new Error('Invalid GLB: chunk overruns file length');
 
     if (chunkType === CHUNK_JSON) {
-      json = JSON.parse(bytes.subarray(chunkStart, chunkEnd).toString('utf8').replace(/\u0000+$/, '').trim());
+      let jsonText = bytes.subarray(chunkStart, chunkEnd).toString('utf8');
+      while (jsonText.endsWith('\u0000')) jsonText = jsonText.slice(0, -1);
+      json = JSON.parse(jsonText.trim());
     } else if (chunkType === CHUNK_BIN) {
       bin = Buffer.from(bytes.subarray(chunkStart, chunkEnd));
     }

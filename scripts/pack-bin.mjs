@@ -71,7 +71,9 @@ try {
   const outputBuffer = encodeBin(header, glb.bin);
   writeFileSync(outputPath, outputBuffer);
   console.log(`Packed ${basename(inputPath)} -> ${outputPath}`);
-  console.log(`  attributes: ${header.attributes.map(([name, type]) => `${name}:${type}`).join(', ') || '(none)'}`);
+  console.log(
+    `  attributes: ${header.attributes.map(([name, type]) => `${name}:${type}`).join(', ') || '(none)'}`,
+  );
   console.log(`  payload:    ${glb.bin.length} bytes`);
 } catch (error) {
   console.error(`pack-bin failed: ${error.message}`);

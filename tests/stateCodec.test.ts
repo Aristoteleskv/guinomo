@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  decodeState,
-  encodeState,
-  STATE_BYTES,
-  STATE_VERSION,
-} from '../src/engine/multiplayer/stateCodec';
+import { decodeState, encodeState, STATE_BYTES, STATE_VERSION } from '../src/engine/multiplayer/stateCodec';
 
 describe('P2P state codec', () => {
   it('round-trips a full state frame', () => {

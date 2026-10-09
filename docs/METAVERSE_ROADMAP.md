@@ -18,7 +18,7 @@ tem pedaços de cada um; o roadmap é sobre fechar as lacunas, uma fase de cada 
 |---|---|---|
 | **Identidade** (avatar, nome, papel) | Avatar com cores/roupa/chapéu/nome persis­tido (PHP + `localStorage`); papel/título escolhível (v1) | Mais customização (acessórios, física/idade já existe), papéis com significado social |
 | **Mundo persistente** | 6 mundos procedurais + `room` P2P (iroh-gossip); sky/secrets por mundo | Estado do mundo em DB (spawn, objetos colocados), mais biomas, noite/dia por mundo |
-| **Social** | Presença em tempo real, painel de amigos, notificações, chat ia PHP | Chat/emoji em tempo real via P2P, voz, grupos/festas, moderação |
+| **Social** | Presença em tempo real, painel de amigos, notificações, chat PHP; **chat P2P no mundo (v1)** | Emojis ligados ao chat, voz, grupos/festas, moderação |
 | **Economia / UGC** | — (vazio) | Moeda soft, colecionáveis/segredos como troféus, criar/colocar itens, marketplace moderado |
 
 ## Arquitetura de referência (já em produção)
@@ -53,11 +53,15 @@ tem pedaços de cada um; o roadmap é sobre fechar as lacunas, uma fase de cada 
 
 **Dependências**: nenhuma — corre fora do gate PHP (Sprint entregável já).
 
-### Fase 2 — Social em tempo real
-- Chat P2P dentro do mundo (não só via PHP), emojis e presença "a escrever".
-- **Festas/grupos**: convidar vários amigos para a mesma `room`, manter rotação.
-- Voz (WebRTC/Datachannel) opcional e com toggle de privacidade.
-- Moderação básica: bloqueio/mute de utilizador P2P, reporte via PHP.
+### Fase 2 — Social em tempo real (em curso)
+| Item | Critério de aceitação |
+|---|---|
+| **Chat P2P no mundo** ✅ | Mensagens em tempo real entre quem está na mesma `room`, via o próprio canal gossip (envelope v3); janela de chat com badge de não-lidos; limite de 200 chars |
+| Presença "a escrever" ✅ | Indicador "X está a escrever…" a partir de frames `typing` P2P, auto-expira (2,5 s) |
+| Emojis no chat | Renderizar emojis (já suportados como UTF-8) num seletor rápido junto ao input |
+| **Festas/grupos** | Convidar vários amigos para a mesma `room`, manter rotação |
+| Voz | WebRTC/Datachannel opcional com toggle de privacidade (P2P, sem servidor) |
+| Moderação básica | Bloqueio/mute de utilizador P2P, reporte via PHP |
 
 ### Fase 3 — Persistência do mundo + UGC
 - **Spawn persistente**: o utilizador volta para onde estava (guardado no servidor).

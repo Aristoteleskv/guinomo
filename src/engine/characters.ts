@@ -340,20 +340,48 @@ export class Characters extends CharacterSkinnedMesh {
 
   /** Lazily imports the iroh connection class and joins the room. */
   private async _connectMultiplayer(options: CharacterOptions) {
+    if (!isMultiplayerEnabled()) {
+      events.emit('p2p_ready', false);
+      return;
+    }
     try {
       const { P2PConnection } = await import('./multiplayer/iroh');
       if (this._disposed) return;
       this._connection = new P2PConnection({
         data: this._dataUpdate,
         roomSeed: options.roomSeed,
-        onConnect: () => this.connected.resolve(),
+        onConnect: () => {
+          this.connected.resolve();
+          events.emit('p2p_ready', true);
+        },
+        onDisconnect: () => events.emit('p2p_ready', false),
         addClient: (id, data) => this._addCharacter(id, data),
         removeClient: (id) => this._removeCharacter(id),
         removeAllClients: () => this._removeAllCharacters(),
+        onChat: (chat) => events.emit('p2p_chat', chat),
+        onTyping: (typing) => events.emit('p2p_typing', typing),
       });
+      events.on('p2p_send_chat', this._onSendChat);
+      events.on('p2p_typing_send', this._onSendTyping);
     } catch (error) {
       console.warn('[p2p] multiplayer is unavailable', error);
+      events.emit('p2p_ready', false);
     }
+  }
+
+  private _onSendChat = (text: string) => {
+    this._connection?.sendChat(this._localChatName(), String(text ?? ''));
+  };
+
+  private _onSendTyping = () => {
+    this._connection?.sendTyping(this._localChatName());
+  };
+
+  private _localChatName(): string {
+    if (window.GUINOMO_PROFILE?.username) return window.GUINOMO_PROFILE.username;
+    const localName = (this._localObject?.userData?.name as string | undefined) || '';
+    if (localName) return localName;
+    return window.GUINOMO_PROFILE?.language === 'en' ? 'Guest' : 'Visitante';
   }
 
   update() {

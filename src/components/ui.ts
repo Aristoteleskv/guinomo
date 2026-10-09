@@ -10,6 +10,7 @@ const closeIcon = '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="m1.5 1.5
 const backIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4 6.5 10l6 6M7 10h10" fill="none" stroke="#716C66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const guideIcon = '<svg viewBox="0 0 20 20" style="width:16px;height:16px;" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="#716C66" stroke-width="1.6"/><path d="M7.9 7.6a2.1 2.1 0 0 1 4.2.5c0 1.3-2 1.7-2 3M10 14.3h.01" fill="none" stroke="#716C66" stroke-width="1.6" stroke-linecap="round"/></svg>';
 const mapIcon = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" fill="none" stroke="#716C66" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 4v14m6-12v14" stroke="#716C66" stroke-width="1.6"/></svg>';
+const chatIcon = '<svg viewBox="0 0 24 24" style="width:17px;height:17px;" aria-hidden="true"><path d="M4 4.5h16a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H9.5L4.5 21.5V5.5a1 1 0 0 1 .5-1Z" fill="none" stroke="#716C66" stroke-width="1.6" stroke-linejoin="round"/><circle cx="8.5" cy="10.8" r="1" fill="#716C66"/><circle cx="12" cy="10.8" r="1" fill="#716C66"/><circle cx="15.5" cy="10.8" r="1" fill="#716C66"/></svg>';
 
 const infoContent = {
   about: {
@@ -118,6 +119,10 @@ export class UiController {
   private notificationIds = new Set<number>();
   private friendsButton: HTMLButtonElement | null = null;
   private friendsPanel: HTMLElement | null = null;
+  private chatButton: HTMLButtonElement | null = null;
+  private chatPanel: HTMLElement | null = null;
+  private chatUnread = 0;
+  private chatTypingTimer = 0;
 
   constructor(root: HTMLElement) {
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
@@ -392,6 +397,18 @@ export class UiController {
     });
     this.nav.insertBefore(friendsButton, this.soundButton);
 
+    const chatLabel = language === 'en' ? 'World chat' : 'Chat do mundo';
+    const chatButton = document.createElement('button');
+    chatButton.className = 'button social-link guinomo-chat-button';
+    chatButton.type = 'button';
+    chatButton.title = chatLabel;
+    chatButton.setAttribute('aria-label', chatLabel);
+    chatButton.innerHTML = `${chatIcon}<span class="guinomo-chat-badge" hidden></span>`;
+    this.chatButton = chatButton;
+    chatButton.addEventListener('click', () => this.toggleChat());
+    this.nav.insertBefore(chatButton, this.soundButton);
+    this.createChatPanel();
+
     const worldControl = document.createElement('label');
     worldControl.className = 'button social-link world-select-control';
     worldControl.title = language === 'en' ? 'Choose a world' : 'Escolher mundo';
@@ -587,6 +604,152 @@ export class UiController {
           ? 'Friends are temporarily unavailable.'
           : 'Amigos temporariamente indisponíveis.';
       }
+  }
+
+  private createChatPanel() {
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const panel = document.createElement('section');
+      panel.id = 'guinomo-room-chat';
+      panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-label', language === 'en' ? 'World chat' : 'Chat do mundo');
+      panel.innerHTML = `
+        <header>
+          <strong>${language === 'en' ? 'World chat' : 'Chat do mundo'}</strong>
+          <span class="guinomo-chat-status">${language === 'en' ? 'Connecting…' : 'A ligar…'}</span>
+          <button type="button" class="guinomo-chat-close" aria-label="${language === 'en' ? 'Close chat' : 'Fechar chat'}">×</button>
+        </header>
+        <div class="guinomo-chat-messages" aria-live="polite"></div>
+        <p class="guinomo-chat-typing" hidden></p>
+        <form class="guinomo-chat-form" novalidate>
+          <input class="guinomo-chat-input" maxlength="200" autocomplete="off"
+            aria-label="${language === 'en' ? 'Write a message' : 'Escreve uma mensagem'}"
+            placeholder="${language === 'en' ? 'Say something to the world…' : 'Diz algo ao mundo…'}">
+          <button type="submit" class="guinomo-chat-send">${language === 'en' ? 'Send' : 'Enviar'}</button>
+        </form>
+      `;
+      panel.hidden = true;
+      document.body.append(panel);
+      this.chatPanel = panel;
+
+      panel.querySelector<HTMLButtonElement>('.guinomo-chat-close')?.addEventListener('click', () => this.closeChat());
+      panel.querySelector<HTMLFormElement>('.guinomo-chat-form')?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        this.sendChatMessage();
+      });
+      const input = panel.querySelector<HTMLInputElement>('.guinomo-chat-input');
+      input?.addEventListener('input', () => {
+        // Signal "typing" once per burst, when the box goes from empty to text.
+        if (input.value.trim() && input.dataset.typingSent !== '1') {
+          input.dataset.typingSent = '1';
+          events.emit('p2p_typing_send');
+          window.setTimeout(() => { input.dataset.typingSent = '0'; }, 1500);
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape' || !panel || panel.hidden) return;
+        this.closeChat();
+      });
+
+      events.on('p2p_chat', (chat: { uid?: number; name?: string; text?: string }) => this.receiveChatMessage(chat));
+      events.on('p2p_typing', (typing: { uid?: number; name?: string }) => this.showTyping(typing.name || ''));
+      events.on('p2p_ready', (ready: boolean) => this.setChatStatus(ready === true));
+  }
+
+  private toggleChat() {
+      if (!this.chatPanel) return;
+      if (this.chatPanel.hidden) {
+        this.chatPanel.hidden = false;
+        this.chatUnread = 0;
+        this.updateChatBadge();
+        const input = this.chatPanel.querySelector<HTMLInputElement>('.guinomo-chat-input');
+        input?.focus();
+      } else {
+        this.closeChat();
+      }
+  }
+
+  private closeChat() {
+      if (!this.chatPanel || this.chatPanel.hidden) return;
+      this.chatPanel.hidden = true;
+  }
+
+  private receiveChatMessage(chat: { uid?: number; name?: string; text?: string }) {
+      if (!this.chatPanel) return;
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const name = (chat.name || '').trim() || (language === 'en' ? 'Guest' : 'Visitante');
+      const text = (chat.text || '').trim();
+      if (!text) return;
+      this.appendChatMessage(name, text, false);
+      if (this.chatPanel.hidden) {
+        this.chatUnread += 1;
+        this.updateChatBadge();
+      }
+  }
+
+  private appendChatMessage(name: string, text: string, own: boolean) {
+      if (!this.chatPanel) return;
+      const list = this.chatPanel.querySelector<HTMLElement>('.guinomo-chat-messages');
+      if (!list) return;
+      const bubble = document.createElement('div');
+      bubble.className = `guinomo-chat-msg${own ? ' own' : ''}`;
+      const sender = document.createElement('span');
+      sender.className = 'guinomo-chat-msg-name';
+      sender.textContent = name;
+      const body = document.createElement('span');
+      body.className = 'guinomo-chat-msg-text';
+      body.textContent = text;
+      bubble.append(sender, body);
+      list.append(bubble);
+      list.scrollTop = list.scrollHeight;
+      while (list.children.length > 80) list.firstElementChild?.remove();
+  }
+
+  private sendChatMessage() {
+      if (!this.chatPanel) return;
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const input = this.chatPanel.querySelector<HTMLInputElement>('.guinomo-chat-input');
+      if (!input) return;
+      const text = input.value.replace(/\s+/g, ' ').trim();
+      input.value = '';
+      if (!text) return;
+      const name = window.GUINOMO_PROFILE?.username?.trim()
+        || (language === 'en' ? 'You' : 'Tu');
+      events.emit('p2p_send_chat', text);
+      this.appendChatMessage(name, text, true);
+  }
+
+  private showTyping(name: string) {
+      if (!this.chatPanel) return;
+      const typing = this.chatPanel.querySelector<HTMLElement>('.guinomo-chat-typing');
+      if (!typing) return;
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const clean = name.trim() || (language === 'en' ? 'Someone' : 'Alguém');
+      typing.textContent = `${clean} ${language === 'en' ? 'is typing…' : 'está a escrever…'}`;
+      typing.hidden = false;
+      window.clearTimeout(this.chatTypingTimer);
+      this.chatTypingTimer = window.setTimeout(() => {
+        typing.hidden = true;
+        typing.textContent = '';
+      }, 2500);
+  }
+
+  private setChatStatus(ready: boolean) {
+      if (!this.chatPanel) return;
+      const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+      const status = this.chatPanel.querySelector<HTMLElement>('.guinomo-chat-status');
+      if (!status) return;
+      status.textContent = ready
+        ? (language === 'en' ? 'In world' : 'No mundo')
+        : (language === 'en' ? 'Offline' : 'Offline');
+      status.classList.toggle('online', ready);
+  }
+
+  private updateChatBadge() {
+      if (!this.chatButton) return;
+      const badge = this.chatButton.querySelector<HTMLElement>('.guinomo-chat-badge');
+      if (!badge) return;
+      badge.textContent = this.chatUnread > 9 ? '9+' : String(this.chatUnread);
+      badge.hidden = this.chatUnread === 0;
   }
 
   private startPresenceHeartbeat(appPath: string) {

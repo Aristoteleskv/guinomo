@@ -12,6 +12,14 @@
 //   [31]     u8   phy (physique index)
 //   [32]     u8   age scale (percentage)
 //   [33]     u8   gender category (0 unknown, 1 masculine, 2 feminine, 3 other)
+//
+// Chat/typing envelopes reuse the same 34-byte state header with version 3 and
+// append an extra byte for the message type plus a UTF-8 JSON payload, so pure
+// position frames (v2) stay readable by every client:
+//   [0]      u8   version (3)
+//   [1..34]  same state header as above (sender's uid lives at [26..30])
+//   [34]     u8   msg type (1 chat, 2 typing)
+//   [35..]   UTF-8 JSON: {"n":"<name>","t":"<text>"} for chat, {"n":"<name>"} for typing
 
 export type P2PData = Record<string, number[] | number | string | boolean | null>;
 
@@ -28,9 +36,34 @@ export interface P2PClientData {
   [key: string]: any;
 }
 
+export interface P2PChatMessage {
+  from: string;
+  uid: number;
+  name: string;
+  text: string;
+}
+
+export interface P2PTyping {
+  from: string;
+  uid: number;
+  name: string;
+}
+
+export interface P2PEnvelope {
+  state: P2PClientData;
+  chat?: Omit<P2PChatMessage, 'from'>;
+  typing?: Omit<P2PTyping, 'from'>;
+}
+
 export const STATE_VERSION = 2;
+export const STATE_VERSION_V3 = 3;
+export const MSG_NONE = 0;
+export const MSG_CHAT = 1;
+export const MSG_TYPING = 2;
 export const LEGACY_STATE_BYTES = 32;
 export const STATE_BYTES = 34;
+/** 34-byte state header + 1 msg-type byte. */
+const ENVELOPE_HEADER_BYTES = STATE_BYTES + 1;
 
 export function encodeState(data: P2PData): Uint8Array {
   const out = new Uint8Array(STATE_BYTES);
@@ -56,7 +89,7 @@ export function encodeState(data: P2PData): Uint8Array {
 }
 
 export function decodeState(bytes: Uint8Array): P2PClientData {
-  if (bytes.length < LEGACY_STATE_BYTES || bytes[0] !== STATE_VERSION) {
+  if (bytes.length < LEGACY_STATE_BYTES || (bytes[0] !== STATE_VERSION && bytes[0] !== STATE_VERSION_V3)) {
     throw new Error(`bad state frame: ${bytes.length} bytes, version ${bytes[0]}`);
   }
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -73,4 +106,54 @@ export function decodeState(bytes: Uint8Array): P2PClientData {
       ? ({ 1: 'masculino', 2: 'feminino', 3: 'outro' } as Record<number, string>)[bytes[33]] || 'nao_informado'
       : 'nao_informado',
   };
+}
+
+/** Encodes a chat message as a v3 envelope: state header + type + UTF-8 JSON. */
+export function encodeChat(uid: number, name: string, text: string): Uint8Array {
+  const payload = new TextEncoder().encode(JSON.stringify({ n: name, t: text }));
+  return envelopeWith(uid, MSG_CHAT, payload);
+}
+
+/** Encodes a "someone is typing" signal as a v3 envelope. */
+export function encodeTyping(uid: number, name: string): Uint8Array {
+  const payload = new TextEncoder().encode(JSON.stringify({ n: name }));
+  return envelopeWith(uid, MSG_TYPING, payload);
+}
+
+function envelopeWith(uid: number, msgType: number, payload: Uint8Array): Uint8Array {
+  const state = encodeState({ uid });
+  const out = new Uint8Array(ENVELOPE_HEADER_BYTES + payload.length);
+  out.set(state, 0); // full 34-byte state header at [0..33]
+  out[0] = STATE_VERSION_V3; // only the version byte changes (2 → 3)
+  out[STATE_BYTES] = msgType;
+  out.set(payload, ENVELOPE_HEADER_BYTES);
+  return out;
+}
+
+/**
+ * Decodes any frame: pure state (v2 or v3 without a payload) yields only
+ * `state`; v3 envelopes additionally carry `chat` or `typing`. Malformed or
+ * unknown frames throw, like `decodeState`.
+ */
+export function decodeEnvelope(bytes: Uint8Array): P2PEnvelope {
+  const state = decodeState(bytes);
+  if (bytes[0] !== STATE_VERSION_V3 || bytes.length <= ENVELOPE_HEADER_BYTES) {
+    return { state };
+  }
+  const msgType = bytes[STATE_BYTES];
+  if (msgType !== MSG_CHAT && msgType !== MSG_TYPING) return { state };
+  const payload = new TextDecoder().decode(bytes.subarray(ENVELOPE_HEADER_BYTES));
+  try {
+    const parsed = JSON.parse(payload) as { n?: unknown; t?: unknown };
+    const name = typeof parsed.n === 'string' ? parsed.n : '';
+    if (msgType === MSG_CHAT) {
+      const text = typeof parsed.t === 'string' ? parsed.t.trim() : '';
+      if (!text) return { state };
+      return { state, chat: { uid: state.uid ?? 0, name, text } };
+    }
+    if (!name) return { state };
+    return { state, typing: { uid: state.uid ?? 0, name } };
+  } catch {
+    return { state };
+  }
 }

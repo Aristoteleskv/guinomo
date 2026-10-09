@@ -6,7 +6,25 @@ import { engine } from './engine/globals';
 import { clock } from './engine/clock';
 import { UiController } from './components/ui';
 import { mountPosterButton } from './engine/photo';
+import { assetUrl } from './core/assets';
 import './styles.css';
+
+/** Loads the Stylish display font through the app asset base. This works both
+ *  in dev (served by the Vite server) and in the static PHP build, where the
+ *  CSS-resolved font path would otherwise point to the wrong origin. */
+function loadDisplayFont(): void {
+  if (!('fonts' in document)) return;
+  try {
+    const face = new FontFace('Stylish', `url(${assetUrl('assets/fonts/Stylish-Regular.woff2')}) format('woff2')`);
+    document.fonts.add(face);
+    void face.load().catch(() => {
+      // Fall back to sans-serif; the font is decorative only.
+    });
+  } catch {
+    // Fall back to sans-serif; the font is decorative only.
+  }
+}
+loadDisplayFont();
 
 const ui = new UiController(document.getElementById('app') ?? document.body);
 mountPosterButton();

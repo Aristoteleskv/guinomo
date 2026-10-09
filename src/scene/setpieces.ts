@@ -12,6 +12,20 @@ import { SceneModule } from './SceneModule';
 
 const SECRETS_STORAGE_KEY = 'guinomo_secrets';
 
+/** Bilingual secret copy. The English text doubles as the stable storage id so
+ *  secrets already found by players are not reset when the UI language changes. */
+interface SecretCopy {
+  pt: string;
+  en: string;
+}
+
+function localizedSecret(copy: SecretCopy): { id: string; text: string } {
+  return {
+    id: copy.en,
+    text: window.GUINOMO_PROFILE?.language === 'en' ? copy.en : copy.pt,
+  };
+}
+
 /** Reads the persisted secret ids, tolerating absent or corrupted storage. */
 function readFoundSecrets(): string[] {
   try {
@@ -29,15 +43,17 @@ export class Secret {
   private _player: Object3D;
   private _distance: number;
   private _text: string;
+  private _id: string;
 
-  constructor(options: { mesh: Mesh; player: Object3D; distance: number; text: string }) {
+  constructor(options: { mesh: Mesh; player: Object3D; distance: number; text: string; id?: string }) {
     this._mesh = options.mesh;
     this._player = options.player;
     this._distance = options.distance;
     this._text = options.text;
+    this._id = options.id ?? options.text;
 
     // Check if already found in localStorage
-    if (readFoundSecrets().includes(this._text)) {
+    if (readFoundSecrets().includes(this._id)) {
       this.completed = true;
     }
 
@@ -49,8 +65,8 @@ export class Secret {
     if (this._mesh.position.distanceTo(this._player.position) < this._distance) {
       this.completed = true;
       const found = readFoundSecrets();
-      if (!found.includes(this._text)) {
-        found.push(this._text);
+      if (!found.includes(this._id)) {
+        found.push(this._id);
         localStorage.setItem(SECRETS_STORAGE_KEY, JSON.stringify(found));
       }
       events.emit('webgl_show_modal', this._text);
@@ -74,7 +90,7 @@ abstract class AnimatedCharacter extends SceneModule {
     position: [number, number, number],
     rotation?: [number, number, number],
     scale?: number,
-    secretText?: string,
+    secret?: { id: string; text: string },
   ) {
     const [skinned, clip] = await Promise.all([
       geometryLoader.skin(meshFile, bonesFile),
@@ -112,12 +128,13 @@ abstract class AnimatedCharacter extends SceneModule {
     };
 
     this.scene.ready.then(() => {
-      if (secretText) {
+      if (secret) {
         this._secret = new Secret({
           mesh: this.mesh,
           player: this.scene.characters.mesh._localObject,
           distance: this._secretDistance,
-          text: secretText,
+          id: secret.id,
+          text: secret.text,
         });
       }
     });
@@ -145,7 +162,10 @@ export class UFO extends SceneModule {
         mesh: this.mesh,
         player: this.scene.characters.mesh._localObject,
         distance: 10,
-        text: "It's a big metallic object. You want to believe it's some kind of vehicle.",
+        ...localizedSecret({
+          pt: 'É um grande objeto metálico. Queres acreditar que é uma espécie de veículo.',
+          en: "It's a big metallic object. You want to believe it's some kind of vehicle.",
+        }),
       });
     });
     this.ready.resolve();
@@ -163,7 +183,10 @@ export class Alien extends AnimatedCharacter {
       [60.14, 0.1, 40.6],
       [-90, 87.1, 90],
       undefined,
-      "It's a very pale and strange looking man. He probably spends too much time on the computer.",
+      localizedSecret({
+        pt: 'É um homem muito pálido e de aspeto estranho. Provavelmente passa demasiado tempo ao computador.',
+        en: "It's a very pale and strange looking man. He probably spends too much time on the computer.",
+      }),
     );
   }
 }
@@ -179,7 +202,10 @@ export class Cats extends AnimatedCharacter {
       [27.4644, 3.18224, -4.1086],
       [0, -106.078, 0],
       undefined,
-      "If these two white cats weren't next to each other it would seem like they were the same one.",
+      localizedSecret({
+        pt: 'Se estes dois gatos brancos não estivessem lado a lado, pareceria que eram o mesmo.',
+        en: "If these two white cats weren't next to each other it would seem like they were the same one.",
+      }),
     );
   }
 }
@@ -194,7 +220,10 @@ export class Sloth extends AnimatedCharacter {
       [-8.38, 1.47, 46.16],
       [-30.8, -42.5, -25.7],
       0.8,
-      'A sloth? That permanent smile it has is so creepy. What is it doing there?',
+      localizedSecret({
+        pt: 'Uma preguiça? Esse sorriso permanente é tão assustador. O que está a fazer ali?',
+        en: 'A sloth? That permanent smile it has is so creepy. What is it doing there?',
+      }),
     );
   }
 }
@@ -233,7 +262,10 @@ export class Gossip extends SceneModule {
         mesh: this.mesh,
         player: this.scene.characters.mesh._localObject,
         distance: 2,
-        text: 'These things look as if they have been taken out of a video game.',
+        ...localizedSecret({
+          pt: 'Estas coisas parecem ter saído de um videojogo.',
+          en: 'These things look as if they have been taken out of a video game.',
+        }),
       });
     });
     this.ready.resolve();

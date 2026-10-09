@@ -8,11 +8,16 @@ declare(strict_types=1);
 //        -> { success: true, notes: [{ id, text, x, y, z, uid, createdAt }] }
 //   POST api/guinomo/notes.php  body { world, x, y, z, text }
 //        -> { success: true, id }
+//   POST api/guinomo/notes.php  body { action: 'update', id, text, world }
+//        -> { success: true, id, text }   (owner only; position is kept)
+//   POST api/guinomo/notes.php  body { action: 'delete', id, world }
+//        -> { success: true, id }         (owner only)
 //
 // Storage follows lib/presence.php: PDO when GUINOMO_DB_DSN is configured
 // (schema in lib/schema.sql), otherwise a zero-config JSON file. Validation:
 // world must be known, text 1..200 chars, coordinates finite, and one note per
-// 20 seconds per uid.
+// 20 seconds per uid. Update/delete check ownership against the session uid
+// (the mocks fall back to uid 1 when no session exists).
 
 session_start();
 require_once __DIR__ . '/../../lib/db.php';
@@ -177,6 +182,101 @@ function guinomo_notes_add(string $world, float $x, float $y, float $z, string $
 }
 
 /**
+ * Finds a single note by id, regardless of world.
+ *
+ * @return array{id:int,uid:int,world:string,text:string}|null
+ */
+function guinomo_notes_find(int $id): ?array
+{
+    if ($id <= 0) {
+        return null;
+    }
+
+    $pdo = guinomo_db();
+    if ($pdo !== null) {
+        guinomo_notes_migrate($pdo);
+        $stmt = $pdo->prepare('SELECT id, uid, world, text FROM guinomo_notes WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch();
+        if (!is_array($row)) {
+            return null;
+        }
+        return [
+            'id' => (int)$row['id'],
+            'uid' => (int)$row['uid'],
+            'world' => (string)$row['world'],
+            'text' => (string)$row['text'],
+        ];
+    }
+
+    foreach (guinomo_notes_file_read() as $note) {
+        if (is_array($note) && (int)($note['id'] ?? 0) === $id) {
+            return [
+                'id' => $id,
+                'uid' => (int)($note['uid'] ?? 0),
+                'world' => (string)($note['world'] ?? ''),
+                'text' => (string)($note['text'] ?? ''),
+            ];
+        }
+    }
+
+    return null;
+}
+
+/** Replaces a note's text. Ownership is checked by the caller. */
+function guinomo_notes_update(int $id, string $text): void
+{
+    $pdo = guinomo_db();
+    if ($pdo !== null) {
+        guinomo_notes_migrate($pdo);
+        $stmt = $pdo->prepare('UPDATE guinomo_notes SET text = :text WHERE id = :id');
+        $stmt->execute([':text' => $text, ':id' => $id]);
+        return;
+    }
+
+    $notes = guinomo_notes_file_read();
+    foreach ($notes as &$note) {
+        if (is_array($note) && (int)($note['id'] ?? 0) === $id) {
+            $note['text'] = $text;
+            break;
+        }
+    }
+    unset($note);
+    guinomo_notes_file_write($notes);
+}
+
+/** Removes a note. Ownership is checked by the caller. */
+function guinomo_notes_delete(int $id): void
+{
+    $pdo = guinomo_db();
+    if ($pdo !== null) {
+        guinomo_notes_migrate($pdo);
+        $pdo->prepare('DELETE FROM guinomo_notes WHERE id = :id')->execute([':id' => $id]);
+        return;
+    }
+
+    $remaining = [];
+    foreach (guinomo_notes_file_read() as $note) {
+        if (is_array($note) && (int)($note['id'] ?? 0) === $id) {
+            continue;
+        }
+        $remaining[] = $note;
+    }
+    guinomo_notes_file_write($remaining);
+}
+
+/** Validates and normalises note text; exits with a 400 when invalid. */
+function guinomo_notes_valid_text(array $body): string
+{
+    $text = trim((string)($body['text'] ?? ''));
+    $length = function_exists('mb_strlen') ? mb_strlen($text) : strlen($text);
+    if ($length < 1 || $length > GUINOMO_NOTES_MAX_LENGTH) {
+        guinomo_notes_fail('O recado deve ter entre 1 e 200 caracteres', 400);
+    }
+    return $text;
+}
+
+/**
  * Creates the notes table when a database is configured. DDL is chosen per
  * driver so the same endpoint runs on MySQL/MariaDB and SQLite.
  */
@@ -290,29 +390,56 @@ if ($method === 'GET') {
 if ($method === 'POST') {
     $body = guinomo_notes_body();
 
+    // The mocks fall back to uid 1 elsewhere; stay consistent so local testing
+    // works without a full login.
+    $uid = (int)($_SESSION['hashtag_uid'] ?? 0);
+    if ($uid <= 0) {
+        $uid = 1;
+    }
+
+    $action = (string)($body['action'] ?? 'add');
+
+    if ($action === 'update') {
+        $id = (int)($body['id'] ?? 0);
+        $note = guinomo_notes_find($id);
+        if ($note === null) {
+            guinomo_notes_fail('Recado não encontrado', 404);
+        }
+        if ($note['uid'] !== $uid) {
+            guinomo_notes_fail('Só podes editar os teus recados', 403);
+        }
+        $text = guinomo_notes_valid_text($body);
+        guinomo_notes_update($id, $text);
+        echo json_encode(['success' => true, 'id' => $id, 'text' => $text], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($action === 'delete') {
+        $id = (int)($body['id'] ?? 0);
+        $note = guinomo_notes_find($id);
+        if ($note === null) {
+            guinomo_notes_fail('Recado não encontrado', 404);
+        }
+        if ($note['uid'] !== $uid) {
+            guinomo_notes_fail('Só podes apagar os teus recados', 403);
+        }
+        guinomo_notes_delete($id);
+        echo json_encode(['success' => true, 'id' => $id], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     $world = isset($body['world']) ? (string)$body['world'] : '';
     if (!in_array($world, guinomo_notes_worlds(), true)) {
         guinomo_notes_fail('Mundo inválido', 400);
     }
 
-    $text = trim((string)($body['text'] ?? ''));
-    $length = function_exists('mb_strlen') ? mb_strlen($text) : strlen($text);
-    if ($length < 1 || $length > GUINOMO_NOTES_MAX_LENGTH) {
-        guinomo_notes_fail('O recado deve ter entre 1 e 200 caracteres', 400);
-    }
+    $text = guinomo_notes_valid_text($body);
 
     foreach (['x', 'y', 'z'] as $axis) {
         $value = $body[$axis] ?? null;
         if (!is_numeric($value) || !is_finite((float)$value)) {
             guinomo_notes_fail('Coordenadas inválidas', 400);
         }
-    }
-
-    // The mocks fall back to uid 1 elsewhere; stay consistent so local testing
-    // works without a full login.
-    $uid = (int)($_SESSION['hashtag_uid'] ?? 0);
-    if ($uid <= 0) {
-        $uid = 1;
     }
 
     $last = guinomo_notes_last_post($uid);

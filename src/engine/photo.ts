@@ -97,6 +97,75 @@ export function downloadPoster(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
+/** Prompts for an optional poster caption. Resolves null when cancelled. */
+function promptCaption(defaultCaption: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const language = uiLanguage();
+    const overlay = document.createElement('div');
+    overlay.id = 'poster-dialog';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', language === 'en' ? 'Poster caption' : 'Legenda do cartaz');
+
+    const card = document.createElement('div');
+    card.className = 'poster-dialog-card';
+
+    const label = document.createElement('label');
+    label.className = 'poster-dialog-label';
+    label.textContent = language === 'en' ? 'Caption (optional)' : 'Legenda (opcional)';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.id = 'poster-dialog-input';
+    input.className = 'poster-dialog-input';
+    input.maxLength = 60;
+    input.value = defaultCaption;
+    label.htmlFor = input.id;
+
+    const actions = document.createElement('div');
+    actions.className = 'poster-dialog-actions';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'poster-dialog-cancel';
+    cancel.textContent = language === 'en' ? 'Cancel' : 'Cancelar';
+
+    const download = document.createElement('button');
+    download.type = 'button';
+    download.className = 'poster-dialog-download';
+    download.textContent = language === 'en' ? 'Download' : 'Descarregar';
+
+    let done = false;
+    const close = (value: string | null): void => {
+      if (done) return;
+      done = true;
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+      resolve(value);
+    };
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close(null);
+      } else if (event.key === 'Enter') {
+        event.preventDefault();
+        close(input.value);
+      }
+    };
+
+    cancel.addEventListener('click', () => close(null));
+    download.addEventListener('click', () => close(input.value));
+    document.addEventListener('keydown', onKey);
+
+    actions.append(cancel, download);
+    card.append(label, input, actions);
+    overlay.append(card);
+    document.body.append(overlay);
+    input.focus();
+    input.select();
+  });
+}
+
 /** Mounts the floating poster button. */
 export function mountPosterButton(): void {
   if (document.getElementById('poster-btn')) return;
@@ -110,8 +179,19 @@ export function mountPosterButton(): void {
   button.textContent = '📸';
   button.addEventListener('click', () => {
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
-    void capturePoster({ world })
+    const worldLabel = WORLDS.find((entry) => entry.id === world);
+    const defaultCaption = worldLabel
+      ? uiLanguage() === 'en'
+        ? worldLabel.label.en
+        : worldLabel.label.pt
+      : world;
+    void promptCaption(defaultCaption)
+      .then((caption) => {
+        if (caption === null) return;
+        return capturePoster({ world, title: caption.trim() || undefined });
+      })
       .then((blob) => {
+        if (!blob) return;
         const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         downloadPoster(blob, `guinomo-${world}-${stamp}.png`);
       })

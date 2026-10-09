@@ -11,6 +11,7 @@ import { CanvasTexture, Raycaster, Sprite, SpriteMaterial, Vector3 } from 'three
 import { appEndpointUrl } from '../core/assets';
 import { getWorldId, type WorldId } from '../core/worlds';
 import { SceneModule } from './SceneModule';
+import './notes.css';
 
 interface WorldNote {
   id: number;
@@ -55,6 +56,11 @@ function isAddPayload(value: unknown): value is { success: true; id: number } {
   return payload.success === true && typeof payload.id === 'number';
 }
 
+function isOkPayload(value: unknown): value is { success: true } {
+  if (typeof value !== 'object' || value === null) return false;
+  return (value as Record<string, unknown>).success === true;
+}
+
 function payloadError(value: unknown): string | null {
   if (typeof value === 'object' && value !== null) {
     const error = (value as Record<string, unknown>).error;
@@ -70,6 +76,8 @@ export class Notes extends SceneModule {
   declare private markerTexture: CanvasTexture | null;
 
   private notes: WorldNote[] = [];
+  private markers = new Map<number, Sprite>();
+  private editingId: number | null = null;
   private near: WorldNote | null = null;
   private panel: HTMLDivElement | null = null;
   private panelBody: HTMLDivElement | null = null;
@@ -165,6 +173,10 @@ export class Notes extends SceneModule {
     return button;
   }
 
+  private isOwn(note: WorldNote): boolean {
+    return note.uid > 0 && note.uid === (window.GUINOMO_UID ?? 0);
+  }
+
   private openReader(note: WorldNote): void {
     const body = this.panelBody;
     if (!body) return;
@@ -172,11 +184,33 @@ export class Notes extends SceneModule {
 
     const author = document.createElement('p');
     author.className = 'notes-author';
-    author.textContent = this.authorLabel(note.uid);
+    author.textContent = this.authorLabel(note);
 
     const text = document.createElement('p');
     text.className = 'notes-text';
     text.textContent = note.text;
+
+    body.append(author, text);
+
+    if (this.isOwn(note)) {
+      const actions = document.createElement('div');
+      actions.className = 'notes-actions';
+
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'notes-action-button';
+      edit.textContent = this.text('Edit', 'Editar');
+      edit.addEventListener('click', () => this.openCompose(note));
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'notes-action-button notes-action-danger';
+      remove.textContent = this.text('Delete', 'Apagar');
+      remove.addEventListener('click', () => this.openDelete(note));
+
+      actions.append(edit, remove);
+      body.append(actions);
+    }
 
     const compose = document.createElement('button');
     compose.type = 'button';
@@ -184,21 +218,24 @@ export class Notes extends SceneModule {
     compose.textContent = this.text('Leave a note', 'Deixar recado');
     compose.addEventListener('click', () => this.openCompose());
 
-    body.append(author, text, compose);
+    body.append(compose);
     this.input = null;
     this.submitButton = null;
     this.status = null;
+    this.editingId = null;
     this.openPanel();
   }
 
-  private openCompose(): void {
+  private openCompose(note?: WorldNote): void {
     const body = this.panelBody;
     if (!body) return;
     body.replaceChildren();
 
     const title = document.createElement('p');
     title.className = 'notes-author';
-    title.textContent = this.text('Leave a note', 'Deixar recado');
+    title.textContent = note
+      ? this.text('Edit note', 'Editar recado')
+      : this.text('Leave a note', 'Deixar recado');
 
     const input = document.createElement('textarea');
     input.className = 'notes-input';
@@ -208,11 +245,14 @@ export class Notes extends SceneModule {
       'Write something (max 200 characters)…',
       'Escreve algo (máx. 200 caracteres)…',
     );
+    if (note) input.value = note.text;
 
     const submit = document.createElement('button');
     submit.type = 'button';
     submit.className = 'notes-submit';
-    submit.textContent = this.text('Place note', 'Colocar recado');
+    submit.textContent = note
+      ? this.text('Save changes', 'Guardar alterações')
+      : this.text('Place note', 'Colocar recado');
 
     const status = document.createElement('p');
     status.className = 'notes-status';
@@ -222,6 +262,7 @@ export class Notes extends SceneModule {
     this.input = input;
     this.submitButton = submit;
     this.status = status;
+    this.editingId = note ? note.id : null;
 
     input.addEventListener('input', () => this.updateSubmitState());
     submit.addEventListener('click', () => void this.submit());
@@ -254,6 +295,59 @@ export class Notes extends SceneModule {
       return;
     }
 
+    const editing = this.editingId;
+    submit.disabled = true;
+    this.setStatus(
+      status,
+      editing !== null ? this.text('Saving…', 'A guardar…') : this.text('Sending…', 'A enviar…'),
+      'pending',
+    );
+
+    if (editing !== null) {
+      const body = new URLSearchParams({
+        action: 'update',
+        id: String(editing),
+        world: this.worldId,
+        text,
+        csrf_token: window.CSRF_TOKEN || '',
+      });
+
+      try {
+        const response = await fetch(appEndpointUrl('api/guinomo/notes.php'), {
+          method: 'POST',
+          credentials: 'same-origin',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body,
+        });
+        const payload: unknown = await response.json();
+
+        if (response.ok && isOkPayload(payload)) {
+          const existing = this.notes.find((note) => note.id === editing);
+          if (existing) existing.text = text;
+          this.editingId = null;
+          this.openReader(existing ?? this.localNote(editing, text));
+          return;
+        }
+
+        this.setStatus(
+          status,
+          payloadError(payload) ?? this.text('Unable to save the note.', 'Não foi possível guardar o recado.'),
+          'error',
+        );
+      } catch (error) {
+        console.warn('Unable to save the world note:', error);
+        this.setStatus(
+          status,
+          this.text('Unable to reach the server.', 'Não foi possível contactar o servidor.'),
+          'error',
+        );
+      } finally {
+        submit.disabled = false;
+      }
+      return;
+    }
+
     const local = this.scene.characters?.mesh?._localObject;
     if (!local) {
       this.setStatus(
@@ -265,8 +359,6 @@ export class Notes extends SceneModule {
     }
 
     const { x, y, z } = local.position;
-    submit.disabled = true;
-    this.setStatus(status, this.text('Sending…', 'A enviar…'), 'pending');
 
     const body = new URLSearchParams({
       world: this.worldId,
@@ -318,6 +410,111 @@ export class Notes extends SceneModule {
     } finally {
       submit.disabled = false;
     }
+  }
+
+  /** Local fallback shape for a freshly updated note whose copy is missing. */
+  private localNote(id: number, text: string): WorldNote {
+    return { id, text, x: 0, y: 0, z: 0, uid: window.GUINOMO_UID ?? 0, createdAt: 0 };
+  }
+
+  private openDelete(note: WorldNote): void {
+    const body = this.panelBody;
+    if (!body) return;
+    body.replaceChildren();
+
+    const title = document.createElement('p');
+    title.className = 'notes-author';
+    title.textContent = this.text('Delete this note?', 'Apagar este recado?');
+
+    const preview = document.createElement('p');
+    preview.className = 'notes-text';
+    preview.textContent = note.text;
+
+    const actions = document.createElement('div');
+    actions.className = 'notes-actions';
+
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'notes-action-button';
+    cancel.textContent = this.text('Cancel', 'Cancelar');
+    cancel.addEventListener('click', () => this.openReader(note));
+
+    const confirm = document.createElement('button');
+    confirm.type = 'button';
+    confirm.className = 'notes-action-button notes-action-danger';
+    confirm.textContent = this.text('Delete', 'Apagar');
+
+    const status = document.createElement('p');
+    status.className = 'notes-status';
+    status.setAttribute('role', 'status');
+
+    confirm.addEventListener('click', () => void this.deleteNote(note, confirm, status));
+
+    actions.append(cancel, confirm);
+    body.append(title, preview, actions, status);
+    this.input = null;
+    this.submitButton = null;
+    this.status = status;
+    this.editingId = null;
+    this.openPanel();
+  }
+
+  private async deleteNote(note: WorldNote, confirm: HTMLButtonElement, status: HTMLParagraphElement): Promise<void> {
+    confirm.disabled = true;
+    this.setStatus(status, this.text('Deleting…', 'A apagar…'), 'pending');
+
+    const body = new URLSearchParams({
+      action: 'delete',
+      id: String(note.id),
+      world: this.worldId,
+      csrf_token: window.CSRF_TOKEN || '',
+    });
+
+    try {
+      const response = await fetch(appEndpointUrl('api/guinomo/notes.php'), {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body,
+      });
+      const payload: unknown = await response.json();
+
+      if (response.ok && isOkPayload(payload)) {
+        this.removeLocal(note.id);
+        this.closePanel();
+        return;
+      }
+
+      if (response.status === 404) {
+        // The note is already gone; drop it locally and move on.
+        this.removeLocal(note.id);
+        this.closePanel();
+        return;
+      }
+
+      this.setStatus(
+        status,
+        payloadError(payload) ?? this.text('Unable to delete the note.', 'Não foi possível apagar o recado.'),
+        'error',
+      );
+      confirm.disabled = false;
+    } catch (error) {
+      console.warn('Unable to delete the world note:', error);
+      this.setStatus(
+        status,
+        this.text('Unable to reach the server.', 'Não foi possível contactar o servidor.'),
+        'error',
+      );
+      confirm.disabled = false;
+    }
+  }
+
+  private removeLocal(id: number): void {
+    this.notes = this.notes.filter((note) => note.id !== id);
+    this.markers.get(id)?.remove();
+    this.markers.delete(id);
+    if (this.near?.id === id) this.near = null;
   }
 
   private setStatus(status: HTMLParagraphElement, message: string, state: string): void {
@@ -375,6 +572,7 @@ export class Notes extends SceneModule {
     sprite.position.set(note.x, this.groundAt(note.x, note.z) + 1.05, note.z);
     sprite.userData.noteId = note.id;
     this.scene.add(sprite);
+    this.markers.set(note.id, sprite);
   }
 
   /** Reuses worldLocations' ground raycast against scene.terrain.mesh. */
@@ -439,8 +637,9 @@ export class Notes extends SceneModule {
     return new CanvasTexture(canvas);
   }
 
-  private authorLabel(uid: number): string {
-    const name = uid > 0 ? `#${uid}` : this.text('Anonymous', 'Anónimo');
+  private authorLabel(note: WorldNote): string {
+    if (this.isOwn(note)) return this.text('Your note', 'O teu recado');
+    const name = note.uid > 0 ? `#${note.uid}` : this.text('Anonymous', 'Anónimo');
     return this.text(`Note from ${name}`, `Recado de ${name}`);
   }
 

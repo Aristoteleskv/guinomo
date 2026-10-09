@@ -69,6 +69,32 @@
   white-space: nowrap;
 }
 
+/* The player is close to the secret: pulse to signal "almost there". */
+#compass .compass-label.near {
+  color: #8a3324;
+  border-color: rgba(226, 87, 76, 0.6);
+  animation: compass-near 1.1s ease-in-out infinite;
+}
+
+@keyframes compass-near {
+  0%,
+  100% {
+    box-shadow: 1px 1px rgba(113, 108, 102, 0.5);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 4px rgba(226, 87, 76, 0.18),
+      1px 1px rgba(113, 108, 102, 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #compass .compass-label.near {
+    animation: none;
+  }
+}
+
 @media (max-width: 760px) {
   #compass {
     top: 18px;

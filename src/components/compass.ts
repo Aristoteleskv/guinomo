@@ -9,6 +9,9 @@ import './compass.css';
 /** Distance (metres) under which the compass hides — the player has arrived. */
 const HIDE_DISTANCE = 5;
 
+/** Distance (metres) under which the label pulses to signal "almost there". */
+const NEAR_PULSE_DISTANCE = 18;
+
 export function mountCompass(scene: EnvironmentScene): void {
   let compass = document.getElementById('compass') as HTMLDivElement | null;
   if (!compass) {
@@ -28,10 +31,12 @@ export function mountCompass(scene: EnvironmentScene): void {
 
   const needle = compass.querySelector<HTMLDivElement>('.compass-needle')!;
   const label = compass.querySelector<HTMLDivElement>('.compass-label')!;
-  label.textContent = document.documentElement.lang.startsWith('en') ? 'Secret' : 'Segredo';
+  const baseLabel = document.documentElement.lang.startsWith('en') ? 'Secret' : 'Segredo';
+  label.textContent = baseLabel;
 
   const toTarget = new Vector3();
   const cameraForward = new Vector3();
+  let shownDistance = -1;
 
   scene.beforeRenderCbs.push(() => {
     const local = scene.characters?.mesh?._localObject;
@@ -50,6 +55,14 @@ export function mountCompass(scene: EnvironmentScene): void {
     }
     compass.hidden = false;
     toTarget.divideScalar(distance);
+
+    // Distance read-out: only touched in the DOM when the rounded value changes.
+    const metres = Math.max(HIDE_DISTANCE, Math.round(distance));
+    if (metres !== shownDistance) {
+      shownDistance = metres;
+      label.textContent = `${baseLabel} · ${metres} m`;
+    }
+    label.classList.toggle('near', distance <= NEAR_PULSE_DISTANCE);
 
     // Camera facing on the XZ plane.
     scene.camera.getWorldDirection(cameraForward);

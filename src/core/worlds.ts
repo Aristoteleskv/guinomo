@@ -3,33 +3,45 @@ export const DEFAULT_WORLD_ID = 'lobby';
 export const WORLDS = [
   {
     id: 'lobby',
+    icon: '🏙️',
     label: { pt: 'Cidade Noop', en: 'Noop City' },
     description: { pt: 'O ponto de encontro público.', en: 'The public meeting place.' },
+    hint: { pt: 'Mantém os olhos no céu…', en: 'Keep an eye on the sky…' },
   },
   {
     id: 'alien',
+    icon: '🛸',
     label: { pt: 'Universo Alienígena', en: 'Alien Universe' },
     description: { pt: 'A cidade sob um céu alienígena.', en: 'The city beneath an alien sky.' },
+    hint: { pt: 'Procura por quem veio de muito longe.', en: 'Look for someone who came from very far.' },
   },
   {
     id: 'forest',
+    icon: '🌲',
     label: { pt: 'Bosque Noop', en: 'Noop Forest' },
     description: { pt: 'Um refúgio verde para explorar com amigos.', en: 'A green retreat to explore with friends.' },
+    hint: { pt: 'Alguém preguiçoso esconde-se entre as árvores.', en: 'A lazy someone hides among the trees.' },
   },
   {
     id: 'floating-city',
+    icon: '☁️',
     label: { pt: 'Cidade Flutuante', en: 'Floating City' },
     description: { pt: 'Uma cidade original suspensa sobre o oceano.', en: 'An original city suspended above the ocean.' },
+    hint: { pt: 'O céu desta cidade guarda um segredo.', en: 'This city’s sky keeps a secret.' },
   },
   {
     id: 'tropical-city',
+    icon: '🌴',
     label: { pt: 'Cidade Tropical', en: 'Tropical City' },
     description: { pt: 'Cúpulas futuristas entre palmeiras e água.', en: 'Futuristic domes among palms and water.' },
+    hint: { pt: 'Os gatos adoram as palmeiras tropicais.', en: 'The cats love the tropical palms.' },
   },
   {
     id: 'old-town',
+    icon: '🏰',
     label: { pt: 'Vila Antiga', en: 'Old Town' },
     description: { pt: 'Uma vila acolhedora de pedra e madeira.', en: 'A welcoming village of stone and timber.' },
+    hint: { pt: 'As comadres da praça contam tudo…', en: 'The town gossips tell everything…' },
   },
 ] as const;
 

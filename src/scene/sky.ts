@@ -98,10 +98,10 @@ export class Sky extends SceneModule {
       uniforms: {
         tMap: { value: textureLoader.load('sky-srgb-highq.png', 'srgb-repeat') },
         tFlow: { value: textureLoader.load('skyflow-highq.ktx2', 'repeat') },
-        uColorHorizon: { value: new Color(palette?.horizon ?? '#caf0fe') },
+        uColorHorizon: { value: new Color(palette?.horizon ?? '#cfeefc') },
         uColorHorizonOverlay: { value: new Color(palette?.overlay ?? '#d8eeff') },
-        uColorSky: { value: new Color(palette?.sky ?? '#248fd5') },
-        uColorClouds: { value: new Color(palette?.clouds ?? '#ffe5c4') },
+        uColorSky: { value: new Color(palette?.sky ?? '#2b96d8') },
+        uColorClouds: { value: new Color(palette?.clouds ?? '#ffe9cf') },
         uNightBlend: { value: 0 },
         uAlienBlend: { value: 0 },
         uForestBlend: { value: world === 'forest' ? 1 : 0 },

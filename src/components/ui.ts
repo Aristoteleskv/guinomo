@@ -1,5 +1,6 @@
 import { events } from '../core/events';
 import { DEFAULT_WORLD_ID, getWorldId, WORLDS } from '../core/worlds';
+import { playSfx } from '../engine/sfx';
 
 const speakerIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M10.189 0.228 6.13 3.332H4.168c-.512 0-.938.41-.938.938v4.384c0 .165.043.321.118.457L.816 10.907a1 1 0 1 0 1.157 1.631l4.153-2.946h.021l.026.02 5.756-4.082v-.054l3.694-2.62a1 1 0 0 0-1.157-1.631l-2.537 1.8V1.08c-.017-.904-1.041-1.399-1.74-.853Z" fill="#716C66"/></svg>';
 const mutedIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M6.96.228 2.9 3.332H.938A.94.94 0 0 0 0 4.27v4.384c0 .511.41.938.938.938h1.979l4.042 3.104a1 1 0 0 0 1.74-.853V1.08C8.682.177 7.659-.318 6.96.228Z" fill="#716C66"/></svg>';
@@ -7,6 +8,8 @@ const infoIcon = '<svg class="info" viewBox="0 0 4 18" aria-hidden="true"><path 
 const hatIcon = '<svg class="hat" viewBox="0 0 20 20" style="width:18px;height:18px;" aria-hidden="true"><path d="M17 13v-2c0-3.866-3.134-7-7-7S3 7.134 3 11v2a4 4 0 0 0-4 4h20a4 4 0 0 0-4-4Z" fill="#716C66"/></svg>';
 const closeIcon = '<svg viewBox="0 0 18 18" aria-hidden="true"><path d="m1.5 1.5 15 15m0-15-15 15" stroke="#989389" stroke-width="2" stroke-linecap="round"/></svg>';
 const backIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4 6.5 10l6 6M7 10h10" fill="none" stroke="#716C66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const guideIcon = '<svg viewBox="0 0 20 20" style="width:16px;height:16px;" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="#716C66" stroke-width="1.6"/><path d="M7.9 7.6a2.1 2.1 0 0 1 4.2.5c0 1.3-2 1.7-2 3M10 14.3h.01" fill="none" stroke="#716C66" stroke-width="1.6" stroke-linecap="round"/></svg>';
+const mapIcon = '<svg viewBox="0 0 24 24" style="width:18px;height:18px;" aria-hidden="true"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" fill="none" stroke="#716C66" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 4v14m6-12v14" stroke="#716C66" stroke-width="1.6"/></svg>';
 
 const infoContent = {
   about: {
@@ -30,6 +33,45 @@ const onboardingContent = {
   en: 'Use WASD to move, E to rest, and H for your hat! 🏖️',
   pt: 'Usa WASD para andar, E para descansar e H para o chapéu! 🏖️',
 };
+
+const guideContent = {
+  pt: {
+    title: 'Guia do Guinomo',
+    steps: [
+      '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — anda pelo mundo',
+      '<kbd>E</kbd> — descansa junto ao fogo ou à sombra',
+      '<kbd>H</kbd> — mostra ou esconde o teu chapéu',
+      '<kbd>Shift</kbd> — corre; o rato (ou o toque) roda a câmara',
+      '<kbd>Esc</kbd> — fecha esta janela e as outras',
+      '🎁 Há um segredo escondido em cada mundo — encontra os 6 para ganhares o crachá dourado.',
+    ],
+    multi: '👥 <b>Multiplayer:</b> cria uma sala com o botão de convite e partilha o link; vê quem está online no painel de amigos.',
+    map: '🗺️ <b>Mapa:</b> viaja entre os 6 mundos e escolhe o teu papel no mapa de mundos.',
+  },
+  en: {
+    title: 'Guinomo Guide',
+    steps: [
+      '<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — move around',
+      '<kbd>E</kbd> — rest by the fire or in the shade',
+      '<kbd>H</kbd> — toggle your hat',
+      '<kbd>Shift</kbd> — run; the mouse (or touch) rotates the camera',
+      '<kbd>Esc</kbd> — closes this and other windows',
+      '🎁 There is a hidden secret in every world — find all 6 to earn your golden badge.',
+    ],
+    multi: '👥 <b>Multiplayer:</b> create a room with the invite button and share the link; see who is online from the friends panel.',
+    map: '🗺️ <b>Map:</b> travel between the 6 worlds and pick your role from the world map.',
+  },
+} as const;
+
+const avatarRoles = [
+  { id: 'explorer', icon: '🧭', label: { pt: 'Explorador', en: 'Explorer' } },
+  { id: 'artist', icon: '🎨', label: { pt: 'Artista', en: 'Artist' } },
+  { id: 'builder', icon: '🔨', label: { pt: 'Construtor', en: 'Builder' } },
+  { id: 'dreamer', icon: '🌙', label: { pt: 'Sonhador', en: 'Dreamer' } },
+  { id: 'guide', icon: '🧑‍🏫', label: { pt: 'Guia', en: 'Guide' } },
+  { id: 'hunter', icon: '🌟', label: { pt: 'Caçador de Segredos', en: 'Secret Hunter' } },
+  { id: 'none', icon: '🙂', label: { pt: 'Sem papel', en: 'No role' } },
+] as const;
 
 type InfoName = keyof typeof infoContent;
 
@@ -71,6 +113,7 @@ export class UiController {
   private rewardGranted = false;
   private congratsShown = false;
   private overlayOpen = false;
+  private pendingOnboardingToast = false;
   private secretTimer = 0;
   private notificationIds = new Set<number>();
   private friendsButton: HTMLButtonElement | null = null;
@@ -100,6 +143,8 @@ export class UiController {
       <button class="button name-tag-color-button" type="button" aria-label="${language === 'en' ? 'Choose name color' : 'Escolher cor do nome'}" title="${language === 'en' ? 'Choose name color' : 'Escolher cor do nome'}">Aa</button>
       <input class="name-tag-color-input" type="color" aria-label="${language === 'en' ? 'Name tag color' : 'Cor da etiqueta do nome'}" tabindex="-1">
       <button class="button about-button" type="button" aria-label="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}" title="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}">${infoIcon}</button>
+      <button class="button guide-button" type="button" aria-label="${language === 'en' ? 'Help and guide' : 'Ajuda e guia'}" title="${language === 'en' ? 'Help and guide' : 'Ajuda e guia'}">${guideIcon}</button>
+      <button class="button map-button" type="button" aria-label="${language === 'en' ? 'World map' : 'Mapa de mundos'}" title="${language === 'en' ? 'World map' : 'Mapa de mundos'}">${mapIcon}</button>
       <div class="cnt">0/0</div>
     `;
     root.append(this.nav);
@@ -167,6 +212,10 @@ export class UiController {
     this.hatButton.addEventListener('click', () => events.emit('webgl_character_toggle_hat'));
     colorButton.addEventListener('click', () => events.emit('webgl_character_randomize_color'));
     infoButton.addEventListener('click', () => this.toggleOverlay('about'));
+    const guideButton = this.nav.querySelector<HTMLButtonElement>('.guide-button')!;
+    const mapButton = this.nav.querySelector<HTMLButtonElement>('.map-button')!;
+    guideButton.addEventListener('click', () => this.openGuide());
+    mapButton.addEventListener('click', () => this.openWorldMap());
 
     // Ouvir evento para mostrar o botão de chapéu apenas para o dono
     events.on('ui_show_hat_button', (show: boolean) => {
@@ -206,7 +255,36 @@ export class UiController {
     this.loader.remove();
     this.nav.classList.add('visible');
 
-    // P2.1: Onboarding Toast
+    // First-time visitors get the full guide overlay instead of the toast; the
+    // toast is deferred until the guide is dismissed. The ?audit hook is left
+    // untouched so the E2E matrix stays deterministic.
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('audit') && !this.guideSeen()) {
+      this.markGuideSeen();
+      this.pendingOnboardingToast = true;
+      window.setTimeout(() => this.openGuide(), 900);
+      return;
+    }
+    this.showOnboardingToast();
+  }
+
+  private guideSeen(): boolean {
+    try {
+      return localStorage.getItem('guinomo.guide.v1') === '1';
+    } catch {
+      return true;
+    }
+  }
+
+  private markGuideSeen(): void {
+    try {
+      localStorage.setItem('guinomo.guide.v1', '1');
+    } catch {
+      // Private mode: keep the guide off rather than throwing.
+    }
+  }
+
+  private showOnboardingToast() {
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
     const toast = document.createElement('div');
     toast.className = 'guinomo-onboarding-toast';
@@ -223,6 +301,7 @@ export class UiController {
   }
 
   showSecret(message: string) {
+    playSfx('secret');
     if (this.overlayOpen) this.closeOverlay();
     this.secretPanel.textContent = message;
     this.secretModal.classList.add('visible');
@@ -710,14 +789,19 @@ export class UiController {
   closeOverlay() {
     if (!this.overlayOpen) return;
     this.overlayOpen = false;
+    playSfx('close');
     this.infoModal.classList.remove('visible');
     this.nav.classList.add('visible');
     events.emit('webgl_overlay_animation', 0);
     events.emit('webgl_overlay_volume', 1);
     events.emit('webgl_character_controls_enable', true);
+    if (this.pendingOnboardingToast) {
+      this.pendingOnboardingToast = false;
+      this.showOnboardingToast();
+    }
   }
 
-  private toggleOverlay(name: InfoName) {
+  private showInfoPanel(html: string) {
     if (this.overlayOpen) {
       this.closeOverlay();
       return;
@@ -725,12 +809,97 @@ export class UiController {
     this.overlayOpen = true;
     this.secretModal.classList.remove('visible');
     this.nav.classList.remove('visible');
-    const content = infoContent[name];
-    this.infoPanel.innerHTML = `<h1>${content.title}</h1>${content.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')}`;
+    this.infoPanel.innerHTML = html;
     this.infoModal.classList.add('visible');
     events.emit('webgl_overlay_animation', 1);
     events.emit('webgl_overlay_volume', 0.4);
     events.emit('webgl_character_controls_enable', false);
+  }
+
+  private toggleOverlay(name: InfoName) {
+    const content = infoContent[name];
+    playSfx('open');
+    this.showInfoPanel(`<h1>${content.title}</h1>${content.paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join('')}`);
+  }
+
+  private openGuide() {
+    playSfx('guide');
+    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const text = guideContent[language === 'pt' ? 'pt' : 'en'];
+    const steps = text.steps.map((step) => `<p class="guide-step">${step}</p>`).join('');
+    this.showInfoPanel(
+      `<h1>${text.title}</h1><div class="overlay-guide">${steps}<p>${text.multi}</p><p>${text.map}</p></div>`,
+    );
+  }
+
+  private openWorldMap() {
+    playSfx('open');
+    const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
+    const lang = language === 'en' ? 'en' : 'pt';
+    const currentWorld = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    const cards = WORLDS.map((world) => {
+      const current = world.id === currentWorld;
+      const travel = current
+        ? (language === 'en' ? 'Here' : 'Aqui')
+        : (language === 'en' ? 'Visit' : 'Visitar');
+      return `
+        <li class="world-card${current ? ' current' : ''}" data-world="${world.id}">
+          <span class="world-icon" aria-hidden="true">${world.icon}</span>
+          <div class="world-info">
+            <strong>${world.label[lang]}</strong>
+            <span class="world-desc">${world.description[lang]}</span>
+            <span class="world-hint">${language === 'en' ? 'Hint' : 'Dica'}: ${world.hint[lang]}</span>
+          </div>
+          <button type="button" class="world-travel" data-world="${world.id}">${travel}</button>
+        </li>`;
+    }).join('');
+    const chips = avatarRoles.map((role) => {
+      const active = role.id === this.currentRole();
+      return `<button type="button" class="role-chip${active ? ' active' : ''}" data-role="${role.id}">${role.icon} ${role.label[lang]}</button>`;
+    }).join('');
+
+    const panel = this.infoPanel;
+    this.showInfoPanel(
+      `<h1>${language === 'en' ? 'World map' : 'Mapa de mundos'}</h1>`
+      + `<ul class="world-list">${cards}</ul>`
+      + `<h2 class="role-title">${language === 'en' ? 'Choose who you want to be' : 'Escolhe quem queres ser'}</h2>`
+      + `<div class="role-chips">${chips}</div>`,
+    );
+    if (this.overlayOpen) {
+      panel.querySelectorAll<HTMLButtonElement>('.world-travel').forEach((button) => {
+        button.addEventListener('click', () => this.travelTo(button.dataset.world || DEFAULT_WORLD_ID));
+      });
+      panel.querySelectorAll<HTMLButtonElement>('.role-chip').forEach((chip) => {
+        chip.addEventListener('click', () => this.selectRole(chip.dataset.role || ''));
+      });
+    }
+  }
+
+  private currentRole(): string {
+    try {
+      return localStorage.getItem('guinomo.role.v1') || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private selectRole(roleId: string) {
+    const role = roleId === 'none' ? '' : roleId;
+    try {
+      localStorage.setItem('guinomo.role.v1', role);
+    } catch {
+      // Private mode: the role still applies for this session only.
+    }
+    events.emit('webgl_character_set_role', role);
+    this.closeOverlay();
+  }
+
+  private travelTo(worldId: string) {
+    const next = new URL(window.location.href);
+    if (worldId === DEFAULT_WORLD_ID) next.searchParams.delete('world');
+    else next.searchParams.set('world', worldId);
+    playSfx('travel');
+    window.location.assign(next.toString());
   }
 
   private closeSecret() {

@@ -15,10 +15,17 @@ export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
 
-  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string }>();
+  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string, role: string }>();
   private _nameTags = new Map<string, HTMLDivElement>();
   private _nameTagsContainer: HTMLDivElement | null = null;
   private _localNameTagColor: string | null = null;
+  private _localRole = (() => {
+    try {
+      return localStorage.getItem('guinomo.role.v1') || '';
+    } catch {
+      return '';
+    }
+  })();
 
   /** Fetches avatar data from PHP and updates a specific character instance */
   private async updateCharacterColors(uid: number, userData: any, clientId: string) {
@@ -34,7 +41,8 @@ export class CharactersModule extends SceneModule {
       userData.isOwner = data.isOwner;
       userData.ageScale = data.ageScale;
       userData.gender = data.gender;
-      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid);
+      userData.role = data.role;
+      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid, clientId === 'local' ? this._localRole || data.role : data.role);
       return;
     }
 
@@ -58,6 +66,7 @@ export class CharactersModule extends SceneModule {
       const physique = dna['physique'] || 'default';
       const ageScales: Record<string, number> = { child: 0.82, teen: 0.93, adult: 1, senior: 0.98 };
       const ageScale = ageScales[dna['age_group']] || 1;
+      const role = typeof dna['role'] === 'string' ? dna['role'] : '';
 
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
@@ -70,6 +79,7 @@ export class CharactersModule extends SceneModule {
         physique: physique,
         ageScale: ageScale,
         gender: typeof dna['gender_category'] === 'string' ? dna['gender_category'] : 'nao_informado',
+        role,
       };
 
       this._avatarCache.set(uid, data);
@@ -82,11 +92,12 @@ export class CharactersModule extends SceneModule {
       userData.physique = data.physique;
       userData.ageScale = data.ageScale;
       userData.gender = data.gender;
+      userData.role = data.role;
 
       // Aplicar escala física baseada no biótipo
       this.applyPhysiqueScale(userData);
 
-      this.ensureNameTag(clientId, name, nameTagColor, uid);
+      this.ensureNameTag(clientId, name, nameTagColor, uid, clientId === 'local' ? this._localRole || role : role);
 
       // Se for o usuário local, avisa a UI para mostrar o botão de chapéu
       if (clientId === 'local' && data.isOwner) {
@@ -104,7 +115,8 @@ export class CharactersModule extends SceneModule {
       userData.isOwner = false;
       userData.ageScale = 1;
       userData.gender = 'nao_informado';
-      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299', uid);
+      userData.role = '';
+      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299', uid, clientId === 'local' ? this._localRole : '');
     }
   }
 
@@ -125,7 +137,8 @@ export class CharactersModule extends SceneModule {
     userData.baseScale = s;
   }
 
-  private ensureNameTag(clientId: string, name: string, backgroundColor: string, uid: number) {
+  private ensureNameTag(clientId: string, name: string, backgroundColor: string, uid: number, role = '') {
+    const roleText = clientId === 'local' ? this._localRole : role;
     if (!this._nameTagsContainer) {
       this._nameTagsContainer = document.createElement('div');
       this._nameTagsContainer.id = 'name-tags-container';
@@ -176,7 +189,9 @@ export class CharactersModule extends SceneModule {
       pill.className = 'character-name-pill';
       const label = document.createElement('span');
       label.className = 'character-name-label';
-      pill.append(label);
+      const roleLabel = document.createElement('span');
+      roleLabel.className = 'character-name-role';
+      pill.append(label, roleLabel);
       const tooltip = document.createElement('span');
       tooltip.className = 'character-tooltip-card';
       tooltip.append(avatar, details);
@@ -187,9 +202,12 @@ export class CharactersModule extends SceneModule {
     const safeColor = this.isValidNameTagColor(backgroundColor) ? backgroundColor : '#e5b299';
     const pill = tag.querySelector<HTMLElement>('.character-name-pill')!;
     const label = tag.querySelector<HTMLElement>('.character-name-label')!;
+    const roleLabel = tag.querySelector<HTMLElement>('.character-name-role')!;
     pill.style.backgroundColor = safeColor;
     pill.style.color = this.getReadableTextColor(safeColor);
     label.textContent = name;
+    roleLabel.textContent = roleText;
+    roleLabel.hidden = !roleText;
     tag.title = name;
     tag.setAttribute('aria-label', `${name} · ${document.documentElement.lang.startsWith('en') ? 'Online, Noop community member' : 'Online, membro da comunidade Noop'}`);
 
@@ -242,9 +260,35 @@ export class CharactersModule extends SceneModule {
     events.emit('ui_name_tag_color_saved', Boolean(saved));
   }
 
+  private async setLocalRole(role: string) {
+    this._localRole = role;
+    try {
+      localStorage.setItem('guinomo.role.v1', role);
+    } catch {
+      // Private mode: the role still applies for this session only.
+    }
+    const uid = window.GUINOMO_UID || 0;
+    const cached = this._avatarCache.get(uid);
+    if (cached) cached.role = role;
+
+    const localTag = this._nameTags.get('local');
+    if (localTag) {
+      const roleLabel = localTag.querySelector<HTMLElement>('.character-name-role');
+      if (roleLabel) {
+        roleLabel.textContent = role;
+        roleLabel.hidden = !role;
+      }
+    }
+
+    if (uid > 0) await this._saveAvatarConfig(uid, 'role', role);
+  }
+
   protected async init() {
     events.on('webgl_character_set_name_tag_color', (color: string) => {
       void this.setLocalNameTagColor(color);
+    });
+    events.on('webgl_character_set_role', (role: string) => {
+      void this.setLocalRole(role || '');
     });
 
     const urlParams = new URLSearchParams(window.location.search);

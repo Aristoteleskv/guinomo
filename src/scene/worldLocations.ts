@@ -50,12 +50,9 @@ export class WorldLocations extends SceneModule {
 
     this.scene.ready.then(() => this.setupSecrets());
 
-    // `updateRestButton`/`toggleRest` are class-field arrows, which are only
-    // assigned after `super()` returns. `SceneModule` calls `init()` from its
-    // constructor, so for worlds without an await above we must read the fields
-    // lazily (at call time) instead of capturing them as `undefined` here.
-    this.scene.beforeRenderCbs.push(() => this.updateRestButton());
-    events.on('world_rest_toggle', () => this.toggleRest());
+    // Safe because SceneModule defers `init()` past field initializers.
+    this.scene.beforeRenderCbs.push(this.updateRestButton);
+    events.on('world_rest_toggle', this.toggleRest);
     this.ready.resolve();
   }
 

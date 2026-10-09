@@ -64,3 +64,31 @@ jobs:
       # cross-checks the HMAC golden vector shared with the browser suite.
       - name: Run PHP store + HMAC tests
         run: php tests/php/run.php
+
+  e2e:
+    # Boots every world through the ?audit hook and asserts the secrets matrix
+    # (exactly one secret per world) plus rest availability. Informational only:
+    # headless WebGL under SwiftShader can be flaky on shared runners, so this
+    # job never blocks a merge — flip `continue-on-error` once the matrix is
+    # stable in CI for a while.
+    name: e2e audit (non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # The e2e config uses the system Chrome (channel: chrome), so installing
+      # Playwright's own Chromium is wasted bandwidth on the runner.
+      - name: Install dependencies
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: bun install --frozen-lockfile
+
+      - name: Run E2E world audit
+        run: bun run test:e2e

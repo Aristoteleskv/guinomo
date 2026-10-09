@@ -40,7 +40,9 @@ export class MainController {
     this.mainMesh = createFullscreenTriangle();
     this.mainMesh.frustumCulled = false;
     this.mainMesh.name = 'Main triangle mesh';
-    void this.init();
+    // Defer like SceneModule so class-field initializers (e.g.
+    // `resizeEnvironment`) exist before `init()` runs.
+    queueMicrotask(() => void this.init());
   }
 
   private async init() {
@@ -54,9 +56,7 @@ export class MainController {
     this.environmentComposer.addPass(new RenderPass(this.environment, this.environment.camera));
     this.environmentComposer.setSize(engine.renderer.domElement.width, engine.renderer.domElement.height);
 
-    // Read the class-field arrow lazily: `init()` runs from the constructor
-    // before field initializers, so capturing it here would pass `undefined`.
-    events.on('resize', () => this.resizeEnvironment());
+    events.on('resize', this.resizeEnvironment);
     await Promise.all([
       this.environment.uploaded,
       this.loaded(this.introMaterial.uniforms.tIntro.value),

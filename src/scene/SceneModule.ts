@@ -9,7 +9,11 @@ export abstract class SceneModule {
 
   constructor(scene: EnvironmentScene) {
     this.scene = scene;
-    this.init();
+    // `init()` (async in most subclasses) must run after subclass class-field
+    // initializers. Calling it synchronously here reads arrow-field handlers
+    // before they exist, which previously pushed `undefined` into
+    // beforeRenderCbs for worlds whose init had no leading await.
+    queueMicrotask(() => void this.init());
   }
 
   protected abstract init(): void;

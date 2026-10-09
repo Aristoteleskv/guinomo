@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { CustomEase } from 'gsap/CustomEase';
 import { events } from '../core/events';
 import { client } from '../core/client';
+import { getWorldId } from '../core/worlds';
 import { BaseScene } from '../engine/scene';
 import { AudioController } from '../engine/audio';
 import { FollowSunLight } from '../engine/sunlight';
@@ -17,6 +18,8 @@ import { Trees, Bushes, Palmtrees, Rocks1, Rocks2, Grass } from './vegetation';
 import { Houses, Warehouses, Machines, Lightposts, Parasols, Castles, Blockers } from './structures';
 import { UFO, Alien, Cats, Sloth, Sign, Gossip } from './setpieces';
 import { CharactersModule } from './characters';
+import { ForestLife } from './forestLife';
+import { WorldLocations } from './worldLocations';
 import type { MainController } from './mainController';
 
 gsap.registerPlugin(CustomEase);
@@ -47,6 +50,8 @@ export class EnvironmentScene extends BaseScene {
   declare sloth: Sloth;
   declare gossip: Gossip;
   declare characters: CharactersModule;
+  declare forestLife: ForestLife;
+  declare worldLocations: WorldLocations;
 
   constructor(_mainController: MainController) {
     super();
@@ -83,6 +88,8 @@ export class EnvironmentScene extends BaseScene {
         ['cats', Cats],
         ['sloth', Sloth],
         ['gossip', Gossip],
+        ['forestLife', ForestLife],
+        ['worldLocations', WorldLocations],
       ];
     await Promise.all(
       modules.map(([name, Module]) => {
@@ -91,9 +98,32 @@ export class EnvironmentScene extends BaseScene {
       }),
     );
 
+    this.configureWorld();
     this.setupLights();
     (this.sea.mesh as any).addReflectedObject(this.sky.mesh);
     this.ready.resolve();
+  }
+
+  private configureWorld() {
+    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    if (world === 'lobby' || world === 'alien') return;
+
+    this.sea.mesh.visible = world !== 'forest';
+    if (world !== 'tropical-city') this.palmtrees.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.houses.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.warehouses.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.machines.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.lightposts.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.lightposts.meshWire.visible = false;
+    this.parasols.mesh.visible = false;
+    this.castles.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.blockers.meshes.forEach((mesh) => { mesh.visible = false; });
+    this.ufo.mesh.visible = false;
+    this.alien.mesh.visible = false;
+    this.sign.mesh.visible = false;
+    this.cats.mesh.visible = false;
+    this.sloth.mesh.visible = false;
+    this.gossip.mesh.visible = false;
   }
 
   private setupCamera() {
@@ -110,12 +140,21 @@ export class EnvironmentScene extends BaseScene {
   private setupLights() {
     const hemi = new HemisphereLight('#33434f', '#737575', 0.7);
     this.add(hemi);
-    const daySky = new Color('#33434f');
     const nightSky = new Color('#111b42');
     const alienSky = new Color('#631aa1');
-    const dayGround = new Color('#737575');
     const nightGround = new Color('#20243b');
     const alienGround = new Color('#193d56');
+    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    const daySky = world === 'forest' ? new Color('#527d69')
+      : world === 'floating-city' ? new Color('#536b7b')
+        : world === 'tropical-city' ? new Color('#558a83')
+          : world === 'old-town' ? new Color('#806957')
+            : new Color('#33434f');
+    const dayGround = world === 'forest' ? new Color('#526b4a')
+      : world === 'floating-city' ? new Color('#62706d')
+        : world === 'tropical-city' ? new Color('#65845e')
+          : world === 'old-town' ? new Color('#796b57')
+            : new Color('#737575');
     this.beforeRenderCbs.push(() => {
       const night = this.sky.nightIntensity;
       const alien = this.sky.alienIntensity;
@@ -138,6 +177,9 @@ export class EnvironmentScene extends BaseScene {
       skipCSMMeshes: [this.characters.mesh, this.sky.mesh, this.sea.mesh, this.birds.mesh],
     });
     sun.shadow.normalBias = 0.07;
+    this.beforeRenderCbs.push(() => {
+      sun.intensity = 0.2 + (1 - this.sky.nightIntensity) * 0.8;
+    });
     this.add(sun);
   }
 

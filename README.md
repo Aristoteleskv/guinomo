@@ -99,6 +99,11 @@ How it works:
    peer-to-peer in every other sense. If the page goes idle/hidden the client
    slows to a 1 Hz presence beacon instead of dropping out.
 
+Multiplayer is enabled by default. Appending `?multiplayer=0` to the URL (also
+accepts `false` or `off`) skips it entirely: the iroh WASM bundle is imported
+dynamically, so it is only fetched when multiplayer is on and stays out of the
+initial page load otherwise.
+
 The Rust workspace lives in `multiplayer/` (`shared` = room logic,
 `browser-wasm` = wasm-bindgen wrapper, `cli` = native tester). The compiled
 wasm package is committed at `multiplayer/browser-wasm/pkg/` so Vercel deploys

@@ -3,6 +3,7 @@
 // shadows. Shader GLSL is verbatim from the original.
 
 import { Color, Matrix4, Mesh, PlaneGeometry, ShaderMaterial, Vector2, Vector3 } from 'three';
+import { getWorldId } from '../core/worlds';
 import { textureLoader } from '../engine/loaders/textures';
 import { globalUBO } from '../engine/globals';
 import { Reflector } from '../engine/reflector';
@@ -22,12 +23,17 @@ export class Sea extends SceneModule {
   protected init() {
     const geometry = new PlaneGeometry(500, 500);
     const skyPosition = new Vector3();
+    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
+    const waterColor = world === 'floating-city' ? '#356c84'
+      : world === 'tropical-city' ? '#31a9a0'
+        : world === 'old-town' ? '#628da0'
+          : '#5a7aa2';
 
     const material = new ShaderMaterial({
       uniformsGroups: [globalUBO],
       uniforms: {
         tMap1: { value: textureLoader.load('sea1-normal-highq.ktx2', 'repeat') },
-        uColor: { value: new Color('#5a7aa2') },
+        uColor: { value: new Color(waterColor) },
         uColorFoam: { value: new Color('#ffffff') },
         tCloudsTop: { value: textureLoader.load('clouds_top-highq.png', 'repeat') },
         tReflection: { value: null },

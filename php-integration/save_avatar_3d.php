@@ -41,8 +41,10 @@ use App\Services\AvatarService;
 $key = filter_input(INPUT_POST, 'key', FILTER_UNSAFE_RAW);
 $value = filter_input(INPUT_POST, 'value', FILTER_UNSAFE_RAW);
 
-// Lista de chaves que o 3D tem permissão para alterar
-$allowed_keys = ['hat_visible'];
+// Lista de chaves que o 3D tem permissão para alterar.
+// Mantenha em sincronia com os eventos emitidos pelo cliente
+// (src/scene/characters.ts: hat_visible, name_tag_color).
+$allowed_keys = ['hat_visible', 'name_tag_color'];
 
 if (!in_array($key, $allowed_keys, true)) {
     echo json_encode(['success' => false, 'error' => 'Chave de configuração inválida']);
@@ -52,6 +54,13 @@ if (!in_array($key, $allowed_keys, true)) {
 // Tratamento específico por tipo de dado
 if ($key === 'hat_visible') {
     $value = ($value === 'true' || $value === '1');
+} elseif ($key === 'name_tag_color') {
+    // Mesmo formato aceito pelo cliente (isValidNameTagColor): #rrggbb
+    if (!is_string($value) || !preg_match('/^#[0-9a-f]{6}$/i', $value)) {
+        echo json_encode(['success' => false, 'error' => 'Cor da etiqueta inválida']);
+        exit;
+    }
+    $value = strtolower($value);
 }
 
 $success = AvatarService::updateAvatarMetaKey($uid_request, $key, $value);

@@ -29,10 +29,21 @@ import type { FollowCamera } from './camera';
 import { Controls } from './controls';
 import { CollisionPhysics } from './physics';
 import { quaternionFromSpherical } from './quaternion';
-import { P2PConnection, type P2PClientData } from './multiplayer/iroh';
+import type { P2PClientData, P2PConnection } from './multiplayer/iroh';
 
 const MAX_CHARS = 128;
 const SECURE_EPS = 1e-4;
+
+/**
+ * Multiplayer is enabled by default and can be turned off with
+ * `?multiplayer=0` (also accepts `false`/`off`). When disabled, the iroh WASM
+ * bundle is never imported.
+ */
+function isMultiplayerEnabled(): boolean {
+  const value = new URLSearchParams(window.location.search).get('multiplayer');
+  if (value === null) return true;
+  return value !== '0' && value.toLowerCase() !== 'false' && value.toLowerCase() !== 'off';
+}
 
 function secureLerp(v: number): number {
   return v > 0.9999 ? 1 : v < SECURE_EPS ? 0 : v;
@@ -248,6 +259,7 @@ export class Characters extends CharacterSkinnedMesh {
   private _customAttribUpdate: CharacterOptions['customAttribUpdate'];
   private _inactiveTime: number;
   private _inactiveMilliseconds = 0;
+  private _disposed = false;
   private _dataUpdate = { p: [0, 0, 0], r: [0, 0], a: 0 } as P2PClientData;
 
   private _v0 = new Vector3();
@@ -318,17 +330,30 @@ export class Characters extends CharacterSkinnedMesh {
           relativeCameraPosition: options.relativeCameraPosition,
           lookatMeshOffset: options.lookatMeshOffset,
         });
-        // Join the dynamic P2P room based on URL world parameter
-        this._connection = new P2PConnection({
-          data: this._dataUpdate,
-          roomSeed: options.roomSeed,
-          onConnect: () => this.connected.resolve(),
-          addClient: (id, data) => this._addCharacter(id, data),
-          removeClient: (id) => this._removeCharacter(id),
-          removeAllClients: () => this._removeAllCharacters(),
-        });
+        // Join the dynamic P2P room based on the world/room URL parameters.
+        // The iroh WASM bundle is imported lazily so it is only fetched when
+        // multiplayer is enabled (`?multiplayer=1`, the default).
+        if (isMultiplayerEnabled()) void this._connectMultiplayer(options);
       },
     });
+  }
+
+  /** Lazily imports the iroh connection class and joins the room. */
+  private async _connectMultiplayer(options: CharacterOptions) {
+    try {
+      const { P2PConnection } = await import('./multiplayer/iroh');
+      if (this._disposed) return;
+      this._connection = new P2PConnection({
+        data: this._dataUpdate,
+        roomSeed: options.roomSeed,
+        onConnect: () => this.connected.resolve(),
+        addClient: (id, data) => this._addCharacter(id, data),
+        removeClient: (id) => this._removeCharacter(id),
+        removeAllClients: () => this._removeAllCharacters(),
+      });
+    } catch (error) {
+      console.warn('[p2p] multiplayer is unavailable', error);
+    }
   }
 
   update() {
@@ -538,6 +563,7 @@ export class Characters extends CharacterSkinnedMesh {
   }
 
   dispose() {
+    this._disposed = true;
     (this.skeleton as any).dispose?.();
     this._controls.disable();
     this._connection?._dispose();

@@ -11,6 +11,26 @@ export const WORLDS = [
     label: { pt: 'Universo Alienígena', en: 'Alien Universe' },
     description: { pt: 'A cidade sob um céu alienígena.', en: 'The city beneath an alien sky.' },
   },
+  {
+    id: 'forest',
+    label: { pt: 'Bosque Noop', en: 'Noop Forest' },
+    description: { pt: 'Um refúgio verde para explorar com amigos.', en: 'A green retreat to explore with friends.' },
+  },
+  {
+    id: 'floating-city',
+    label: { pt: 'Cidade Flutuante', en: 'Floating City' },
+    description: { pt: 'Uma cidade original suspensa sobre o oceano.', en: 'An original city suspended above the ocean.' },
+  },
+  {
+    id: 'tropical-city',
+    label: { pt: 'Cidade Tropical', en: 'Tropical City' },
+    description: { pt: 'Cúpulas futuristas entre palmeiras e água.', en: 'Futuristic domes among palms and water.' },
+  },
+  {
+    id: 'old-town',
+    label: { pt: 'Vila Antiga', en: 'Old Town' },
+    description: { pt: 'Uma vila acolhedora de pedra e madeira.', en: 'A welcoming village of stone and timber.' },
+  },
 ] as const;
 
 export type WorldId = (typeof WORLDS)[number]['id'];

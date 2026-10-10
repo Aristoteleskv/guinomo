@@ -7,6 +7,8 @@
 // and the server trophies sync (src/core/sealsSync.ts). Storage keys are kept
 // identical to the historical ones so existing players keep their progress.
 
+import type { WorldId } from './worlds';
+
 const SECRETS_STORAGE_KEY = 'guinomo_secrets';
 const GOLDEN_SEALS_KEY = 'guinomo.golden_seals.v1';
 const GRAND_SECRET_KEY = 'guinomo.grand_secret.v1';
@@ -20,6 +22,46 @@ export const SECRET_IDS = [
   'A sloth? That permanent smile it has is so creepy. What is it doing there?',
   'These things look as if they have been taken out of a video game.',
 ] as const;
+
+/** A hidden secret's home world and its short bilingual quest name. */
+export interface SecretEntry {
+  id: string;
+  world: WorldId;
+  name: { pt: string; en: string };
+}
+
+/**
+ * The five hidden secrets in the suggested exploration order (one per world).
+ * Drives the "next secret" callouts and the compass quest mode, which points
+ * at the world that still holds a secret instead of the already-found local one.
+ */
+export const SECRETS: ReadonlyArray<SecretEntry> = [
+  {
+    id: SECRET_IDS[0],
+    world: 'lobby',
+    name: { pt: 'objeto metálico', en: 'metallic object' },
+  },
+  {
+    id: SECRET_IDS[2],
+    world: 'tropical-city',
+    name: { pt: 'gatos gémeos', en: 'twin cats' },
+  },
+  {
+    id: SECRET_IDS[3],
+    world: 'forest',
+    name: { pt: 'preguiça sorridente', en: 'smiling sloth' },
+  },
+  {
+    id: SECRET_IDS[1],
+    world: 'alien',
+    name: { pt: 'viajante pálido', en: 'pale traveller' },
+  },
+  {
+    id: SECRET_IDS[4],
+    world: 'old-town',
+    name: { pt: 'coisas de videojogo', en: 'video-game things' },
+  },
+];
 
 function readStringList(storageKey: string): string[] {
   try {
@@ -58,6 +100,28 @@ export function isSecretFound(id: string): boolean {
 export function allSecretsFound(): boolean {
   const found = new Set(readFoundSecrets());
   return SECRET_IDS.every((id) => found.has(id));
+}
+
+/** Number of distinct secrets already found (0–5). */
+export function foundSecretCount(): number {
+  return SECRETS.filter((entry) => isSecretFound(entry.id)).length;
+}
+
+/** The first non-found secret in quest order, or null when the collection is
+ *  complete (the Grand Secret finale takes over the celebrations). */
+export function nextSecretToFind(): SecretEntry | null {
+  return SECRETS.find((entry) => !isSecretFound(entry.id)) ?? null;
+}
+
+/** The secret living in a given world, if any (floating-city has none). */
+export function secretForWorld(world: WorldId): SecretEntry | undefined {
+  return SECRETS.find((entry) => entry.world === world);
+}
+
+/** True when a world's own secret is already found, or the world has none. */
+export function isWorldSecretFound(world: WorldId): boolean {
+  const entry = secretForWorld(world);
+  return entry ? isSecretFound(entry.id) : true;
 }
 
 /** Secret ids discovered during the golden hour (kept as golden keepsakes). */

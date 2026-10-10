@@ -13,7 +13,8 @@ import { mountLightTrailHud } from './components/lightTrailHud';
 import { mountPairHud } from './components/pairHud';
 import { awardPoints, POINTS, readPoints } from './core/adventurePoints';
 import { isGoldenHour } from './core/goldenHour';
-import { allSecretsFound, isGrandSecretUnlocked, maybeUnlockGrandSecret, unlockGrandSecret } from './core/secrets';
+import { allSecretsFound, foundSecretCount, isGrandSecretUnlocked, maybeUnlockGrandSecret, nextSecretToFind, unlockGrandSecret } from './core/secrets';
+import { WORLDS } from './core/worlds';
 import { mountSealsSync } from './core/sealsSync';
 import { showToast } from './components/toast';
 import { assetUrl } from './core/assets';
@@ -99,6 +100,22 @@ function start() {
     }
     // The 5/5 finale unlocks once, when the last secret is found.
     if (maybeUnlockGrandSecret()) events.emit('webgl_grand_secret_unlocked');
+
+    // Guide the player to the next secret: the compass re-targets to its world
+    // and this callout names the destination.
+    const found = foundSecretCount();
+    const next = nextSecretToFind();
+    if (next) {
+      const english = window.GUINOMO_PROFILE?.language === 'en';
+      const world = WORLDS.find((entry) => entry.id === next.world);
+      const destination = world ? (english ? world.label.en : world.label.pt) : next.world;
+      showToast(
+        english
+          ? `🎉 Secret found (${found}/5) — now find the next one: travel to ${destination}, the compass will point the way.`
+          : `🎉 Encontraste um segredo (${found}/5) — agora vai à procura do próximo: viaja para ${destination}, a bússola aponta-te o caminho.`,
+        'violet',
+      );
+    }
   };
   const onPosterCaptured = () => {
     const gained = awardPoints(POINTS.poster, isGoldenHour(new Date()));

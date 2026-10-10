@@ -47,3 +47,34 @@ export function whisperForDistance(distance: number, english: boolean): string {
   if (!entry) return '';
   return english ? entry.en : entry.pt;
 }
+
+/**
+ * Label shown while the compass guides the player to a secret in ANOTHER
+ * world (quest mode): the current world's secret is already found, so the
+ * needle stops pointing at a spot and searches for the next destination.
+ */
+export function questLabel(worldIcon: string, worldLabel: string, english: boolean): string {
+  return english ? `Next · ${worldIcon} ${worldLabel}` : `Próximo · ${worldIcon} ${worldLabel}`;
+}
+
+/** Whisper shown in quest mode, telling the player how to reach the next world. */
+export function questWhisper(english: boolean): string {
+  return english
+    ? 'A secret is waiting elsewhere… open the World Map and travel there.'
+    : 'Um segredo espera noutro lugar… abre o Mapa de Mundos e viaja até lá.';
+}
+
+/** A point in screen (viewport) coordinates. */
+export interface ScreenPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * Angle in degrees for the compass needle (which points up at 0°) so it aims
+ * from `from` toward `to` in screen space. Quest mode uses it to point the
+ * player at the World Map button — the way to reach the next secret's world.
+ */
+export function screenAngleTo(from: ScreenPoint, to: ScreenPoint): number {
+  return (Math.atan2(to.x - from.x, from.y - to.y) * 180) / Math.PI;
+}

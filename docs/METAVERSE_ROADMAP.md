@@ -30,13 +30,16 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 |---|---|
 | **Streak de visitas** 🔥 | Dias consecutivos no HUD (badge de chama, `localStorage`); aos **7 dias** o cartaz fica com moldura dourada + contador |
 | **Álbum de selos** 🏅 | 5 cromos por segredo (raridade Comum/Raro/Lendário), ligado aos segredos já persistidos; atualiza ao vivo |
-| **Bússola sussurrante** 🗣️ | Pistas que ficam mais precisas à medida que te aproximas do segredo (lógica pura, coberta por vitest) |
+| **Hora dourada** ☀️ | Janela diária de 10 min a hora variável e anunciada (determinística: mesma janela em todos os dispositivos); segredos dão pontos a dobrar e selos dourados |
+| **Grande Segredo** 👑 | Finale ao encontrar os 5 segredos: overlay dourado bilingue, +200 XP (×2 na golden hour) e selo-mestre "Mestre dos Segredos" no álbum (6.ª carta); marca retroativa para jogadores que já tinham 5/5 |
+| **Troféus persistidos** 🏅→🌐 | Selos sincronizados para o servidor (`api/guinomo/seals.php`): POST autenticado por sessão (HMAC aditivo) + GET público por `uid` para o perfil; store file/PDO (`guinomo_seals`) |
+| **Celebração ao encontrar** 🎉 | Saltos de alegria ao achar um segredo + toast de progresso/guia ("Encontraste 2/5 — viaja para X"); a bússola entra em **modo quest** e aponta para o botão do Mapa de Mundos |
+| **Bússola sussurrante** 🗣️ | Pistas que ficam mais precisas à medida que te aproximas do segredo (lógica pura, coberta por vitest); no modo quest aponta para o botão do Mapa de Mundos quando o segredo local já foi encontrado |
 | **Cartaz com legenda** 📸 | Moldura polaroid + legenda por mundo (ou livre), esquema dourado no streak máximo |
 | **Par Extraordinário** 👥 | Vínculo ao vivo entre 2 jogadores que ficam juntos no mesmo mundo (linha dourada + auréolas); pontos de aventura e chip no cartão, uma vez por par por dia |
 
 | Planeado | Descrição |
 |---|---|
-| **Hora dourada** ☀️ | Janela diária de 10 min a hora variável e anunciada; segredos raros e pontos a dobrar |
 | **Rastro de luz** ✨ | Rasto colorido dos amigos no mundo (presença); seguir até ao fim desbloqueia um cartaz a dois |
 | **Guerra de mundos** ⚔️ | Pontos por mundo + placar semanal; o vencedor ganha céu/decoração exclusiva |
 | **Cadeias de recados** 🧵 | Responder a recados cria fios visíveis no chão; cadeias longas brilham mais |
@@ -86,7 +89,9 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 ### Fase 3 — Persistência do mundo + UGC
 - **Spawn persistente**: o utilizador volta para onde estava (guardado no servidor).
 - **Criar/colocar objetos** (móveis simples, sinais, decorações) com gravação em DB.
-- Segredos/colecionáveis como **troféus visíveis** no perfil (badges).
+- Segredos/colecionáveis como **troféus visíveis** no perfil (badges) — ✅
+  endpoint pronto (`GET api/guinomo/seals?uid=N` público + POST com HMAC);
+  falta a renderização dos badges na app social.
 - **Economia soft**: moeda do mundo, lojas de cosméticos (cor/roupa/chapéu/papel).
 
 ### Fase 4 — UGC aberto + escala

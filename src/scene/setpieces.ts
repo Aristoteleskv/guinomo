@@ -8,6 +8,7 @@ import { isGoldenHour } from '../core/goldenHour';
 import { radians } from '../core/math';
 import { markGoldenSeal, readFoundSecrets, saveFoundSecret } from '../core/secrets';
 import { clock } from '../engine/clock';
+import type { CharacterLocal } from '../engine/characters';
 import { geometryLoader } from '../engine/loaders/geometries';
 import { phongMaterial } from './materials';
 import { SceneModule } from './SceneModule';
@@ -62,7 +63,20 @@ export class Secret {
       }
       events.emit('webgl_show_modal', this._text);
       events.emit('webgl_secret_found');
+      this._celebrate();
     }
+  }
+
+  /** Short "jump of joy": two hops the moment the secret is found. The second
+   *  request is consumed by the physics as soon as the player lands again. */
+  private _celebrate() {
+    const player = this._player as CharacterLocal;
+    if (typeof player.jumpRequested !== 'boolean') return;
+    player.jumpRequested = true;
+    window.setTimeout(() => {
+      if (typeof player.jumpRequested !== 'boolean') return;
+      player.jumpRequested = true;
+    }, 400);
   }
 }
 

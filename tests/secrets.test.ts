@@ -1,13 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   allSecretsFound,
+  foundSecretCount,
   isGrandSecretUnlocked,
+  isWorldSecretFound,
   markGoldenSeal,
   maybeUnlockGrandSecret,
+  nextSecretToFind,
   readFoundSecrets,
   readGoldenSeals,
   saveFoundSecret,
+  SECRETS,
   SECRET_IDS,
+  secretForWorld,
   unlockGrandSecret,
 } from '../src/core/secrets';
 
@@ -89,5 +94,46 @@ describe('explorer secrets state', () => {
     expect(localStorage.getItem(GRAND_SECRET_KEY)).toBeNull();
     unlockGrandSecret();
     expect(localStorage.getItem(GRAND_SECRET_KEY)).toBe('1');
+  });
+});
+
+describe('secret quest order', () => {
+  it('maps each of the five ids to exactly one home world', () => {
+    expect(SECRETS).toHaveLength(SECRET_IDS.length);
+    const ids = new Set(SECRETS.map((entry) => entry.id));
+    expect(ids.size).toBe(SECRETS.length);
+    for (const id of SECRET_IDS) expect(ids.has(id)).toBe(true);
+  });
+
+  it('covers each secret world once and none in floating-city', () => {
+    const worlds = SECRETS.map((entry) => entry.world);
+    expect(new Set(worlds).size).toBe(worlds.length);
+    expect(worlds).not.toContain('floating-city');
+    expect(secretForWorld('floating-city')).toBeUndefined();
+  });
+
+  it('tracks the found count', () => {
+    expect(foundSecretCount()).toBe(0);
+    saveFoundSecret(SECRET_IDS[0]);
+    saveFoundSecret(SECRET_IDS[2]);
+    expect(foundSecretCount()).toBe(2);
+    saveFoundSecret(SECRET_IDS[0]);
+    expect(foundSecretCount()).toBe(2);
+  });
+
+  it('returns the first non-found secret in quest order', () => {
+    expect(nextSecretToFind()).toEqual(SECRETS[0]);
+    saveFoundSecret(SECRET_IDS[0]);
+    expect(nextSecretToFind()).toEqual(SECRETS[1]);
+    for (const entry of SECRETS) saveFoundSecret(entry.id);
+    expect(nextSecretToFind()).toBeNull();
+  });
+
+  it('reports whether the current world still hides a secret', () => {
+    expect(isWorldSecretFound('lobby')).toBe(false);
+    saveFoundSecret(SECRET_IDS[0]);
+    expect(isWorldSecretFound('lobby')).toBe(true);
+    // Worlds without a secret never block the quest guidance.
+    expect(isWorldSecretFound('floating-city')).toBe(true);
   });
 });

@@ -105,8 +105,43 @@
   }
 }
 
+/* Quest mode: the local secret is found and the compass points at the World
+   Map button (the way to the next secret's world). The needle keeps its inline
+   rotation, so the animation only pulses the golden glow — never transform. */
+#compass .compass-needle.quest {
+  border-color: rgba(212, 175, 55, 0.75);
+  box-shadow:
+    0 0 0 3px rgba(212, 175, 55, 0.16),
+    2px 2px rgba(113, 108, 102, 0.55);
+  animation: compass-quest 1.8s ease-in-out infinite;
+}
+
+@keyframes compass-quest {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 3px rgba(212, 175, 55, 0.16),
+      2px 2px rgba(113, 108, 102, 0.55);
+  }
+
+  50% {
+    box-shadow:
+      0 0 0 7px rgba(212, 175, 55, 0.3),
+      2px 2px rgba(113, 108, 102, 0.55);
+  }
+}
+
+#compass .compass-label.quest {
+  color: #8a6d1a;
+  border-color: rgba(212, 175, 55, 0.55);
+}
+
 @media (prefers-reduced-motion: reduce) {
   #compass .compass-label.near {
+    animation: none;
+  }
+
+  #compass .compass-needle.quest {
     animation: none;
   }
 }

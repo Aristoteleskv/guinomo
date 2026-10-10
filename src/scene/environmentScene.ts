@@ -22,6 +22,7 @@ import { ForestLife } from './forestLife';
 import { WorldLocations } from './worldLocations';
 import { Notes } from './notes';
 import { LightTrailScene } from './lightTrailScene';
+import { PairLinkScene } from './pairLinkScene';
 import { mountCompass } from '../components/compass';
 import { isGoldenHour } from '../core/goldenHour';
 import type { MainController } from './mainController';
@@ -58,6 +59,7 @@ export class EnvironmentScene extends BaseScene {
   declare worldLocations: WorldLocations;
   declare notes: Notes;
   declare lightTrail: LightTrailScene;
+  declare pairLink: PairLinkScene;
 
   constructor(_mainController: MainController) {
     super();
@@ -98,6 +100,7 @@ export class EnvironmentScene extends BaseScene {
       ['worldLocations', WorldLocations],
       ['notes', Notes],
       ['lightTrail', LightTrailScene],
+      ['pairLink', PairLinkScene],
     ];
     await Promise.all(
       modules.map(([name, Module]) => {

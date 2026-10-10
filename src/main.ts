@@ -10,6 +10,7 @@ import { mountStreakHud } from './components/streakHud';
 import { mountAlbum } from './scene/album';
 import { mountGoldenHourHud } from './components/goldenHourHud';
 import { mountLightTrailHud } from './components/lightTrailHud';
+import { mountPairHud } from './components/pairHud';
 import { awardPoints, POINTS, readPoints } from './core/adventurePoints';
 import { isGoldenHour } from './core/goldenHour';
 import { showToast } from './components/toast';
@@ -39,6 +40,7 @@ mountStreakHud();
 mountAlbum();
 mountGoldenHourHud();
 mountLightTrailHud();
+mountPairHud();
 
 CustomEase.create('inOut1', 'M0,0 C0.5,0 0.1,1 1,1');
 CustomEase.create('inOut2', 'M0,0 C0.56,0 0,1 1,1');

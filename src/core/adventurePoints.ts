@@ -14,6 +14,7 @@ export const POINTS = {
   poster: 5,
   streakVisit: 10,
   friendMeet: 25,
+  pair: 40,
 } as const;
 
 interface PointsState {

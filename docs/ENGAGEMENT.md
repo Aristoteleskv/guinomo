@@ -33,6 +33,20 @@ próximos passos). Para jogadores e para quem desenvolve.
 - Com **streak ≥ 7 dias**, o cartaz sai com moldura dourada dupla + contador de
   dias — o troféu visível do hábito diário.
 
+## Par Extraordinário (👥)
+
+- Vínculo ao vivo: quando tu e outro jogador ficam próximos (≤ **4 m**) no mesmo
+  mundo, uma **linha dourada** carrega entre vocês; ao fim de ~**1,2 s** juntos o
+  par forma-se (linha + auréolas no chão). Afastarem-se além de **6 m** quebra o
+  vínculo (histerese, para não piscar ao passar).
+- A primeira vez de cada dia com cada amigo dá **40 pontos de aventura** (×2 na
+  hora dourada), um toast bilingue e o chip **👥 Par Extraordinário** no cartão
+  de identidade acende; reencontrar o mesmo amigo no mesmo dia repete o efeito
+  sem pontos.
+- Código: `src/core/extraordinaryPair.ts` (máquina de estados pura, testada em
+  `tests/extraordinary-pair.test.ts`), `src/scene/pairLinkScene.ts` (rendering)
+  e `src/components/pairHud.ts` (chip + pontos).
+
 ## Próximos passos
 
 - **Hora dourada** ☀️: janela diária anunciada (10 min, hora variável) com

@@ -1,0 +1,68 @@
+/* "Par Extraordinário" HUD: 👥 chip for the live two-player link. Floats
+   top-right when no identity card is present; sits in the badge otherwise. */
+
+#pair-hud {
+  position: fixed;
+  top: 58px;
+  right: 18px;
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(249, 239, 220, 0.94);
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  box-shadow: 1px 1px rgba(113, 108, 102, 0.5);
+  color: #514d48;
+  font-family: var(--default-font);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#pair-hud[hidden] {
+  display: none;
+}
+
+#pair-hud .pair-hud-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+#pair-hud .pair-hud-mark {
+  color: #c99a2e;
+}
+
+/* Live link active: golden glow matching the pair link in the world. */
+#pair-hud.active {
+  border-color: rgba(201, 154, 46, 0.85);
+  background: linear-gradient(135deg, #fdf3d0 0%, #f7e2a6 100%);
+  color: #7a5910;
+  box-shadow:
+    0 0 0 3px rgba(201, 154, 46, 0.22),
+    0 0 12px rgba(255, 209, 102, 0.7);
+}
+
+/* A pair was already unlocked today. */
+#pair-hud.claimed {
+  border-color: rgba(196, 140, 240, 0.55);
+}
+
+/* Inside the identity card: compact pill, no fixed overlay. */
+#pair-hud.in-badge {
+  position: static;
+  padding: 2px 9px;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  #pair-hud {
+    top: 48px;
+    right: 12px;
+    padding: 3px 10px;
+  }
+}

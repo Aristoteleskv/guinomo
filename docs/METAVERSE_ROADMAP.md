@@ -32,6 +32,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | **Álbum de selos** 🏅 | 5 cromos por segredo (raridade Comum/Raro/Lendário), ligado aos segredos já persistidos; atualiza ao vivo |
 | **Bússola sussurrante** 🗣️ | Pistas que ficam mais precisas à medida que te aproximas do segredo (lógica pura, coberta por vitest) |
 | **Cartaz com legenda** 📸 | Moldura polaroid + legenda por mundo (ou livre), esquema dourado no streak máximo |
+| **Par Extraordinário** 👥 | Vínculo ao vivo entre 2 jogadores que ficam juntos no mesmo mundo (linha dourada + auréolas); pontos de aventura e chip no cartão, uma vez por par por dia |
 
 | Planeado | Descrição |
 |---|---|

@@ -5,6 +5,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
 html,
 html body {
   margin: 0;
@@ -17,9 +18,11 @@ html body {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
+
 html body .click {
   cursor: pointer;
 }
+
 html body #app {
   display: block;
   position: absolute;
@@ -31,13 +34,7 @@ html body #app {
   padding: 0;
   overflow: hidden;
 }
-@font-face {
-  font-family: Stylish;
-  src: url(fonts/Stylish-Regular.woff2) format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
+
 html {
   --default-font: 'Stylish', sans-serif;
 }
@@ -63,7 +60,12 @@ html {
   align-items: center;
   align-content: center;
 }
-#loader.hidden { opacity: 0; pointer-events: none; }
+
+#loader.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 #loader h1 {
   font-family: var(--default-font);
   font-weight: normal;
@@ -73,14 +75,17 @@ html {
   margin: 0 0 20px 0;
   color: #bdbcb8;
 }
+
 #loader h1.fallback {
   line-height: 0.95em;
   font-size: 42px;
 }
+
 #loader .spinner {
   width: 54px;
   height: 54px;
 }
+
 #loader svg {
   display: block;
   position: relative;
@@ -90,6 +95,7 @@ html {
   will-change: opacity;
   animation: loaderrotator 2.5s linear infinite;
 }
+
 #loader svg .path {
   stroke: #bdbcb8;
   stroke-dasharray: 187;
@@ -97,14 +103,31 @@ html {
   transform-origin: center;
   animation: loaderdash 2.5s ease-in-out infinite;
 }
+
 @keyframes loaderrotator {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(270deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(270deg);
+  }
 }
+
 @keyframes loaderdash {
-  0% { stroke-dashoffset: 187; }
-  50% { stroke-dashoffset: 46.75; transform: rotate(135deg); }
-  100% { stroke-dashoffset: 187; transform: rotate(450deg); }
+  0% {
+    stroke-dashoffset: 187;
+  }
+
+  50% {
+    stroke-dashoffset: 46.75;
+    transform: rotate(135deg);
+  }
+
+  100% {
+    stroke-dashoffset: 187;
+    transform: rotate(450deg);
+  }
 }
 
 /* ---- interactive click layer ---- */
@@ -120,9 +143,19 @@ html {
   outline: none;
   cursor: pointer;
 }
-.interactive:focus { outline: none; }
-.interactive:focus-visible { outline: 3px solid #5d5a57; outline-offset: 4px; }
-.interactive * { pointer-events: none; }
+
+.interactive:focus {
+  outline: none;
+}
+
+.interactive:focus-visible {
+  outline: 3px solid #5d5a57;
+  outline-offset: 4px;
+}
+
+.interactive * {
+  pointer-events: none;
+}
 
 /* ---- secret modal (easter egg popup) ---- */
 #modal {
@@ -145,7 +178,11 @@ html {
   -webkit-user-select: none;
   user-select: none;
 }
-#modal.visible { display: flex; }
+
+#modal.visible {
+  display: flex;
+}
+
 #modal .cnt {
   position: relative;
   padding: 33px 90px 33px 40px;
@@ -154,6 +191,7 @@ html {
   will-change: opacity;
   transition: opacity 0.75s ease 1.5s;
 }
+
 #modal .cnt .bg-dark,
 #modal .cnt .bg-light {
   position: absolute;
@@ -164,16 +202,19 @@ html {
   border-radius: 5px;
   will-change: transform, scale;
 }
+
 #modal .cnt .bg-dark {
   background-color: #b5a997;
   border-radius: 5px;
   transform: translate(8px, 8px) rotate(0.5deg);
   animation: modalpopdark 2s cubic-bezier(0.5, 0, 0.1, 1) 0.2s both;
 }
+
 #modal .cnt .bg-light {
   background-color: #fff6e3;
   animation: modalpop 2s cubic-bezier(0.5, 0, 0.1, 1) 0.35s both;
 }
+
 #modal .cnt article {
   position: relative;
   opacity: 0.001;
@@ -181,18 +222,37 @@ html {
   will-change: opacity;
   animation: fadein 0.75s ease 1.5s both;
 }
+
 @keyframes modalpopdark {
-  0% { transform: translate(8px, 8px) rotate(0.5deg) scale(0.001); }
-  100% { transform: translate(8px, 8px) rotate(0.5deg) scale(1); }
+  0% {
+    transform: translate(8px, 8px) rotate(0.5deg) scale(0.001);
+  }
+
+  100% {
+    transform: translate(8px, 8px) rotate(0.5deg) scale(1);
+  }
 }
+
 @keyframes modalpop {
-  0% { transform: scale(0.001); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0.001);
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
+
 @keyframes fadein {
-  from { opacity: 0.001; }
-  to { opacity: 1; }
+  from {
+    opacity: 0.001;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
+
 #modal p {
   font-size: 30px;
   letter-spacing: -0.03em;
@@ -200,6 +260,7 @@ html {
   color: #989389;
   margin: 0;
 }
+
 .button-close {
   position: absolute;
   top: 22px;
@@ -219,6 +280,7 @@ html {
   border: none;
   padding: 0;
 }
+
 .button-close svg {
   display: block;
   width: 18px;
@@ -249,7 +311,11 @@ html {
   -webkit-user-select: none;
   user-select: none;
 }
-#info.visible { display: flex; }
+
+#info.visible {
+  display: flex;
+}
+
 #info .close-hit {
   position: absolute;
   top: 0;
@@ -258,6 +324,7 @@ html {
   height: 100%;
   cursor: pointer;
 }
+
 #info .cnt {
   position: relative;
   padding: 50px 60px;
@@ -266,6 +333,7 @@ html {
   will-change: opacity;
   transition: opacity 0.75s ease;
 }
+
 #info .cnt .bg-dark,
 #info .cnt .bg-light {
   position: absolute;
@@ -276,16 +344,19 @@ html {
   border-radius: 5px;
   will-change: transform, scale;
 }
+
 #info .cnt .bg-dark {
   background-color: #bab3a5;
   border-radius: 5px;
   transform: translate(10px, 10px) rotate(1deg);
   animation: modalpopdark 2s cubic-bezier(0.5, 0, 0.1, 1) both;
 }
+
 #info .cnt .bg-light {
   background-color: #f9f2e4;
   animation: modalpop 2s cubic-bezier(0.5, 0, 0.1, 1) 0.15s both;
 }
+
 #info .cnt article {
   position: relative;
   opacity: 0.001;
@@ -293,6 +364,7 @@ html {
   max-width: 600px;
   animation: fadein 0.75s ease 0.6s both;
 }
+
 #info h1 {
   font-size: 45px;
   line-height: 1em;
@@ -301,6 +373,7 @@ html {
   color: #8d8981;
   margin: 0 0 1.3em;
 }
+
 #info p {
   font-size: 30px;
   letter-spacing: -0.03em;
@@ -308,7 +381,11 @@ html {
   color: #989389;
   margin: 0 0 1.3em;
 }
-#info p:last-of-type { margin: 0; }
+
+#info p:last-of-type {
+  margin: 0;
+}
+
 #info .cnt p a,
 #info .cnt p a:visited {
   display: inline-block;
@@ -318,6 +395,7 @@ html {
   padding-left: 18px;
   color: #989389;
 }
+
 #info .cnt p a.link2:before {
   display: block;
   content: '';
@@ -331,8 +409,16 @@ html {
   transform-origin: 0% 50%;
   transition: transform 0.4s cubic-bezier(0.5, 0, 0.1, 1);
 }
-#info .cnt p a.link2:hover:before { transform: scaleX(0.65); }
-#info .cnt b { font-weight: 400; font-size: 0.75em; }
+
+#info .cnt p a.link2:hover:before {
+  transform: scaleX(0.65);
+}
+
+#info .cnt b {
+  font-weight: 400;
+  font-size: 0.75em;
+}
+
 #info .button-close {
   top: 30px;
   right: 30px;
@@ -344,7 +430,8 @@ html {
 .button {
   width: 32px;
   height: 32px;
-  border-radius: 5px;
+  border-radius: 12px;
+  corner-shape: superellipse(1.4);
   margin-bottom: 16px;
   transform: rotate(10deg);
   background-color: #f9efdc;
@@ -358,6 +445,7 @@ html {
   padding: 0;
   position: relative;
 }
+
 nav {
   display: none;
   flex-direction: column;
@@ -375,8 +463,16 @@ nav {
   transform: translate(80px);
   transition: transform 0.75s cubic-bezier(0.5, 0, 0.1, 1);
 }
-nav.visible { display: flex; transform: translate(0); }
-nav.inactive { pointer-events: none; }
+
+nav.visible {
+  display: flex;
+  transform: translate(0);
+}
+
+nav.inactive {
+  pointer-events: none;
+}
+
 nav svg.sound {
   display: block;
   width: 25px;
@@ -386,18 +482,24 @@ nav svg.sound {
   top: 4px;
   left: 4px;
 }
-nav svg.sound2 { left: 8px; }
+
+nav svg.sound2 {
+  left: 8px;
+}
+
 nav .back-button,
 nav .profile-avatar {
   display: grid;
   place-items: center;
   text-decoration: none;
 }
+
 nav .back-button svg {
   width: 22px;
   height: 22px;
   transform: rotate(-10deg);
 }
+
 nav .profile-avatar {
   width: 40px;
   height: 40px;
@@ -406,6 +508,7 @@ nav .profile-avatar {
   transform: none;
   background-color: #f9efdc;
 }
+
 nav .profile-avatar img {
   display: block;
   width: 100%;
@@ -413,7 +516,11 @@ nav .profile-avatar img {
   border-radius: inherit;
   object-fit: cover;
 }
-nav .profile-avatar:hover { transform: translateY(-2px); }
+
+nav .profile-avatar:hover {
+  transform: translateY(-2px);
+}
+
 nav .color-square {
   display: block;
   position: relative;
@@ -423,6 +530,7 @@ nav .color-square {
   border-radius: 2px;
   transform: rotate(-16deg);
 }
+
 nav svg.info {
   display: block;
   width: 22px;
@@ -432,6 +540,7 @@ nav svg.info {
   top: 6px;
   left: 5px;
 }
+
 nav .cnt {
   position: absolute;
   top: 100%;
@@ -446,6 +555,102 @@ nav .cnt {
   font-size: 33px;
   letter-spacing: -0.05em;
   line-height: 1em;
+}
+
+/* ---- identity card: photo + username + elements found ---- */
+.guinomo-badge {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 25px;
+  corner-shape: superellipse(1.4);
+  background: rgba(249, 239, 220, 0.94);
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  box-shadow: 2px 2px rgba(113, 108, 102, 0.68);
+  font-family: var(--default-font);
+  z-index: 30;
+}
+
+.guinomo-badge.visible {
+  display: flex;
+}
+
+.guinomo-badge a {
+  text-decoration: none;
+}
+
+.guinomo-badge-avatar {
+  display: block;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: #f9efdc;
+  flex: none;
+  transition: transform 160ms ease;
+}
+
+.guinomo-badge-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.guinomo-badge-avatar:hover,
+.guinomo-badge-avatar:focus-visible {
+  transform: translateY(-2px);
+}
+
+.guinomo-badge-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.1;
+}
+
+.guinomo-badge-name {
+  display: block;
+  color: #514d48;
+  font-size: 15px;
+  font-weight: 400;
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.guinomo-badge-name:hover,
+.guinomo-badge-name:focus-visible {
+  color: #2f2c29;
+}
+
+.guinomo-badge-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #716c66;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.guinomo-badge-count svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.guinomo-badge-count .cnt {
+  font-size: 12px;
+}
+
+.guinomo-badge-count em {
+  font-style: normal;
 }
 
 /* ---- unsupported ---- */
@@ -468,27 +673,76 @@ nav .cnt {
 }
 
 @media (max-width: 1200px) {
-  #modal { bottom: 0; }
-  #modal .cnt { padding: 28px 65px 28px 30px; }
-  #modal p { font-size: 23px; }
-  #modal .button-close { top: 15px; right: 15px; }
-  #info .cnt { padding: 64px 26px 40px; margin: 20px; }
-  #info h1 { font-size: 32px; }
-  #info p { font-size: 25px; }
-  #info .button-close { top: 24px; right: 24px; }
-  .button { margin-bottom: 12px; }
-  nav { top: 20px; right: 20px; }
-  nav .cnt { font-size: 27px; }
+  #modal {
+    bottom: 0;
+  }
+
+  #modal .cnt {
+    padding: 28px 65px 28px 30px;
+  }
+
+  #modal p {
+    font-size: 23px;
+  }
+
+  #modal .button-close {
+    top: 15px;
+    right: 15px;
+  }
+
+  #info .cnt {
+    padding: 64px 26px 40px;
+    margin: 20px;
+  }
+
+  #info h1 {
+    font-size: 32px;
+  }
+
+  #info p {
+    font-size: 25px;
+  }
+
+  #info .button-close {
+    top: 24px;
+    right: 24px;
+  }
+
+  .button {
+    margin-bottom: 12px;
+  }
+
+  nav {
+    top: 20px;
+    right: 20px;
+  }
+
+  nav .cnt {
+    font-size: 27px;
+  }
+
+  .guinomo-badge {
+    top: 20px;
+    left: 20px;
+  }
 }
 
-.button:hover { transform: rotate(10deg) translateY(-2px); }
-.button:active, .button-close:active { transform: rotate(10deg) translateY(2px); box-shadow: 1px 1px #716c66; }
+.button:hover {
+  transform: rotate(10deg) translateY(-2px);
+}
+
+.button:active,
+.button-close:active {
+  transform: rotate(10deg) translateY(2px);
+  box-shadow: 1px 1px #716c66;
+}
 
 .name-tag-color-button {
   color: #716c66;
   font: 700 12px Arial, sans-serif;
   border: 1px solid rgba(113, 108, 102, 0.45);
 }
+
 .name-tag-color-input {
   position: fixed;
   width: 1px;
@@ -496,42 +750,154 @@ nav .cnt {
   opacity: 0;
   pointer-events: none;
 }
+
+/* ---- avatar editor (shirt/skin colors, owner-only) ---- */
+.avatar-editor {
+  position: absolute;
+  right: 130px;
+  top: -6px;
+  z-index: 30;
+  width: min(238px, 62vw);
+  padding: 12px 12px 8px;
+  background-color: #f9efdc;
+  border-radius: 12px;
+  corner-shape: superellipse(1.4);
+  box-shadow: 2px 2px 0 0 #716c66;
+  color: #333;
+  font-family: var(--default-font);
+  text-align: left;
+}
+
+.avatar-editor[hidden] {
+  display: none;
+}
+
+.avatar-editor-title {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #514d48;
+}
+
+.avatar-editor-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.avatar-editor-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #514d48;
+}
+
+.avatar-editor-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.avatar-editor-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(113, 108, 102, 0.45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+.avatar-editor-swatch:hover {
+  transform: translateY(-1px);
+}
+
+.avatar-editor-swatch.active {
+  outline: 2px solid #2f5bb0;
+  outline-offset: 1px;
+  border-color: #fff;
+}
+
+.avatar-editor-input[type="color"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(113, 108, 102, 0.45);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.avatar-editor-random.button {
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 8px auto 0;
+  padding: 5px 12px;
+  font: 600 12px var(--default-font);
+  color: #514d48;
+  transform: none;
+  border-radius: 10px;
+}
+
+.avatar-editor-random.button:hover {
+  transform: translateY(-1px);
+}
+
+.avatar-editor-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #716c66;
+  text-align: center;
+}
+
 html.guinomo-chat-open nav .social-link {
   display: none;
 }
+
 nav .social-link {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  min-width: 40px;
-  height: 40px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid rgba(113, 108, 102, 0.32);
+  transform: rotate(10deg);
+  border: 1px solid rgba(113, 108, 102, .32);
   border-radius: 12px;
-  background: rgba(249, 239, 220, 0.94);
-  box-shadow: 2px 2px rgba(113, 108, 102, 0.68);
+  corner-shape: superellipse(1.4);
+  background: #f9efdcf0;
+  box-shadow: 2px 2px #716c66ad;
   color: #514d48;
   font: 600 12px Arial, sans-serif;
   text-decoration: none;
-  transform: none;
-  transition: transform 160ms ease, background-color 160ms ease;
+  transition: transform .16s ease, background-color .16s ease;
 }
+
 nav button.social-link {
   cursor: pointer;
   appearance: none;
 }
+
 nav .social-link:hover,
 nav .social-link:focus-visible {
   background: #fffaf0;
-  transform: translateY(-2px);
+  transform: rotate(10deg) translateY(-2px);
 }
+
 nav .social-link:focus-visible,
 .name-tag-color-button:focus-visible {
   outline: 2px solid #716c66;
   outline-offset: 3px;
 }
+
 nav .social-link svg {
   width: 18px;
   height: 18px;
@@ -542,6 +908,7 @@ nav .social-link svg {
   stroke-linejoin: round;
   stroke-width: 1.8;
 }
+
 nav .social-link::after {
   position: absolute;
   top: 50%;
@@ -557,14 +924,17 @@ nav .social-link::after {
   transform: translate(4px, -50%);
   transition: opacity 140ms ease, transform 140ms ease;
 }
+
 nav .social-link:hover::after,
 nav .social-link:focus-visible::after {
   opacity: 1;
   transform: translate(0, -50%);
 }
+
 .world-select-control {
   cursor: pointer;
 }
+
 nav .world-select {
   position: absolute;
   inset: 0;
@@ -573,10 +943,12 @@ nav .world-select {
   opacity: 0;
   cursor: pointer;
 }
+
 .world-select-control:focus-within {
   outline: 2px solid #716c66;
   outline-offset: 3px;
 }
+
 .world-rest-action {
   position: fixed;
   z-index: 30;
@@ -593,15 +965,18 @@ nav .world-select {
   transform: translateX(-50%);
   backdrop-filter: blur(12px);
 }
+
 .world-rest-action:hover,
 .world-rest-action:focus-visible {
   background: rgba(43, 70, 72, 0.96);
   outline: 2px solid #fffaf0;
   outline-offset: 3px;
 }
+
 .world-rest-action[hidden] {
   display: none;
 }
+
 #guinomo-friends-panel {
   position: fixed;
   z-index: 25;
@@ -619,13 +994,16 @@ nav .world-select {
   color: #fffaf0;
   font: 12px Arial, sans-serif;
 }
+
 #guinomo-friends-panel.open {
   display: flex;
   flex-direction: column;
 }
+
 html.guinomo-chat-open #guinomo-friends-panel {
   display: none;
 }
+
 #guinomo-friends-panel header {
   display: flex;
   min-height: 44px;
@@ -634,9 +1012,11 @@ html.guinomo-chat-open #guinomo-friends-panel {
   padding: 0 12px 0 15px;
   background: rgba(255, 250, 240, 0.08);
 }
+
 #guinomo-friends-panel header strong {
   font-size: 13px;
 }
+
 #guinomo-friends-panel .guinomo-friends-close {
   width: 30px;
   height: 30px;
@@ -647,26 +1027,31 @@ html.guinomo-chat-open #guinomo-friends-panel {
   cursor: pointer;
   font-size: 22px;
 }
+
 #guinomo-friends-panel .guinomo-friends-close:hover {
   background: rgba(255, 250, 240, 0.14);
 }
+
 #guinomo-friends-panel .guinomo-friends-summary {
   margin: 0;
   padding: 9px 14px 5px;
   color: rgba(255, 250, 240, 0.7);
   font-size: 11px;
 }
+
 #guinomo-friends-panel .guinomo-friends-list {
   display: grid;
   gap: 6px;
   overflow-y: auto;
   padding: 7px 9px 12px;
 }
+
 #guinomo-friends-panel .guinomo-friends-empty {
   margin: 8px 5px;
   color: rgba(255, 250, 240, 0.72);
   line-height: 1.5;
 }
+
 .guinomo-friend-card {
   display: flex;
   min-width: 0;
@@ -676,6 +1061,7 @@ html.guinomo-chat-open #guinomo-friends-panel {
   border-radius: 11px;
   background: rgba(255, 250, 240, 0.07);
 }
+
 .guinomo-friend-avatar {
   width: 38px;
   height: 38px;
@@ -683,13 +1069,15 @@ html.guinomo-chat-open #guinomo-friends-panel {
   border-radius: 50%;
   object-fit: cover;
 }
+
 .guinomo-friend-details {
   display: grid;
   min-width: 0;
   flex: 1 1 auto;
   gap: 4px;
 }
-.guinomo-friend-details > a {
+
+.guinomo-friend-details>a {
   overflow: hidden;
   color: #fffaf0;
   font-size: 12px;
@@ -698,9 +1086,11 @@ html.guinomo-chat-open #guinomo-friends-panel {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.guinomo-friend-details > a:hover {
+
+.guinomo-friend-details>a:hover {
   text-decoration: underline;
 }
+
 .guinomo-friend-status {
   overflow: hidden;
   color: rgba(255, 250, 240, 0.68);
@@ -708,6 +1098,7 @@ html.guinomo-chat-open #guinomo-friends-panel {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .guinomo-friend-status.online::before {
   display: inline-block;
   width: 7px;
@@ -717,6 +1108,7 @@ html.guinomo-chat-open #guinomo-friends-panel {
   background: #48d597;
   content: '';
 }
+
 .guinomo-friend-join {
   flex: 0 0 auto;
   padding: 7px 9px;
@@ -727,12 +1119,215 @@ html.guinomo-chat-open #guinomo-friends-panel {
   font-weight: 700;
   text-decoration: none;
 }
+
+.guinomo-chat-button {
+  position: relative;
+}
+
+.guinomo-chat-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #ff5c5c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+#guinomo-room-chat {
+  position: fixed;
+  z-index: 26;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(56vh, 520px);
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 250, 240, 0.32);
+  border-radius: 16px;
+  background: rgba(25, 28, 34, 0.94);
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(18px) saturate(125%);
+  color: #fffaf0;
+  font: 12px Arial, sans-serif;
+}
+
+#guinomo-room-chat[hidden] {
+  display: none;
+}
+
+#guinomo-room-chat header {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 15px;
+  background: rgba(255, 250, 240, 0.08);
+}
+
+#guinomo-room-chat header strong {
+  font-size: 13px;
+}
+
+#guinomo-room-chat .guinomo-chat-status {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: rgba(255, 250, 240, 0.55);
+  font-size: 10px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#guinomo-room-chat .guinomo-chat-status.online::before {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: #48d597;
+  content: '';
+  vertical-align: 1px;
+}
+
+#guinomo-room-chat .guinomo-chat-close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+#guinomo-room-chat .guinomo-chat-close:hover {
+  background: rgba(255, 250, 240, 0.14);
+}
+
+#guinomo-room-chat .guinomo-chat-messages {
+  display: flex;
+  min-height: 96px;
+  max-height: 40vh;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+
+#guinomo-room-chat .guinomo-chat-msg {
+  align-self: flex-start;
+  max-width: 86%;
+  padding: 7px 11px;
+  border-radius: 13px 13px 13px 4px;
+  background: rgba(255, 250, 240, 0.1);
+  line-height: 1.4;
+}
+
+#guinomo-room-chat .guinomo-chat-msg.own {
+  align-self: flex-end;
+  border-radius: 13px 13px 4px 13px;
+  background: rgba(72, 213, 151, 0.24);
+}
+
+#guinomo-room-chat .guinomo-chat-msg-name {
+  display: block;
+  margin-bottom: 2px;
+  color: rgba(255, 250, 240, 0.62);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+#guinomo-room-chat .guinomo-chat-msg.own .guinomo-chat-msg-name {
+  color: rgba(223, 255, 240, 0.75);
+}
+
+#guinomo-room-chat .guinomo-chat-msg-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+#guinomo-room-chat .guinomo-chat-typing {
+  min-height: 0;
+  margin: 0;
+  padding: 0 14px 6px;
+  color: rgba(255, 250, 240, 0.55);
+  font-size: 11px;
+  font-style: italic;
+}
+
+#guinomo-room-chat .guinomo-chat-typing[hidden] {
+  display: none;
+}
+
+#guinomo-room-chat .guinomo-chat-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255, 250, 240, 0.12);
+}
+
+#guinomo-room-chat .guinomo-chat-input {
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 250, 240, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.1);
+  color: #fffaf0;
+  font: 12px 'Arial', sans-serif;
+}
+
+#guinomo-room-chat .guinomo-chat-input:focus {
+  outline: 2px solid rgba(72, 213, 151, 0.7);
+  outline-offset: 1px;
+}
+
+#guinomo-room-chat .guinomo-chat-input::placeholder {
+  color: rgba(255, 250, 240, 0.42);
+}
+
+#guinomo-room-chat .guinomo-chat-send {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: #48d597;
+  color: #08130d;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+#guinomo-room-chat .guinomo-chat-send:hover {
+  background: #5fe3a6;
+}
+
+@media (max-width: 640px) {
+  #guinomo-room-chat {
+    bottom: 10px;
+    width: calc(100vw - 16px);
+    max-height: 46vh;
+  }
+}
+
 .guinomo-friend-join:hover {
   background: #fffaf0;
 }
+
 nav .guinomo-friends-button {
   overflow: visible;
 }
+
 nav .guinomo-friends-count:not([hidden]) {
   position: absolute;
   top: -5px;
@@ -749,6 +1344,7 @@ nav .guinomo-friends-count:not([hidden]) {
   font: 700 9px Arial, sans-serif;
   transform: rotate(-10deg);
 }
+
 #noop-chat-overlay {
   position: fixed;
   z-index: 30;
@@ -772,20 +1368,24 @@ nav .guinomo-friends-count:not([hidden]) {
   transition: opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
   visibility: hidden;
 }
+
 #noop-chat-overlay.open {
   opacity: 1;
   pointer-events: auto;
   transform: translate(0, 0);
   visibility: visible;
 }
+
 html.guinomo-avatar-right #noop-chat-overlay {
   right: auto;
   left: 18px;
   transform: translate(-12px, 12px);
 }
+
 html.guinomo-avatar-right #noop-chat-overlay.open {
   transform: translate(0, 0);
 }
+
 #noop-chat-overlay .chat-overlay-header {
   display: flex;
   flex: 0 0 48px;
@@ -795,6 +1395,7 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   background: rgba(255, 250, 240, 0.09);
   font: 600 14px Arial, sans-serif;
 }
+
 #noop-chat-overlay .chat-overlay-close {
   display: grid;
   width: 32px;
@@ -805,13 +1406,16 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   background: transparent;
   cursor: pointer;
 }
+
 #noop-chat-overlay .chat-overlay-close:hover {
   background: rgba(255, 250, 240, 0.16);
 }
+
 #noop-chat-overlay .chat-overlay-close svg {
   width: 16px;
   height: 16px;
 }
+
 #noop-chat-overlay iframe {
   flex: 1 1 auto;
   width: 100%;
@@ -820,15 +1424,18 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   background: transparent;
   visibility: hidden;
 }
+
 #noop-chat-overlay iframe.ready {
   visibility: visible;
 }
+
 #noop-chat-overlay .chat-overlay-error {
   margin: auto;
   padding: 20px;
   font: 13px Arial, sans-serif;
   text-align: center;
 }
+
 #guinomo-notification-toasts {
   position: fixed;
   z-index: 2147483000;
@@ -839,6 +1446,7 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   gap: 9px;
   pointer-events: none;
 }
+
 .guinomo-notification-toast {
   display: flex;
   align-items: center;
@@ -858,10 +1466,12 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   transform: translateY(0);
   transition: opacity 180ms ease, transform 180ms ease;
 }
+
 .guinomo-notification-toast.leaving {
   opacity: 0;
   transform: translateY(-5px);
 }
+
 .guinomo-notification-toast .notification-avatar {
   width: 36px;
   height: 36px;
@@ -869,21 +1479,25 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   border-radius: 50%;
   object-fit: cover;
 }
+
 .guinomo-notification-toast .notification-content {
   display: grid;
   min-width: 0;
   gap: 3px;
 }
+
 .guinomo-notification-toast strong,
-.guinomo-notification-toast .notification-content > span {
+.guinomo-notification-toast .notification-content>span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.guinomo-notification-toast .notification-content > span {
+
+.guinomo-notification-toast .notification-content>span {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
 .guinomo-notification-toast small {
   flex: 0 0 auto;
   margin-left: auto;
@@ -897,18 +1511,21 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   pointer-events: auto;
   cursor: pointer;
 }
+
 .character-name-pill {
   display: block;
   max-width: 180px;
   overflow: hidden;
-  padding: 3px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  border-radius: 999px;
+  padding: 10px;
+  border: 1px solid rgba(54, 50, 50, 0.7);
+  border-radius: 25px;
+  corner-shape: superellipse(1.4);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   font: 700 12px/1.25 Arial, sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .character-tooltip-card {
   position: absolute;
   top: calc(100% + 8px);
@@ -932,6 +1549,7 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   white-space: normal;
   backdrop-filter: blur(14px);
 }
+
 .character-name-tag:hover .character-tooltip-card,
 .character-name-tag:focus-within .character-tooltip-card {
   opacity: 1;
@@ -939,6 +1557,7 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   transform: translate(-50%, 0);
   visibility: visible;
 }
+
 .character-tooltip-avatar {
   width: 46px;
   height: 46px;
@@ -947,25 +1566,30 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   background: rgba(255, 255, 255, 0.12);
   object-fit: cover;
 }
+
 .character-tooltip-avatar.unavailable {
   visibility: hidden;
 }
+
 .character-tooltip-details {
   display: grid;
   min-width: 0;
   gap: 2px;
 }
+
 .character-tooltip-name {
   overflow: hidden;
   font-size: 14px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .character-tooltip-status,
 .character-tooltip-category {
   color: rgba(255, 255, 255, 0.76);
   font-size: 11px;
 }
+
 .character-tooltip-status::before {
   display: inline-block;
   width: 7px;
@@ -975,6 +1599,7 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
   background: #48d597;
   content: '';
 }
+
 @media (max-width: 640px) {
   #guinomo-friends-panel {
     top: 70px;
@@ -982,6 +1607,7 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
     width: min(320px, calc(100vw - 82px));
     max-height: min(430px, calc(100dvh - 90px));
   }
+
   #noop-chat-overlay {
     top: 12px;
     right: 112px;
@@ -990,18 +1616,22 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
     height: min(320px, 38dvh, calc(100dvh - 130px));
     transform: translateY(-12px);
   }
+
   html.guinomo-avatar-right #noop-chat-overlay {
     right: auto;
     left: 10px;
     width: min(300px, calc(100vw - 24px));
     transform: translateY(-12px);
   }
+
   html.guinomo-avatar-right #noop-chat-overlay.open {
     transform: translateY(0);
   }
+
   #noop-chat-overlay.open {
     transform: translateY(0);
   }
+
   #guinomo-notification-toasts {
     top: auto;
     right: auto;
@@ -1009,5 +1639,188 @@ html.guinomo-avatar-right #noop-chat-overlay.open {
     left: 12px;
     width: min(280px, calc(100vw - 76px));
   }
-  .character-tooltip-card { width: min(220px, calc(100vw - 32px)); }
+
+  .character-tooltip-card {
+    width: min(220px, calc(100vw - 32px));
+  }
+}
+
+/* ---- metaverse overlays: guide, world map, avatar role ---- */
+#info .overlay-guide p {
+  font-size: 19px;
+  line-height: 1.45;
+  margin: 0 0 0.9em;
+}
+
+#info .overlay-guide kbd {
+  display: inline-block;
+  min-width: 26px;
+  padding: 3px 7px;
+  margin-right: 5px;
+  border: 1px solid #cfc8bb;
+  border-bottom-width: 3px;
+  border-radius: 6px;
+  background: #f5eede;
+  color: #6b665e;
+  font: 700 13px/1 Arial, sans-serif;
+  text-align: center;
+}
+
+.world-list {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.world-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(152, 147, 137, 0.35);
+  border-radius: 12px;
+  background: rgba(249, 242, 228, 0.7);
+}
+
+.world-card.current {
+  box-shadow: 0 0 0 2px rgba(152, 147, 137, 0.55) inset;
+  background: rgba(236, 226, 205, 0.75);
+}
+
+.world-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.world-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.world-info strong {
+  color: #7d786f;
+  font: 700 16px/1.2 Arial, sans-serif;
+}
+
+.world-desc {
+  color: #989389;
+  font: 400 13px/1.35 Arial, sans-serif;
+}
+
+.world-hint {
+  color: #8d8981;
+  font: 400 11px/1.3 Arial, sans-serif;
+  opacity: 0.85;
+}
+
+.world-travel {
+  align-self: center;
+  padding: 6px 12px;
+  border: 1px solid rgba(152, 147, 137, 0.5);
+  border-radius: 999px;
+  background: #f5eede;
+  color: #7d786f;
+  font: 700 12px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.world-travel:hover {
+  background: #ece2cd;
+}
+
+.role-title {
+  margin: 0 0 10px;
+  color: #8d8981;
+  font: 400 17px/1.2 Arial, sans-serif;
+}
+
+.role-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.role-chip {
+  padding: 7px 12px;
+  border: 1px solid rgba(152, 147, 137, 0.5);
+  border-radius: 999px;
+  background: #f5eede;
+  color: #7d786f;
+  font: 700 12px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.role-chip.active {
+  background: #d9d2c2;
+  box-shadow: 0 0 0 2px rgba(152, 147, 137, 0.45) inset;
+}
+
+.role-chip:hover {
+  background: #ece2cd;
+}
+
+/* role shown under the avatar name pill */
+.character-name-role {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 10px/1.3 Arial, sans-serif;
+  opacity: 0.88;
+}
+
+/* first-run onboarding toast (standalone styling; the Noop app also styles it) */
+.guinomo-onboarding-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  z-index: 2000;
+  max-width: 90vw;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(17, 20, 30, 0.92);
+  color: #fff;
+  font: 400 13px/1.35 Arial, sans-serif;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+  backdrop-filter: blur(10px);
+}
+
+.guinomo-onboarding-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (max-width: 640px) {
+  #info .cnt {
+    margin: 12px;
+    padding: 40px 20px;
+  }
+
+  #info .overlay-guide p {
+    font-size: 16px;
+  }
+
+  .world-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .world-travel {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .guinomo-onboarding-toast {
+    bottom: 14px;
+    font-size: 12px;
+  }
 }

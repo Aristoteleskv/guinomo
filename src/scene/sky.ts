@@ -28,7 +28,13 @@ import fitGLSL from './glsl/fit.glsl?raw';
 import falloffGLSL from './glsl/falloff.glsl?raw';
 import { globalUBODeclaration } from './materials';
 
-const DAY_NIGHT_PERIOD_MS = 240_000;
+// The daylight cycle follows the user's local time (their timezone), not an
+// artificial timer: 06:00 → sunrise (angle 0), 12:00 → solar noon (π/2),
+// 18:00 → sunset (π), 00:00 → midnight (3π/2).
+function localSolarAngle(date: Date = new Date()): number {
+  const minutesOfDay = date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
+  return (minutesOfDay / 1440 - 0.25) * Math.PI * 2;
+}
 
 function createGlow(color: string, size: number): Sprite {
   const canvas = document.createElement('canvas');
@@ -98,10 +104,10 @@ export class Sky extends SceneModule {
       uniforms: {
         tMap: { value: textureLoader.load('sky-srgb-highq.png', 'srgb-repeat') },
         tFlow: { value: textureLoader.load('skyflow-highq.ktx2', 'repeat') },
-        uColorHorizon: { value: new Color(palette?.horizon ?? '#caf0fe') },
+        uColorHorizon: { value: new Color(palette?.horizon ?? '#cfeefc') },
         uColorHorizonOverlay: { value: new Color(palette?.overlay ?? '#d8eeff') },
-        uColorSky: { value: new Color(palette?.sky ?? '#248fd5') },
-        uColorClouds: { value: new Color(palette?.clouds ?? '#ffe5c4') },
+        uColorSky: { value: new Color(palette?.sky ?? '#2b96d8') },
+        uColorClouds: { value: new Color(palette?.clouds ?? '#ffe9cf') },
         uNightBlend: { value: 0 },
         uAlienBlend: { value: 0 },
         uForestBlend: { value: world === 'forest' ? 1 : 0 },
@@ -219,7 +225,7 @@ export class Sky extends SceneModule {
       const cameraPosition = this.scene.camera.position;
       this.mesh.position.copy(cameraPosition);
       if (this.stars) this.stars.position.copy(cameraPosition);
-      const angle = (Date.now() % DAY_NIGHT_PERIOD_MS) / DAY_NIGHT_PERIOD_MS * Math.PI * 2;
+      const angle = localSolarAngle();
       const sunHeight = Math.sin(angle);
       const daylightProgress = Math.min(1, Math.max(0, (sunHeight + 0.12) / 0.24));
       const daylight = daylightProgress * daylightProgress * (3 - 2 * daylightProgress);
@@ -232,12 +238,14 @@ export class Sky extends SceneModule {
       uniforms.uAlienBlend.value = this.theme === 'alien' ? 1 : 0;
       if (this.stars) (this.stars.material as PointsMaterial).opacity = this.theme === 'alien' ? 0.7 : this.nightBlend * 0.8;
 
+      // O sol/lua ficam À FRENTE da câmara (+z, direção de visão da câmara de
+      // seguimento) em vez de atrás, para serem visíveis no céu à nossa frente.
       const distance = 88;
       const x = Math.cos(angle) * distance * 0.58;
       const y = Math.sin(angle) * distance * 0.58;
-      this.sun?.position.set(cameraPosition.x + x, cameraPosition.y + y, cameraPosition.z - distance * 0.72);
+      this.sun?.position.set(cameraPosition.x + x, cameraPosition.y + y, cameraPosition.z + distance * 0.72);
       this.sunGlow?.position.copy(this.sun?.position ?? cameraPosition);
-      this.moon?.position.set(cameraPosition.x - x, cameraPosition.y - y, cameraPosition.z - distance * 0.72);
+      this.moon?.position.set(cameraPosition.x - x, cameraPosition.y - y, cameraPosition.z + distance * 0.72);
       this.moonGlow?.position.copy(this.moon?.position ?? cameraPosition);
       const sunVisible = this.theme === 'cycle' && daylight > 0.12;
       const moonVisible = this.theme === 'night' || (this.theme === 'cycle' && daylight <= 0.5);

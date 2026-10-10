@@ -1,0 +1,96 @@
+/* Golden hour HUD: countdown chip (top-center), adventure points, vignette. */
+
+#golden-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 28;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 50% 6%,
+    rgba(255, 214, 102, 0.3) 0%,
+    rgba(255, 190, 80, 0.12) 36%,
+    rgba(255, 190, 80, 0) 64%
+  );
+  animation: golden-breathe 3.4s ease-in-out infinite;
+}
+
+#golden-vignette[hidden] {
+  display: none;
+}
+
+@keyframes golden-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+#golden-chip {
+  position: fixed;
+  top: 104px;
+  left: 24px;
+  transform: none;
+  z-index: 62;
+  box-sizing: border-box;
+  max-width: min(360px, 88vw);
+  padding: 4px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  background: rgba(249, 239, 220, 0.94);
+  box-shadow: 1px 1px rgba(113, 108, 102, 0.5);
+  color: #514d48;
+  font-family: var(--default-font, Arial, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#golden-chip.active {
+  border-color: rgba(233, 191, 68, 0.9);
+  background: linear-gradient(135deg, #fdf3d0 0%, #f7e2a6 100%);
+  color: #7a5910;
+  box-shadow:
+    0 0 0 3px rgba(233, 191, 68, 0.25),
+    1px 1px rgba(113, 108, 102, 0.45);
+}
+
+#points-chip {
+  position: fixed;
+  top: 136px;
+  left: 24px;
+  transform: none;
+  z-index: 62;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(20, 28, 32, 0.55);
+  backdrop-filter: blur(6px);
+  color: #ffe8b0;
+  font-family: var(--default-font, Arial, sans-serif);
+  font-size: 12px;
+  font-weight: 700;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@media (max-width: 760px) {
+  #golden-chip {
+    top: 100px;
+    left: 16px;
+    font-size: 12px;
+    padding: 3px 10px;
+  }
+  #points-chip {
+    top: 132px;
+    left: 16px;
+  }
+}

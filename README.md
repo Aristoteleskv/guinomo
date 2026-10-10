@@ -6,11 +6,10 @@
 </p>
 
 A rewritten vanilla TypeScript port of **Guinomo**, the
-WebGL art experiment by [Vicente Lucendo](https://summer-afternoon.vlucendo.com),
+WebGL art experiment by [Kivova],
 rebuilt from a fully decompiled copy of the original deployed site.
 
-> **Summer Afternoon** · A WebGL experiment by Vicente Lucendo
-> https://summer-afternoon.vlucendo.com
+> **Guinomo** 
 
 ## Run it
 
@@ -18,11 +17,15 @@ Requires [bun](https://bun.sh) (or npm, `package.json` scripts are compatible).
 
 ```bash
 bun install
-bun run dev        # http://localhost:5173
+bun run dev        # dev server (HMR) at http://localhost:5173
 bun run build      # tsc -b && vite build → dist/
-bun run preview    # serve the production build
+bun run preview    # serve the production build at http://localhost:4173
 bun run typecheck  # tsc -b --noEmit
 ```
+
+There is no static deploy step: the app is always served by a Vite server
+(dev server or `npm run preview`). The PHP page loads it via the
+`GUINOMO_APP_SERVER` env var (see the integration section below).
  
 
 ## From the original to this port
@@ -172,7 +175,7 @@ src/
 
 multiplayer/         # Rust workspace: iroh P2P room (see section above)
 ├── shared/          # SummerNode: endpoint + gossip + pkarr room beacon
-├── browser-wasm/    # wasm-bindgen wrapper → pkg/ (committed, consumed as `summer-iroh`)
+├── browser-wasm/    # wasm-bindgen wrapper → pkg/ (committed, consumed as `guinomo-browser`)
 └── cli/             # native tester that joins the same room from a terminal
 ```
 
@@ -186,12 +189,11 @@ This port has been customized to integrate with a PHP-based social network (Noop
   - `php/save_avatar_3d.php`: Secure endpoint for persisting 3D customization back to the MySQL database.
 - **Customization:** Added a bidirectional sync for the `hat_visible` attribute, toggleable via the **H** key or a custom UI button (exclusive to the avatar owner).
 - **Data Source:** Fetches real user identity and color preferences from the `user_avatar_config` and `usuarios` tables.
-- **Subpath hosting:** Set `window.GUINOMO_ASSET_BASE` before loading the app bundle to the origin-relative directory containing `assets/` (for example, `/rede-social-dev/avatar-3d/`). Geometry, decoder, texture, audio, and font requests then stay under that directory instead of resolving against the host site's root.
+- **App hosting:** There is no static build committed to the site (the old `avatar-3d/` folder is gone). `guinomo.php` fetches the app's `index.html` from the Vite server configured by `GUINOMO_APP_SERVER` (default `http://localhost:5173`, the dev server; use `http://localhost:4173` for `npm run preview`, or the public URL Caddy proxies to) and injects the user identity/CSRF into it. It also sets `window.GUINOMO_ASSET_BASE` to that server so geometry, decoder, texture, audio, and font requests resolve against it.
 
 ## Credits & disclaimer
 
-- Original experience: **Summer Afternoon** by **Vicente Lucendo**,
-  https://summer-afternoon.vlucendo.com
+- Original experience: **Guinomo**
 - All 3D assets, textures, audio, fonts and the original code belong to their
   respective authors; this is a reverse-engineering and learning project,
   not affiliated with or endorsed by the original author.

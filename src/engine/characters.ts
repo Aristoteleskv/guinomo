@@ -21,7 +21,17 @@ import {
 } from 'three';
 import { events } from '../core/events';
 import { deferred, type Deferred } from '../core/deferred';
-import { ceilPowerOfTwo, clamp, fit, frictionFPS, HALF_PI, lerp, lerpCoefFPS, ratioFPS, TWO_PI } from '../core/math';
+import {
+  ceilPowerOfTwo,
+  clamp,
+  fit,
+  frictionFPS,
+  HALF_PI,
+  lerp,
+  lerpCoefFPS,
+  ratioFPS,
+  TWO_PI,
+} from '../core/math';
 import { gsap } from 'gsap';
 import { ticker } from '../core/ticker';
 import { clock } from './clock';
@@ -47,6 +57,52 @@ function isMultiplayerEnabled(): boolean {
 
 function secureLerp(v: number): number {
   return v > 0.9999 ? 1 : v < SECURE_EPS ? 0 : v;
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/** True when `value` is an array of exactly `length` finite numbers. */
+function isFiniteVec(value: unknown, length: number): value is number[] {
+  return Array.isArray(value) && value.length === length && value.every(isFiniteNumber);
+}
+
+/** Rejects garbage positions from the network (NaN / Infinity / absurd coords). */
+const POSITION_LIMIT = 1e5;
+function isSanePosition(p: number[]): boolean {
+  return p.every((v) => Math.abs(v) <= POSITION_LIMIT);
+}
+
+/**
+ * Copies only validated, bounded network fields onto a remote's userData, so a
+ * peer cannot inject arbitrary keys or out-of-range values. Unknown keys and
+ * non-finite numbers are intentionally dropped.
+ */
+function applyRemoteUserData(userData: Record<string, any>, key: string, value: unknown): void {
+  switch (key) {
+    case 'a':
+      if (isFiniteNumber(value)) userData.a = clamp(Math.round(value), 0, 7);
+      break;
+    case 'phy':
+      if (isFiniteNumber(value)) userData.phy = clamp(Math.round(value), 0, 6);
+      break;
+    case 'ageScale':
+      if (isFiniteNumber(value)) userData.ageScale = clamp(value, 0.5, 1.5);
+      break;
+    case 'uid':
+      if (isFiniteNumber(value)) userData.uid = Math.max(0, Math.floor(value));
+      break;
+    case 'seed':
+    case 'h':
+      if (isFiniteNumber(value)) userData[key] = value;
+      break;
+    case 'gender':
+      if (typeof value === 'string') userData.gender = value;
+      break;
+    default:
+      break;
+  }
 }
 
 /** Deep-clone an Object3D tree keeping skinned-mesh bone references intact. */
@@ -136,7 +192,12 @@ export interface CharacterOptions {
 
 export class CharacterSkinnedMesh extends InstancedMesh {
   skeleton!: ReturnType<typeof cloneWithSkeleton> extends never ? never : any;
-  actions: Array<{ setEffectiveWeight(w: number): void; setEffectiveTimeScale(s: number): void; enabled: boolean; play(): void }> = [];
+  actions: Array<{
+    setEffectiveWeight(w: number): void;
+    setEffectiveTimeScale(s: number): void;
+    enabled: boolean;
+    play(): void;
+  }> = [];
 
   private _mixer: AnimationMixer;
   private _boneMatrix = new Matrix4();
@@ -286,14 +347,11 @@ export class Characters extends CharacterSkinnedMesh {
     this._camera = options.camera;
 
     const urlParams = new URLSearchParams(window.location.search);
-    const worldName = urlParams.get('world') || 'lobby';
     const uid = parseInt(urlParams.get('uid') || '0', 10);
 
-    // Derive a 32-byte seed from the world name for the P2P room
-    const encoder = new TextEncoder();
-    const worldData = encoder.encode(worldName.padEnd(32, '\0').substring(0, 32));
-    const roomSeed = new Uint8Array(32);
-    roomSeed.set(worldData);
+    // The world room seed is derived once by the caller (`getWorldRoomSeed`,
+    // hashed per world + invite code) and arrives via `options.roomSeed`, so it
+    // is the single source of truth for the P2P room identity.
 
     this._localObject = new Object3D() as CharacterLocal;
     this._localObject.instanceID = 0;
@@ -325,11 +383,12 @@ export class Characters extends CharacterSkinnedMesh {
       damp: options.damp,
       onCollisionsReady: () => {
         this._setInitialPosition(options.initialPosition ?? [0, 0, 0], options.initialRadius ?? 2);
-        (this._camera as any).isFollowCamera && this._camera.follow({
-          mesh: this as unknown as any,
-          relativeCameraPosition: options.relativeCameraPosition,
-          lookatMeshOffset: options.lookatMeshOffset,
-        });
+        (this._camera as any).isFollowCamera &&
+          this._camera.follow({
+            mesh: this as unknown as any,
+            relativeCameraPosition: options.relativeCameraPosition,
+            lookatMeshOffset: options.lookatMeshOffset,
+          });
         // Join the dynamic P2P room based on the world/room URL parameters.
         // The iroh WASM bundle is imported lazily so it is only fetched when
         // multiplayer is enabled (`?multiplayer=1`, the default).
@@ -340,20 +399,49 @@ export class Characters extends CharacterSkinnedMesh {
 
   /** Lazily imports the iroh connection class and joins the room. */
   private async _connectMultiplayer(options: CharacterOptions) {
+    if (!isMultiplayerEnabled()) {
+      events.emit('p2p_ready', false);
+      return;
+    }
     try {
       const { P2PConnection } = await import('./multiplayer/iroh');
       if (this._disposed) return;
       this._connection = new P2PConnection({
         data: this._dataUpdate,
         roomSeed: options.roomSeed,
-        onConnect: () => this.connected.resolve(),
+        maxClients: MAX_CHARS - 1,
+        onConnect: () => {
+          this.connected.resolve();
+          events.emit('p2p_ready', true);
+        },
+        onDisconnect: () => events.emit('p2p_ready', false),
         addClient: (id, data) => this._addCharacter(id, data),
         removeClient: (id) => this._removeCharacter(id),
         removeAllClients: () => this._removeAllCharacters(),
+        onChat: (chat) => events.emit('p2p_chat', chat),
+        onTyping: (typing) => events.emit('p2p_typing', typing),
       });
+      events.on('p2p_send_chat', this._onSendChat);
+      events.on('p2p_typing_send', this._onSendTyping);
     } catch (error) {
       console.warn('[p2p] multiplayer is unavailable', error);
+      events.emit('p2p_ready', false);
     }
+  }
+
+  private _onSendChat = (text: string) => {
+    this._connection?.sendChat(this._localChatName(), String(text ?? ''));
+  };
+
+  private _onSendTyping = () => {
+    this._connection?.sendTyping(this._localChatName());
+  };
+
+  private _localChatName(): string {
+    if (window.GUINOMO_PROFILE?.username) return window.GUINOMO_PROFILE.username;
+    const localName = (this._localObject?.userData?.name as string | undefined) || '';
+    if (localName) return localName;
+    return window.GUINOMO_PROFILE?.language === 'en' ? 'Guest' : 'Visitante';
   }
 
   update() {
@@ -421,28 +509,31 @@ export class Characters extends CharacterSkinnedMesh {
         if (clientData) {
           for (const key of Object.keys(clientData)) {
             if (key === 'p') {
-              const p = clientData.p as number[];
-              if (p.length !== 3) continue;
+              const p = clientData.p;
+              if (!isFiniteVec(p, 3) || !isSanePosition(p)) continue;
               this._v1.copy(remote.position);
               this._v0.fromArray(p);
               const teleport = this._v0.distanceTo(this._v1) > this._positionDeltaLimitSnap;
               const lerpAmount = teleport ? 1 : posLerp;
               const dampFactor = teleport ? 0 : 1;
-              (remote.targetPosition ??= new Vector3()).lerp(this._v0, lerpAmount);
-              remote.position.lerp((remote as any).targetPosition, lerpAmount);
+              // Interpolate straight to the received position. `targetPosition`
+              // just tracks the latest network sample; the old
+              // target→position double smoothing added extra lag.
+              (remote.targetPosition ??= new Vector3()).copy(this._v0);
+              remote.position.lerp(remote.targetPosition, lerpAmount);
               remote.velocity.add(this._v2.subVectors(remote.position, this._v1).multiplyScalar(ratio));
               remote.velocity.multiplyScalar(remoteDamp * animFactor * dampFactor);
               remote.velocityHorizontal = this._v0.copy(remote.velocity).setY(0).length();
             } else if (key === 'r') {
-              const r = clientData.r as number[];
-              if (r.length !== 2) continue;
+              const r = clientData.r;
+              if (!isFiniteVec(r, 2)) continue;
               remote.spherical.phi = r[0];
               remote.spherical.theta = r[1];
               quaternionFromSpherical(remote.spherical, this._q0);
               (remote.targetRotation ??= new Quaternion()).slerp(this._q0, rotLerp);
               remote.quaternion.slerp(remote.targetRotation as Quaternion, rotLerp);
             } else {
-              remote.userData[key] = clientData[key];
+              applyRemoteUserData(remote.userData, key, clientData[key]);
             }
           }
         }
@@ -468,7 +559,7 @@ export class Characters extends CharacterSkinnedMesh {
         slim_long: [0.8, 1.25, 0.8],
         dynamic: [1.0, 1.1, 1.0],
         athletic: [1.1, 1.05, 1.05],
-        default: [1, 1, 1]
+        default: [1, 1, 1],
       };
       const s = scales[pName];
       const ageScale = remote.userData.ageScale ?? 1;
@@ -490,6 +581,11 @@ export class Characters extends CharacterSkinnedMesh {
   }
 
   private _addCharacter(id: string, data: P2PClientData) {
+    // `local` already occupies one slot, so only MAX_CHARS - 1 remotes fit.
+    if (this._charactersObjects.size >= MAX_CHARS) {
+      console.warn(`[characters] room full (${MAX_CHARS}); ignoring ${id}`);
+      return;
+    }
     const remote = new Object3D() as CharacterLocal;
     remote.spherical = new Spherical(1, HALF_PI);
     remote.targetPosition = new Vector3();
@@ -501,19 +597,19 @@ export class Characters extends CharacterSkinnedMesh {
     remote.animationWeights = this.actions.map((_, i) => (i === 0 ? 1 : 0));
     for (const key of Object.keys(data)) {
       if (key === 'p') {
-        const p = data.p as number[];
-        if (p.length !== 3) continue;
+        const p = data.p;
+        if (!isFiniteVec(p, 3) || !isSanePosition(p)) continue;
         remote.position.fromArray(p);
         remote.targetPosition.copy(remote.position);
       } else if (key === 'r') {
-        const r = data.r as number[];
-        if (r.length !== 2) continue;
+        const r = data.r;
+        if (!isFiniteVec(r, 2)) continue;
         remote.spherical.phi = r[0] || HALF_PI;
         remote.spherical.theta = r[1] || 0;
         quaternionFromSpherical(remote.spherical, remote.targetRotation);
         remote.quaternion.copy(remote.targetRotation);
       } else {
-        remote.userData[key] = data[key];
+        applyRemoteUserData(remote.userData, key, data[key]);
       }
     }
     this._charactersObjects.set(id, remote);
@@ -521,10 +617,7 @@ export class Characters extends CharacterSkinnedMesh {
     this.count++;
 
     remote.userData.spawnScale = 0;
-    gsap.to(
-      remote.userData,
-      { spawnScale: 1, ease: 'power2.out', duration: 0.35 },
-    );
+    gsap.to(remote.userData, { spawnScale: 1, ease: 'power2.out', duration: 0.35 });
   }
 
   private _removeCharacter(id: string) {

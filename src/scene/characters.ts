@@ -11,14 +11,27 @@ import { appEndpointUrl } from '../core/assets';
 import { signIfEnabled } from '../core/hmac';
 import { getWorldId, getWorldRoomSeed } from '../core/worlds';
 
+/** Converte um array RGB 0..1 em hex (para o editor de avatar). */
+function charactersHex(rgb: number[] | undefined, fallback: string): string {
+  if (!rgb || rgb.length < 3) return fallback;
+  return `#${new Color(rgb[0], rgb[1], rgb[2]).getHexString()}`;
+}
+
 export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
 
-  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string }>();
+  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string, role: string }>();
   private _nameTags = new Map<string, HTMLDivElement>();
   private _nameTagsContainer: HTMLDivElement | null = null;
   private _localNameTagColor: string | null = null;
+  private _localRole = (() => {
+    try {
+      return localStorage.getItem('guinomo.role.v1') || '';
+    } catch {
+      return '';
+    }
+  })();
 
   /** Fetches avatar data from PHP and updates a specific character instance */
   private async updateCharacterColors(uid: number, userData: any, clientId: string) {
@@ -34,7 +47,9 @@ export class CharactersModule extends SceneModule {
       userData.isOwner = data.isOwner;
       userData.ageScale = data.ageScale;
       userData.gender = data.gender;
-      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid);
+      userData.role = data.role;
+      this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid, clientId === 'local' ? this._localRole || data.role : data.role);
+      if (clientId === 'local') this.emitLocalAvatarState(data);
       return;
     }
 
@@ -58,6 +73,7 @@ export class CharactersModule extends SceneModule {
       const physique = dna['physique'] || 'default';
       const ageScales: Record<string, number> = { child: 0.82, teen: 0.93, adult: 1, senior: 0.98 };
       const ageScale = ageScales[dna['age_group']] || 1;
+      const role = typeof dna['role'] === 'string' ? dna['role'] : '';
 
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
@@ -70,6 +86,7 @@ export class CharactersModule extends SceneModule {
         physique: physique,
         ageScale: ageScale,
         gender: typeof dna['gender_category'] === 'string' ? dna['gender_category'] : 'nao_informado',
+        role,
       };
 
       this._avatarCache.set(uid, data);
@@ -82,16 +99,18 @@ export class CharactersModule extends SceneModule {
       userData.physique = data.physique;
       userData.ageScale = data.ageScale;
       userData.gender = data.gender;
+      userData.role = data.role;
 
       // Aplicar escala física baseada no biótipo
       this.applyPhysiqueScale(userData);
 
-      this.ensureNameTag(clientId, name, nameTagColor, uid);
+      this.ensureNameTag(clientId, name, nameTagColor, uid, clientId === 'local' ? this._localRole || role : role);
 
       // Se for o usuário local, avisa a UI para mostrar o botão de chapéu
       if (clientId === 'local' && data.isOwner) {
         events.emit('ui_show_hat_button', true);
       }
+      if (clientId === 'local') this.emitLocalAvatarState(data);
     } catch (e) {
       console.warn('Unable to load avatar profile:', e);
       const hue = (uid * 137.5) % 360 / 360;
@@ -104,7 +123,8 @@ export class CharactersModule extends SceneModule {
       userData.isOwner = false;
       userData.ageScale = 1;
       userData.gender = 'nao_informado';
-      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299', uid);
+      userData.role = '';
+      this.ensureNameTag(clientId, userData.name, clientId === 'local' && this._localNameTagColor ? this._localNameTagColor : '#e5b299', uid, clientId === 'local' ? this._localRole : '');
     }
   }
 
@@ -125,7 +145,8 @@ export class CharactersModule extends SceneModule {
     userData.baseScale = s;
   }
 
-  private ensureNameTag(clientId: string, name: string, backgroundColor: string, uid: number) {
+  private ensureNameTag(clientId: string, name: string, backgroundColor: string, uid: number, role = '') {
+    const roleText = clientId === 'local' ? this._localRole : role;
     if (!this._nameTagsContainer) {
       this._nameTagsContainer = document.createElement('div');
       this._nameTagsContainer.id = 'name-tags-container';
@@ -176,7 +197,9 @@ export class CharactersModule extends SceneModule {
       pill.className = 'character-name-pill';
       const label = document.createElement('span');
       label.className = 'character-name-label';
-      pill.append(label);
+      const roleLabel = document.createElement('span');
+      roleLabel.className = 'character-name-role';
+      pill.append(label, roleLabel);
       const tooltip = document.createElement('span');
       tooltip.className = 'character-tooltip-card';
       tooltip.append(avatar, details);
@@ -187,9 +210,12 @@ export class CharactersModule extends SceneModule {
     const safeColor = this.isValidNameTagColor(backgroundColor) ? backgroundColor : '#e5b299';
     const pill = tag.querySelector<HTMLElement>('.character-name-pill')!;
     const label = tag.querySelector<HTMLElement>('.character-name-label')!;
+    const roleLabel = tag.querySelector<HTMLElement>('.character-name-role')!;
     pill.style.backgroundColor = safeColor;
     pill.style.color = this.getReadableTextColor(safeColor);
     label.textContent = name;
+    roleLabel.textContent = roleText;
+    roleLabel.hidden = !roleText;
     tag.title = name;
     tag.setAttribute('aria-label', `${name} · ${document.documentElement.lang.startsWith('en') ? 'Online, Noop community member' : 'Online, membro da comunidade Noop'}`);
 
@@ -242,9 +268,78 @@ export class CharactersModule extends SceneModule {
     events.emit('ui_name_tag_color_saved', Boolean(saved));
   }
 
+  private async setLocalRole(role: string) {
+    this._localRole = role;
+    try {
+      localStorage.setItem('guinomo.role.v1', role);
+    } catch {
+      // Private mode: the role still applies for this session only.
+    }
+    const uid = window.GUINOMO_UID || 0;
+    const cached = this._avatarCache.get(uid);
+    if (cached) cached.role = role;
+
+    const localTag = this._nameTags.get('local');
+    if (localTag) {
+      const roleLabel = localTag.querySelector<HTMLElement>('.character-name-role');
+      if (roleLabel) {
+        roleLabel.textContent = role;
+        roleLabel.hidden = !role;
+      }
+    }
+
+    if (uid > 0) await this._saveAvatarConfig(uid, 'role', role);
+  }
+
+  /** Aplica e guarda a cor de camisa/pele do avatar local (dono guarda no perfil). */
+  private async setLocalColor(kind: 'shirt' | 'skin', hex: unknown) {
+    if (!this.isValidNameTagColor(hex)) return;
+    const local = this.mesh?._localObject;
+    const uid = local?.userData.uid ?? window.GUINOMO_UID ?? 0;
+    const isOwner = Boolean(local?.userData.isOwner);
+
+    const color = new Color(hex).toArray();
+    if (local) {
+      if (kind === 'shirt') local.userData.colorShirt = color;
+      else local.userData.colorSkin = color;
+      const cached = this._avatarCache.get(uid);
+      if (cached) {
+        if (kind === 'shirt') cached.shirt = color;
+        else cached.skin = color;
+      }
+    }
+    if (uid > 0 && isOwner) {
+      await this._saveAvatarConfig(uid, kind === 'shirt' ? 'shirt_color' : 'skin_color', hex);
+    }
+    this.emitLocalAvatarState({
+      shirt: kind === 'shirt' ? color : local?.userData.colorShirt,
+      skin: kind === 'skin' ? color : local?.userData.colorSkin,
+      isOwner: true,
+    });
+  }
+
+  /** Avisa a UI do editor de avatar: mostra o painel (dono) e as cores atuais. */
+  private emitLocalAvatarState(data: { shirt?: number[]; skin?: number[]; isOwner?: boolean }) {
+    if (!data?.isOwner) return;
+    events.emit('ui_show_avatar_editor', true);
+    events.emit('webgl_character_colors', {
+      shirt: charactersHex(data.shirt, '#3a86ff'),
+      skin: charactersHex(data.skin, '#e5b299'),
+    });
+  }
+
   protected async init() {
     events.on('webgl_character_set_name_tag_color', (color: string) => {
       void this.setLocalNameTagColor(color);
+    });
+    events.on('webgl_character_set_role', (role: string) => {
+      void this.setLocalRole(role || '');
+    });
+    events.on('webgl_character_set_shirt_color', (hex: string) => {
+      void this.setLocalColor('shirt', hex);
+    });
+    events.on('webgl_character_set_skin_color', (hex: string) => {
+      void this.setLocalColor('skin', hex);
     });
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -471,5 +566,13 @@ export class CharactersModule extends SceneModule {
     while (Math.abs(hue - seed) < 0.2) hue = Math.random();
     this.seed = color + hue;
     this.updateLocalCharacterSeed();
+
+    // Além da semente, aleatoriza as cores reais de camisa e pele. O dono
+    // guarda no perfil (PHP); um convidado só altera a sessão local.
+    const shirtHex = `#${new Color().setHSL(Math.random(), 0.55, 0.5).getHexString()}`;
+    const skinPalette = ['#f2c8a0', '#e5b299', '#d7916e', '#b06c46', '#8c4f2b', '#5d3a1f'];
+    const skinHex = skinPalette[Math.floor(Math.random() * skinPalette.length)];
+    void this.setLocalColor('shirt', shirtHex);
+    void this.setLocalColor('skin', skinHex);
   };
 }

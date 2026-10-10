@@ -16,22 +16,35 @@
 //   [31]     u8   phy (physique index)
 //   [32]     u8   age scale (percentage)
 //   [33]     u8   gender category (0 unknown, 1 masculine, 2 feminine, 3 other)
+//
+// Chat and typing ride the same gossip channel as v3 envelopes (34-byte state
+// header + msg type + UTF-8 JSON payload), so purely positional frames (v2) stay
+// readable by every client. See stateCodec.ts for the exact layout.
 
-import { SummerNode, type RoomChannel } from 'guinomo-browser';
-import { encodeState, decodeState, type P2PData, type P2PClientData } from './stateCodec';
+import { SummerNode as GuinomoNode, type RoomChannel } from 'guinomo-browser';
+import { encodeState, decodeEnvelope, encodeChat, encodeTyping, type P2PData, type P2PClientData, type P2PChatMessage, type P2PTyping } from './stateCodec';
 
-export { encodeState, decodeState } from './stateCodec';
-export type { P2PData, P2PClientData } from './stateCodec';
+export {
+  encodeState,
+  decodeState,
+  decodeEnvelope,
+  encodeChat,
+  encodeTyping,
+} from './stateCodec';
+export type { P2PData, P2PClientData, P2PChatMessage, P2PTyping } from './stateCodec';
 
 interface P2POptions {
   data: P2PData;
   roomSeed?: Uint8Array; // Semente da sala para isolar mundos/perfis
   updateRate?: number;
+  maxClients?: number; // Máximo de remotos rastreados em simultâneo
   addClient?: (id: string, data: P2PClientData) => void;
   removeClient?: (id: string) => void;
   removeAllClients?: () => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
+  onChat?: (chat: P2PChatMessage) => void;
+  onTyping?: (typing: P2PTyping) => void;
 }
 
 const DEFAULT_ROOM_SEED = new Uint8Array(32);
@@ -63,10 +76,11 @@ export class P2PConnection {
   _data: P2PData;
   private _lastSeen = new Map<string, number>();
   private _updateRate: number;
+  private _maxClients: number;
   private _prevData = '{}';
   private _lastFullSent = 0;
   private _connected = false;
-  private _node: SummerNode | null = null;
+  private _node: GuinomoNode | null = null;
   private _channel: RoomChannel | null = null;
   private _reader: ReadableStreamDefaultReader<P2PEvent> | null = null;
   private _closed = false;
@@ -80,15 +94,20 @@ export class P2PConnection {
   private _onRemoveAllClients: () => void;
   private _onConnect: () => void;
   private _onDisconnect: () => void;
+  private _onChat: (chat: P2PChatMessage) => void;
+  private _onTyping: (typing: P2PTyping) => void;
 
   constructor(options: P2POptions) {
     this._data = options.data;
     this._updateRate = options.updateRate ?? 35;
+    this._maxClients = options.maxClients ?? Infinity;
     this._onAddClient = options.addClient ?? noop;
     this._onRemoveClient = options.removeClient ?? noop;
     this._onRemoveAllClients = options.removeAllClients ?? noop;
     this._onConnect = options.onConnect ?? noop;
     this._onDisconnect = options.onDisconnect ?? noop;
+    this._onChat = options.onChat ?? noop;
+    this._onTyping = options.onTyping ?? noop;
     this._onRemoveAllClients();
     void this._init(options.roomSeed);
   }
@@ -96,7 +115,7 @@ export class P2PConnection {
   /** Spawns the iroh node and joins its world room; retries until it succeeds. */
   private async _init(roomSeed?: Uint8Array) {
     try {
-      const node = await SummerNode.spawn();
+      const node = await GuinomoNode.spawn();
       this._node = node;
       const channel = await node.join_room(roomSeed ?? DEFAULT_ROOM_SEED);
       if (this._closed) return;
@@ -139,13 +158,14 @@ export class P2PConnection {
       case 'messageReceived': {
         const from = event.from;
         if (from === this._node?.endpoint_id()) return; // never echo ourselves
-        let state: P2PClientData;
+        let envelope;
         try {
-          state = decodeState(toBytes(event.data));
+          envelope = decodeEnvelope(toBytes(event.data));
         } catch (err) {
-          console.warn('[p2p] undecodable state', err);
+          console.warn('[p2p] undecodable frame', err);
           return;
         }
+        const state: P2PClientData = envelope.state;
         this._lastSeen.set(from, Date.now());
         const existing = this._clients.get(from);
         if (existing) {
@@ -153,9 +173,15 @@ export class P2PConnection {
             if (Array.isArray(state[key]) && state[key].length === 0) continue;
             existing[key] = state[key];
           }
-        } else {
+        } else if (this._clients.size < this._maxClients) {
           this._clients.set(from, { ...this._data, ...state });
           this._onAddClient(from, { ...this._data, ...state });
+        }
+        if (envelope.chat) {
+          this._onChat({ from, uid: envelope.chat.uid, name: envelope.chat.name, text: envelope.chat.text });
+        }
+        if (envelope.typing) {
+          this._onTyping({ from, uid: envelope.typing.uid, name: envelope.typing.name });
         }
         return;
       }
@@ -206,6 +232,23 @@ export class P2PConnection {
 
   private _send(data: P2PData) {
     const payload = encodeState(data);
+    void this._channel!.sender.broadcast(payload);
+  }
+
+  /** Broadcasts a chat message to the world room. Returns false while offline. */
+  sendChat(name: string, text: string): boolean {
+    if (!this._connected || !this._channel) return false;
+    const clean = text.replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!clean) return false;
+    const payload = encodeChat((this._data.uid as number) ?? 0, name.slice(0, 40), clean);
+    void this._channel!.sender.broadcast(payload);
+    return true;
+  }
+
+  /** Broadcasts a "typing" signal to the world room (peers auto-expire it). */
+  sendTyping(name: string): void {
+    if (!this._connected || !this._channel) return;
+    const payload = encodeTyping((this._data.uid as number) ?? 0, name.slice(0, 40));
     void this._channel!.sender.broadcast(payload);
   }
 

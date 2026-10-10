@@ -3,6 +3,7 @@ import {
   ConeGeometry,
   CylinderGeometry,
   Group,
+  InstancedMesh,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -27,6 +28,9 @@ export class WorldLocations extends SceneModule {
   declare private raycaster: Raycaster;
   declare private down: Vector3;
   declare private restButton: HTMLButtonElement | null;
+
+  /** Current secret to point the HUD compass at (empty when the world has none). */
+  secretTargets: Array<{ id: string; position: Vector3 }> = [];
 
   protected async init() {
     this.worldId = getWorldId(new URLSearchParams(window.location.search).get('world'));
@@ -80,7 +84,9 @@ export class WorldLocations extends SceneModule {
     const { ufo, alien, cats, sloth, gossip } = this.scene;
 
     // Default: hide all, then enable based on world context
-    [ufo, alien, cats, sloth, gossip].forEach(s => { if (s?.mesh) s.mesh.visible = false; });
+    [ufo, alien, cats, sloth, gossip].forEach((s) => {
+      if (s?.mesh) s.mesh.visible = false;
+    });
 
     if (world === 'lobby') {
       // UFO appearing in the distance in the main lobby
@@ -102,6 +108,10 @@ export class WorldLocations extends SceneModule {
       alien.mesh.visible = true;
       alien.mesh.position.set(60.14, 0.1, 40.6); // Original alien spot
     }
+
+    // Point the compass HUD at whichever set piece is active in this world.
+    const secret = [ufo, alien, cats, sloth, gossip].find((piece) => piece?.mesh?.visible);
+    this.secretTargets = secret?.mesh ? [{ id: world, position: secret.mesh.position.clone() }] : [];
   }
 
   private groundAt(x: number, z: number): number {
@@ -133,6 +143,34 @@ export class WorldLocations extends SceneModule {
     mesh.receiveShadow = true;
     parent.add(mesh);
     return mesh;
+  }
+
+  // The authored .bin geometries carry the original map's world offset baked
+  // into the vertices (e.g. houses[0] lives at ~x=31, z=8). Re-centering the
+  // asset (x/z) makes `mesh.position` control the real spot, so the city
+  // layouts below land exactly where they are assigned.
+  private recenter(mesh: Mesh) {
+    const geometry = mesh.geometry;
+    geometry.computeBoundingBox();
+    const bb = geometry.boundingBox;
+    if (!bb) return;
+    geometry.translate(-(bb.min.x + bb.max.x) / 2, 0, -(bb.min.z + bb.max.z) / 2);
+  }
+
+  // Instanced patches (machines) carry their world spots in the per-instance
+  // matrices. Shift those so the first instance sits at the origin; the public
+  // mesh.position then places the whole patch where the city wants it.
+  private recenterInstanced(mesh: InstancedMesh) {
+    const array = mesh.instanceMatrix.array as Float32Array;
+    const tx = array[12];
+    const ty = array[13];
+    const tz = array[14];
+    for (let i = 0; i < mesh.count; i++) {
+      array[i * 16 + 12] -= tx;
+      array[i * 16 + 13] -= ty;
+      array[i * 16 + 14] -= tz;
+    }
+    mesh.instanceMatrix.needsUpdate = true;
   }
 
   private standard(color: string, metalness = 0.08): MeshStandardMaterial {
@@ -189,8 +227,12 @@ export class WorldLocations extends SceneModule {
 
     const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
     const label = sleeping
-      ? (language === 'en' ? 'Wake up' : 'Acordar')
-      : (language === 'en' ? 'Rest · press E' : 'Descansar · tecla E');
+      ? language === 'en'
+        ? 'Wake up'
+        : 'Acordar'
+      : language === 'en'
+        ? 'Rest · press E'
+        : 'Descansar · tecla E';
     if (button.textContent !== label) button.textContent = label;
     button.setAttribute('aria-label', label);
     button.setAttribute('aria-pressed', String(sleeping));
@@ -205,20 +247,31 @@ export class WorldLocations extends SceneModule {
     this.add(plaza, new CylinderGeometry(12, 13, 0.45, 12), stone, 0, 0.24, 0);
     this.add(plaza, new CylinderGeometry(7.4, 7.4, 0.12, 12), cap, 0, 0.53, 0);
 
-    // Integrar Machines autorais na cidade flutuante
+    // Integrar Machines autorais na cidade flutuante. As instâncias vêm com as
+    // posições do mapa original baked; recentra-se cada patch e distribuem-se
+    // as três máquinas por spots distintos em torno da praça.
     this.scene.ready.then(() => {
       if (this.scene.machines?.meshes.length) {
+        const spots = [
+          { x: -10, z: -68 },
+          { x: 26, z: -42 },
+          { x: 44, z: -52 },
+        ];
         this.scene.machines.meshes.forEach((mesh, i) => {
           mesh.visible = true;
-          const x = i === 0 ? -10 : 35;
-          const z = -65;
-          mesh.position.set(x, this.groundAt(x, z), z);
+          this.recenterInstanced(mesh);
+          const spot = spots[i % spots.length];
+          mesh.position.set(spot.x, this.groundAt(spot.x, spot.z), spot.z);
+          mesh.updateMatrixWorld(true);
         });
       }
 
       this.scene.blockers.meshes.forEach((mesh, i) => {
         mesh.visible = true;
-        mesh.position.set(12 + (i * 5), this.groundAt(12 + (i * 5), -70), -70);
+        this.recenter(mesh);
+        const x = 12 + i * 5;
+        mesh.position.set(x, this.groundAt(x, -70), -70);
+        mesh.updateMatrixWorld(true);
       });
     });
 
@@ -229,7 +282,14 @@ export class WorldLocations extends SceneModule {
     ];
     towers.forEach(({ x, z, width, height }) => {
       const tower = this.groundGroup(x, z);
-      this.add(tower, new BoxGeometry(width, height, width), this.standard('#425d70', 0.32), 0, height / 2, 0);
+      this.add(
+        tower,
+        new BoxGeometry(width, height, width),
+        this.standard('#425d70', 0.32),
+        0,
+        height / 2,
+        0,
+      );
       this.add(tower, new CylinderGeometry(width * 0.6, width * 0.8, 0.4, 8), cap, 0, height + 0.2, 0);
       this.add(tower, new CylinderGeometry(width * 0.3, width * 0.3, 0.1, 8), glow, 0, height + 0.4, 0);
     });
@@ -245,11 +305,16 @@ export class WorldLocations extends SceneModule {
     this.scene.ready.then(() => {
       if (this.scene.parasols?.mesh) {
         this.scene.parasols.mesh.visible = true;
+        this.recenter(this.scene.parasols.mesh);
         this.scene.parasols.mesh.position.set(25, this.groundAt(25, -45), -45);
+        this.scene.parasols.mesh.updateMatrixWorld(true);
       }
       this.scene.castles.meshes.forEach((mesh, i) => {
         mesh.visible = true;
-        mesh.position.set(5 + i * 15, this.groundAt(5 + i * 15, -40), -40);
+        this.recenter(mesh);
+        const x = 5 + i * 15;
+        mesh.position.set(x, this.groundAt(x, -40), -40);
+        mesh.updateMatrixWorld(true);
       });
     });
 
@@ -260,8 +325,22 @@ export class WorldLocations extends SceneModule {
     ];
     domes.forEach(({ x, z, radius, height }) => {
       const dome = this.groundGroup(x, z);
-      this.add(dome, new CylinderGeometry(radius, radius * 1.1, height, 10), this.standard('#d8c8a0'), 0, height / 2, 0);
-      this.add(dome, new SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), this.standard('#2e8f85', 0.22), 0, height, 0);
+      this.add(
+        dome,
+        new CylinderGeometry(radius, radius * 1.1, height, 10),
+        this.standard('#d8c8a0'),
+        0,
+        height / 2,
+        0,
+      );
+      this.add(
+        dome,
+        new SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        this.standard('#2e8f85', 0.22),
+        0,
+        height,
+        0,
+      );
     });
   }
 
@@ -282,15 +361,17 @@ export class WorldLocations extends SceneModule {
       this.scene.houses.meshes.forEach((mesh, i) => {
         const pos = positions[i % positions.length];
         mesh.visible = true;
+        this.recenter(mesh);
         mesh.position.set(pos.x, this.groundAt(pos.x, pos.z), pos.z);
         mesh.rotation.y = pos.rot;
         mesh.updateMatrixWorld(true);
       });
 
       this.scene.warehouses.meshes.forEach((mesh, i) => {
-        const x = i === 0 ? -15 : 30;
+        const x = i === 0 ? -15 : i === 1 ? 10 : 35;
         const z = -40;
         mesh.visible = true;
+        this.recenter(mesh);
         mesh.position.set(x, this.groundAt(x, z), z);
         mesh.updateMatrixWorld(true);
       });

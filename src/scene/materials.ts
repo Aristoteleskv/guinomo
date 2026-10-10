@@ -79,6 +79,8 @@ const uniforms = UniformsUtils.merge([
   UniformsLib.lights,
   {
     emissive: { value: new Color(0) },
+    /** Night factor (0 = day, 1 = full night); drives street lamps on/off. */
+    uNight: { value: 0 },
     specular: { value: new Color(0x111111) },
     shininess: { value: 30 },
     tRamp: { value: null },
@@ -165,6 +167,7 @@ export function phongMaterial(options: PhongMaterialOptions = {}): ShaderMateria
   }
   if (options.isLightPost) {
     defines.USE_RAMP = 1;
+    defines.IS_LIGHTPOST = 1;
   }
   if (options.isWires) {
     defines.SHAKE = 1;

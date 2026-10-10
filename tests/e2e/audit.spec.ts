@@ -40,7 +40,7 @@ test.describe('Guinomo world audit (?audit)', () => {
       // synchronously, but the meshes resolve asynchronously.
       await page.waitForFunction(
         () => {
-          const audit = (window as unknown as { __summerAudit?: { snapshot(): Snapshot } }).__summerAudit;
+          const audit = (window as unknown as { __guinomoAudit?: { snapshot(): Snapshot } }).__guinomoAudit;
           return Boolean(audit) && Object.keys(audit!.snapshot().secretVisibility).length >= 5;
         },
         undefined,
@@ -50,7 +50,7 @@ test.describe('Guinomo world audit (?audit)', () => {
       await page.waitForTimeout(800);
 
       const snapshot = await page.evaluate(
-        () => (window as unknown as { __summerAudit: { snapshot(): Snapshot } }).__summerAudit.snapshot(),
+        () => (window as unknown as { __guinomoAudit: { snapshot(): Snapshot } }).__guinomoAudit.snapshot(),
       );
 
       console.log(

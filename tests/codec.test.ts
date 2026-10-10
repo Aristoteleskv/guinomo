@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { decodeState, encodeState, STATE_BYTES, STATE_VERSION } from '../src/engine/multiplayer/stateCodec';
+import {
+  decodeState,
+  encodeState,
+  STATE_BYTES,
+  STATE_VERSION,
+  decodeEnvelope,
+  encodeChat,
+  encodeTyping,
+} from '../src/engine/multiplayer/stateCodec';
 
 describe('P2P state codec', () => {
   it('round-trips a full state frame', () => {
@@ -61,5 +69,62 @@ describe('P2P state codec', () => {
     const wrongVersion = encodeState({});
     wrongVersion[0] = 99;
     expect(() => decodeState(wrongVersion)).toThrow(/bad state frame/);
+  });
+
+  it('round-trips a chat message over the v3 envelope', () => {
+    const frame = encodeChat(42, 'Alice', 'Olá mundo!');
+    expect(frame[0]).toBe(3);
+    expect(frame.length).toBeGreaterThanOrEqual(STATE_BYTES);
+
+    const envelope = decodeEnvelope(frame);
+    expect(envelope.chat).toBeDefined();
+    expect(envelope.chat?.uid).toBe(42);
+    expect(envelope.chat?.name).toBe('Alice');
+    expect(envelope.chat?.text).toBe('Olá mundo!');
+    expect(envelope.typing).toBeUndefined();
+    // The envelope still carries a state header that clients can apply.
+    expect(envelope.state.uid).toBe(42);
+  });
+
+  it('preserves multi-byte UTF-8 and spaces in chat text', () => {
+    const frame = encodeChat(7, 'João', 'Que tal? 😄  tudo\nbem');
+    const envelope = decodeEnvelope(frame);
+    expect(envelope.chat?.text).toBe('Que tal? 😄  tudo\nbem');
+    expect(envelope.chat?.name).toBe('João');
+  });
+
+  it('round-trips a typing signal', () => {
+    const frame = encodeTyping(3, 'Marta');
+    const envelope = decodeEnvelope(frame);
+    expect(envelope.typing).toBeDefined();
+    expect(envelope.typing?.uid).toBe(3);
+    expect(envelope.typing?.name).toBe('Marta');
+    expect(envelope.chat).toBeUndefined();
+  });
+
+  it('keeps pure state frames chat-free for both v2 and v3 readers', () => {
+    const pure = encodeState({ uid: 9 });
+    const envelope = decodeEnvelope(pure);
+    expect(envelope.state.uid).toBe(9);
+    expect(envelope.chat).toBeUndefined();
+    expect(envelope.typing).toBeUndefined();
+  });
+
+  it('ignores malformed chat payloads without crashing', () => {
+    const frame = encodeChat(1, 'X', 'y');
+    // Corrupt the UTF-8 JSON payload so JSON.parse fails.
+    frame[frame.length - 1] = 0xff;
+    const envelope = decodeEnvelope(frame);
+    expect(envelope.chat).toBeUndefined();
+    expect(envelope.state.uid).toBe(1);
+  });
+
+  it('drops an empty chat text', () => {
+    const frame = encodeChat(2, 'Zed', '   ');
+    expect(decodeEnvelope(frame).chat).toBeUndefined();
+  });
+
+  it('rejects garbage envelopes like bad state frames', () => {
+    expect(() => decodeEnvelope(new Uint8Array(2))).toThrow(/bad state frame/);
   });
 });

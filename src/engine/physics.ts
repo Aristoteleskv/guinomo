@@ -6,14 +6,17 @@ import {
   Box3,
   BufferAttribute,
   BufferGeometry,
+  Group,
   Line3,
+  LineBasicMaterial,
   Mesh,
+  MeshBasicMaterial,
   Raycaster,
   Sphere,
   Spherical,
   Vector3,
 } from 'three';
-import { MeshBVH, acceleratedRaycast } from 'three-mesh-bvh';
+import { MeshBVH, MeshBVHVisualizer, acceleratedRaycast } from 'three-mesh-bvh';
 import type { CharacterLocal } from './characters';
 import { lerp, lerpCoefFPS, lerpFPS, getShortestRotationAngle, ratioFPS, frictionFPS, HALF_PI } from '../core/math';
 import { clock } from './clock';
@@ -37,6 +40,9 @@ export interface CollisionOptions {
   checkFalling?: boolean;
   radiusPercentage?: number;
   floorDetectInclination?: number;
+  /** Declive máximo (razão vertical/horizontal da resposta à colisão) que ainda
+   *  conta como chão no teste por deslocamento. 1.0 ≈ 45°. */
+  slopeInclination?: number;
   fallLimitDistance?: number;
   onCollisionsReady?: () => void;
 }
@@ -77,6 +83,7 @@ export class CollisionPhysics {
   private _rotVelocityMax: number;
   private _checkFalling: boolean;
   private _floorDetectInclination: number;
+  private _slopeInclination: number;
   private _fallLimitDistance: number;
   private _geometry: BufferGeometry | null = null;
   private _prevIsOnFloor: boolean;
@@ -89,6 +96,8 @@ export class CollisionPhysics {
   private _l0 = new Line3();
   private _l1 = new Line3();
   private _b = new Box3();
+  private _bvhVisualizer: MeshBVHVisualizer | null = null;
+  private _bvhGroup: Group | null = null;
 
   constructor(characters: { _localObject: CharacterLocal; _camera: { spherical: Spherical } }, options: CollisionOptions) {
     this._characters = characters;
@@ -106,6 +115,7 @@ export class CollisionPhysics {
     this.canFly = options.canFly === true;
     this._checkFalling = options.checkFalling !== false;
     this._floorDetectInclination = Math.min(1, options.floorDetectInclination ?? 0.7);
+    this._slopeInclination = options.slopeInclination ?? 1;
     this._fallLimitDistance = Math.min(1, options.fallLimitDistance ?? 10);
     this._prevIsOnFloor = this._characters._localObject.isOnFloor;
 
@@ -155,8 +165,44 @@ export class CollisionPhysics {
   private _initializeGeometry(options: CollisionOptions) {
     const mesh = this._colliderMesh;
     mesh.updateMatrixWorld(true);
-    const worker = new BvhWorker();
+
+    let settled = false;
+    // A construção na main thread é adiada para um microtask: `onCollisionsReady`
+    // tem de disparar de forma assíncrona (como acontecia com o worker), senão é
+    // invocado durante o construtor de CollisionPhysics — antes de
+    // `Characters._collisionPhysics` ser atribuído — e `_setInitialPosition`
+    // falhava a ler `.collider`.
+    const buildHere = () => {
+      if (settled) return;
+      settled = true;
+      queueMicrotask(() => this._buildBoundsTreeOnMainThread(options));
+    };
+
+    // Os workers têm de ser same-origin com a página. Em desenvolvimento com a
+    // página servida pelo PHP (porta 8081) e os módulos pelo Vite (porta 5173),
+    // o URL do worker pertence a outra origem: com `server.origin` o construtor
+    // lança SecurityError e sem ele o URL relativo dá 404 na 8081. Detectamos a
+    // origem cruzada e construímos o BVH aqui mesmo (sem nunca criar o worker),
+    // caso contrário o collider nunca ficaria pronto e o mundo aparecia preto.
+    const moduleOrigin = new URL(import.meta.url).origin;
+    if (moduleOrigin !== window.location.origin) {
+      buildHere();
+      return;
+    }
+
+    let worker: Worker;
+    try {
+      worker = new BvhWorker();
+    } catch {
+      // Safety net: se a construção do worker falhar, o mundo não pode ficar
+      // bloqueado — construímos o BVH na main thread.
+      buildHere();
+      return;
+    }
+
     worker.onmessage = (e: MessageEvent) => {
+      if (settled) return;
+      settled = true;
       const { serialized, position } = e.data;
       this._geometry = new BufferGeometry();
       this._geometry.setAttribute('position', new BufferAttribute(position, 3));
@@ -167,8 +213,16 @@ export class CollisionPhysics {
       this._geometry.boundsTree = MeshBVH.deserialize(serialized, this._geometry, { setIndex: false });
       (this as any).collider = new Collider(this._geometry);
       worker.terminate();
+      this._maybeEnableBvhDebug();
       options.onCollisionsReady?.();
     };
+    // Se o worker não carregar (por exemplo, um 404 do URL relativo em dev),
+    // não bloqueamos o arranque do mundo: construímos o BVH na main thread.
+    worker.onerror = () => {
+      worker.terminate();
+      buildHere();
+    };
+
     const position = (mesh.geometry.attributes.position.array as Float32Array).slice();
     const sourceIndex = mesh.geometry.index?.array as Uint16Array | Uint32Array | undefined;
     const index = sourceIndex ? new Uint32Array(sourceIndex) : null;
@@ -180,6 +234,28 @@ export class CollisionPhysics {
       },
       [position.buffer, ...(index ? [index.buffer] : [])],
     );
+  }
+
+  /** Builds the collider BVH synchronously. Mirrors `bvh-worker.ts` (world
+   *  space transform + `MeshBVH`) and is used as a fallback whenever the
+   *  worker cannot run, so the world always finishes loading. */
+  private _buildBoundsTreeOnMainThread(options: CollisionOptions) {
+    const mesh = this._colliderMesh;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new BufferAttribute((mesh.geometry.attributes.position.array as Float32Array).slice(), 3),
+    );
+    if (mesh.geometry.index) {
+      geometry.setIndex(new BufferAttribute(new Uint32Array(mesh.geometry.index.array), 1));
+    }
+    geometry.applyMatrix4(mesh.matrixWorld);
+    geometry.computeBoundingBox();
+    geometry.boundsTree = new MeshBVH(geometry);
+    this._geometry = geometry;
+    (this as any).collider = new Collider(geometry);
+    this._maybeEnableBvhDebug();
+    options.onCollisionsReady?.();
   }
 
   /** Advance the character one physics frame. `move` is the input vector. */
@@ -278,6 +354,17 @@ export class CollisionPhysics {
     const correction = this._v0;
     correction.subVectors(this._l0.start, this._l1.start);
     const len = Math.max(0, correction.length() - 1e-5 * dt);
+    // Grounding por deslocamento (portado do metaverso original, `enableBVHCharacter`
+    // + `PhysicsUpdate`): além do teste do normal no fundo do cápsula (`intersectsTriangle`),
+    // o chão também é detetado quando a resposta à colisão empurra para cima acima de um
+    // declive mínimo. Apanha degraus, arestas e corrimões, onde o ponto de contacto é uma
+    // face lateral (normal.y ≈ 0) e o teste do normal não dispara.
+    if (!local.isOnFloor && len > 0 && correction.y > 0) {
+      const horizontal = Math.abs(correction.x) + Math.abs(correction.z);
+      if (correction.y / (horizontal + 1e-5) > this._slopeInclination) {
+        local.isOnFloor = true;
+      }
+    }
     correction.normalize();
     local.position.addScaledVector(correction, len);
     local.velocity.addScaledVector(correction, -correction.dot(local.velocity));
@@ -324,5 +411,46 @@ export class CollisionPhysics {
     if (b < a && b < c) closest = hit.face.b;
     if (c < a && c < b) closest = hit.face.c;
     this.nearestVerticalPoint = closest;
+  }
+
+  private _maybeEnableBvhDebug() {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('debug')) return;
+    const val = params.get('debug');
+    if (val !== 'bvh' && val !== 'collider') return;
+    if (!this._geometry || !(this._geometry as any).boundsTree) return;
+
+    const scene = this._characters as unknown as { scene?: { add: (obj: unknown) => void } };
+    const root = scene.scene;
+    if (!root) return;
+
+    try {
+      this._bvhVisualizer = new MeshBVHVisualizer((this.collider as unknown as Mesh) ?? this._colliderMesh, 20);
+      (this._bvhVisualizer as any).displayParents = false;
+      (this._bvhVisualizer as any).displayEdges = true;
+      (this._bvhVisualizer as any).opacity = 0.15;
+      (this._bvhVisualizer as any).edgeMaterial = new LineBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.4 });
+      (this._bvhVisualizer as any).meshMaterial = new MeshBasicMaterial({ color: 0x00ff88, wireframe: true, transparent: true, opacity: 0.05 });
+      this._bvhVisualizer.update();
+      this._bvhGroup = new Group();
+      this._bvhGroup.add(this._bvhVisualizer);
+      root.add(this._bvhGroup);
+      (scene as any).beforeRenderCbs?.push?.(() => {
+        if (this._bvhVisualizer) this._bvhVisualizer.update();
+      });
+    } catch {
+      // ignore debug failures
+    }
+  }
+
+  disposeBvhDebug() {
+    if (this._bvhGroup && (this._characters as any)?.scene) {
+      try {
+        (this._characters as any).scene.remove(this._bvhGroup);
+      } catch {}
+    }
+    this._bvhGroup = null;
+    this._bvhVisualizer = null;
   }
 }

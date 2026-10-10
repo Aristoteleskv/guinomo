@@ -37,3 +37,12 @@ CREATE TABLE IF NOT EXISTS guinomo_notes (
     created_at BIGINT       NOT NULL,
     INDEX idx_guinomo_notes_world (world, created_at)
 );
+
+-- Explorer trophies: per-player seal collection (api/guinomo/seals.php).
+CREATE TABLE IF NOT EXISTS guinomo_seals (
+    uid     INTEGER  NOT NULL PRIMARY KEY,
+    secrets TEXT     NOT NULL,
+    golden  TEXT     NOT NULL,
+    grand   TINYINT  NOT NULL DEFAULT 0,
+    updated BIGINT   NOT NULL
+);

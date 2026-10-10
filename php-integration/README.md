@@ -12,6 +12,17 @@ without the full PHP/MySQL application. **None of these are production code.**
 | `notificacoes_action.php` | `php/notificacoes_action.php?action=recent&limit=5` | `{ "success": bool, "itens": [...] }` |
 | `api/guinomo/friends.php` | `GET api/guinomo/friends` | `{ "success": true, "friends": [...] }` |
 | `api/guinomo/presence.php` | `POST api/guinomo/presence` | `{ "success": true, ... }` |
+| `api/guinomo/seals.php` | `GET api/guinomo/seals?uid=N`, `POST api/guinomo/seals` (`uid`, `secrets`, `golden`, `grand`, `csrf_token`) | `{ "success": bool, "seals": {...} \| null }` |
+
+## Explorer trophies (seals)
+
+`api/guinomo/seals.php` persists each player's seal collection (the 5 found
+secrets, the golden-hour subset, and the 5/5 Grand Secret flag). The engine
+pushes it after every change (`src/core/sealsSync.ts`) and any profile page can
+read it back publicly with `GET api/guinomo/seals?uid=N` to render the badge
+trophies to other players. The store lives in `lib/seals.php` — file-backed
+(`.seals.json`) by default, PDO (`guinomo_seals` table in `schema.sql`) when
+`GUINOMO_DB_DSN` is set.
 
 ## Path mapping
 

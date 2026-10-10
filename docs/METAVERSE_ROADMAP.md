@@ -21,6 +21,25 @@ tem pedaços de cada um; o roadmap é sobre fechar as lacunas, uma fase de cada 
 | **Social** | Presença em tempo real, painel de amigos, notificações, chat PHP; **chat P2P no mundo (v1)** | Emojis ligados ao chat, voz, grupos/festas, moderação |
 | **Economia / UGC** | — (vazio) | Moeda soft, colecionáveis/segredos como troféus, criar/colocar itens, marketplace moderado |
 
+## Engagement: hooks e retenção (entregue e planeado)
+
+Loops de hábito e colecionismo — viciantes, mas **saudáveis**: streaks só dão
+cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
+
+| Entregue | Descrição |
+|---|---|
+| **Streak de visitas** 🔥 | Dias consecutivos no HUD (badge de chama, `localStorage`); aos **7 dias** o cartaz fica com moldura dourada + contador |
+| **Álbum de selos** 🏅 | 5 cromos por segredo (raridade Comum/Raro/Lendário), ligado aos segredos já persistidos; atualiza ao vivo |
+| **Bússola sussurrante** 🗣️ | Pistas que ficam mais precisas à medida que te aproximas do segredo (lógica pura, coberta por vitest) |
+| **Cartaz com legenda** 📸 | Moldura polaroid + legenda por mundo (ou livre), esquema dourado no streak máximo |
+
+| Planeado | Descrição |
+|---|---|
+| **Hora dourada** ☀️ | Janela diária de 10 min a hora variável e anunciada; segredos raros e pontos a dobrar |
+| **Rastro de luz** ✨ | Rasto colorido dos amigos no mundo (presença); seguir até ao fim desbloqueia um cartaz a dois |
+| **Guerra de mundos** ⚔️ | Pontos por mundo + placar semanal; o vencedor ganha céu/decoração exclusiva |
+| **Cadeias de recados** 🧵 | Responder a recados cria fios visíveis no chão; cadeias longas brilham mais |
+
 ## Arquitetura de referência (já em produção)
 
 - **Render/game**: TypeScript + three.js (módulos `src/scene/*`, `SceneModule` base),

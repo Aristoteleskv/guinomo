@@ -1,0 +1,49 @@
+/* Daily-visit streak HUD. Fixed overlay, top-right, never participates in layout. */
+
+#streak-hud {
+  position: fixed;
+  top: 22px;
+  right: 18px;
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(249, 239, 220, 0.94);
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  box-shadow: 1px 1px rgba(113, 108, 102, 0.5);
+  color: #514d48;
+  font-family: var(--default-font);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#streak-hud .streak-hud-flame {
+  font-size: 15px;
+  line-height: 1;
+}
+
+#streak-hud .streak-hud-count {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* Golden mode: GOLDEN_STREAK_DAYS+ consecutive days (matches the poster frame). */
+#streak-hud.golden {
+  border-color: rgba(201, 154, 46, 0.85);
+  background: linear-gradient(135deg, #fdf3d0 0%, #f7e2a6 100%);
+  color: #7a5910;
+  box-shadow:
+    0 0 0 3px rgba(201, 154, 46, 0.22),
+    1px 1px rgba(113, 108, 102, 0.45);
+}
+
+@media (max-width: 760px) {
+  #streak-hud {
+    top: 18px;
+    right: 12px;
+    padding: 3px 10px;
+  }
+}

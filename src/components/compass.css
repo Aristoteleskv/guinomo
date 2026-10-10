@@ -69,6 +69,22 @@
   white-space: nowrap;
 }
 
+/* Whispered hints: grow more precise the closer the player gets. */
+#compass .compass-whisper {
+  max-width: 240px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(20, 28, 32, 0.5);
+  backdrop-filter: blur(4px);
+  color: #ffe9c4;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: normal;
+}
+
 /* The player is close to the secret: pulse to signal "almost there". */
 #compass .compass-label.near {
   color: #8a3324;

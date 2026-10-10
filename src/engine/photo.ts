@@ -10,6 +10,7 @@
 import './photo.css';
 import { engine } from './globals';
 import { getWorldId, WORLDS } from '../core/worlds';
+import { GOLDEN_STREAK_DAYS, readStreak } from '../core/streak';
 
 export interface PosterOptions {
   /** Overrides the caption (defaults to the world label). */
@@ -40,6 +41,10 @@ export function drawPoster(frame: HTMLCanvasElement, opts: PosterOptions = {}): 
   const world = WORLDS.find((entry) => entry.id === worldId);
   const language = uiLanguage();
   const caption = opts.title ?? (language === 'en' ? world?.label.en : world?.label.pt) ?? worldId;
+
+  // Golden poster: unlocked by reaching GOLDEN_STREAK_DAYS consecutive visits.
+  const streak = readStreak();
+  const golden = streak >= GOLDEN_STREAK_DAYS;
 
   const photoWidth = frame.width;
   const photoHeight = frame.height;
@@ -83,6 +88,24 @@ export function drawPoster(frame: HTMLCanvasElement, opts: PosterOptions = {}): 
     margin + photoHeight + captionHeight / 2 + 1,
     width - margin * 2,
   );
+
+  if (golden) {
+    // Double golden frame around the paper card.
+    const outer = Math.max(2, Math.round(margin * 0.14));
+    context.strokeStyle = '#c99a2e';
+    context.lineWidth = outer;
+    context.strokeRect(outer / 2, outer / 2, width - outer, height - outer);
+    context.strokeStyle = '#f2d27a';
+    context.lineWidth = Math.max(1, Math.round(outer * 0.4));
+    context.strokeRect(outer, outer, width - outer * 2, height - outer * 2);
+
+    // Flame + day counter on the caption strip (bottom-right).
+    context.textAlign = 'right';
+    context.fillStyle = '#7a5910';
+    context.font = `600 ${Math.max(10, Math.round(fontSize * 0.9))}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+    context.fillText(`🔥 ${streak}`, width - margin, margin + photoHeight + captionHeight / 2 + 1);
+    context.textAlign = 'center';
+  }
 
   return canvas;
 }

@@ -6,6 +6,8 @@ import { engine } from './engine/globals';
 import { clock } from './engine/clock';
 import { UiController } from './components/ui';
 import { mountPosterButton } from './engine/photo';
+import { mountStreakHud } from './components/streakHud';
+import { mountAlbum } from './scene/album';
 import { assetUrl } from './core/assets';
 import './styles.css';
 
@@ -28,6 +30,8 @@ loadDisplayFont();
 
 const ui = new UiController(document.getElementById('app') ?? document.body);
 mountPosterButton();
+mountStreakHud();
+mountAlbum();
 
 CustomEase.create('inOut1', 'M0,0 C0.5,0 0.1,1 1,1');
 CustomEase.create('inOut2', 'M0,0 C0.56,0 0,1 1,1');

@@ -4,13 +4,8 @@
 
 import { Vector3 } from 'three';
 import type { EnvironmentScene } from '../scene/environmentScene';
+import { HIDE_DISTANCE, NEAR_PULSE_DISTANCE, whisperForDistance } from '../core/compassGuidance';
 import './compass.css';
-
-/** Distance (metres) under which the compass hides — the player has arrived. */
-const HIDE_DISTANCE = 5;
-
-/** Distance (metres) under which the label pulses to signal "almost there". */
-const NEAR_PULSE_DISTANCE = 18;
 
 export function mountCompass(scene: EnvironmentScene): void {
   let compass = document.getElementById('compass') as HTMLDivElement | null;
@@ -25,18 +20,24 @@ export function mountCompass(scene: EnvironmentScene): void {
     const label = document.createElement('div');
     label.className = 'compass-label';
 
-    compass.append(needle, label);
+    const whisper = document.createElement('div');
+    whisper.className = 'compass-whisper';
+
+    compass.append(needle, label, whisper);
     document.body.append(compass);
   }
 
   const needle = compass.querySelector<HTMLDivElement>('.compass-needle')!;
   const label = compass.querySelector<HTMLDivElement>('.compass-label')!;
-  const baseLabel = document.documentElement.lang.startsWith('en') ? 'Secret' : 'Segredo';
+  const whisper = compass.querySelector<HTMLDivElement>('.compass-whisper')!;
+  const english = document.documentElement.lang.startsWith('en');
+  const baseLabel = english ? 'Secret' : 'Segredo';
   label.textContent = baseLabel;
 
   const toTarget = new Vector3();
   const cameraForward = new Vector3();
   let shownDistance = -1;
+  let shownWhisper = '';
 
   scene.beforeRenderCbs.push(() => {
     const local = scene.characters?.mesh?._localObject;
@@ -63,6 +64,13 @@ export function mountCompass(scene: EnvironmentScene): void {
       label.textContent = `${baseLabel} · ${metres} m`;
     }
     label.classList.toggle('near', distance <= NEAR_PULSE_DISTANCE);
+
+    // Whisper: hints grow more precise as the player approaches the secret.
+    const hint = whisperForDistance(distance, english);
+    if (hint !== shownWhisper) {
+      shownWhisper = hint;
+      whisper.textContent = hint;
+    }
 
     // Camera facing on the XZ plane.
     scene.camera.getWorldDirection(cameraForward);

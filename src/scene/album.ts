@@ -4,11 +4,9 @@
 
 import { WORLDS, type WorldId } from '../core/worlds';
 import { events } from '../core/events';
-import { readGoldenSeals } from './setpieces';
+import { isGrandSecretUnlocked, readFoundSecrets, readGoldenSeals } from '../core/secrets';
 import { badgeChipsSlot } from '../components/badgeSlot';
 import './album.css';
-
-const SECRETS_STORAGE_KEY = 'guinomo_secrets';
 
 type Rarity = 'common' | 'rare' | 'legendary';
 
@@ -75,20 +73,18 @@ function uiLanguage(): string {
   return window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
 }
 
-function readFoundSeals(): string[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(SECRETS_STORAGE_KEY) || '[]');
-    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
-  } catch {
-    return [];
-  }
-}
+/** The 5/5 finale seal: a trophy instead of a world-stamped keepsake. */
+const MASTER_SEAL = {
+  icon: '👑',
+  label: { pt: 'Mestre dos Segredos', en: 'Master of Secrets' },
+} as const;
 
 function renderAlbum(panel: HTMLDivElement, english: boolean): void {
-  const found = new Set(readFoundSeals());
+  const found = new Set(readFoundSecrets());
   const goldenFound = new Set(readGoldenSeals());
-  const total = SEALS.length;
-  const count = SEALS.filter((seal) => found.has(seal.id)).length;
+  const grandUnlocked = isGrandSecretUnlocked();
+  const total = SEALS.length + 1;
+  const count = SEALS.filter((seal) => found.has(seal.id)).length + (grandUnlocked ? 1 : 0);
 
   const title =
     count === total ? (english ? 'Complete collection!' : 'Coleção completa!') : english ? 'Explorer seals' : 'Selos de explorador';
@@ -123,6 +119,24 @@ function renderAlbum(panel: HTMLDivElement, english: boolean): void {
       </article>`;
   }).join('');
 
+  // The Grand Secret finale seal: secretly locked until the 5/5 moment.
+  const masterName = english ? MASTER_SEAL.label.en : MASTER_SEAL.label.pt;
+  const masterHint = grandUnlocked
+    ? english
+      ? 'Found all 5 secrets'
+      : 'Encontrou os 5 segredos'
+    : english
+      ? 'Find all 5 secrets to unlock it.'
+      : 'Encontra os 5 segredos para o desbloquear.';
+  const masterCard = `
+    <article class="album-seal ${grandUnlocked ? 'found ' : ''}rarity-legendary master">
+      ${grandUnlocked ? '<span class="album-seal-check" aria-hidden="true">✓</span>' : ''}
+      <div class="album-seal-icon" aria-hidden="true">${grandUnlocked ? MASTER_SEAL.icon : '🔒'}</div>
+      <h3>${grandUnlocked ? masterName : '???'}</h3>
+      <span class="album-seal-meta">✨ ${english ? 'Grand Secret · Legendary' : 'Grande Segredo · Lendário'}</span>
+      <p class="album-seal-hint">${masterHint}</p>
+    </article>`;
+
   panel.innerHTML = `
     <div class="album-panel">
       <header class="album-header">
@@ -132,7 +146,7 @@ function renderAlbum(panel: HTMLDivElement, english: boolean): void {
         </div>
         <button class="album-close" type="button" aria-label="${english ? 'Close' : 'Fechar'}">×</button>
       </header>
-      <div class="album-grid">${cards}</div>
+      <div class="album-grid">${cards}${masterCard}</div>
     </div>`;
 }
 
@@ -180,6 +194,9 @@ export function mountAlbum(): void {
     }
   });
   events.on('webgl_secret_found', () => {
+    if (!panel.hidden) renderAlbum(panel, uiLanguage() === 'en');
+  });
+  events.on('webgl_grand_secret_unlocked', () => {
     if (!panel.hidden) renderAlbum(panel, uiLanguage() === 'en');
   });
 

@@ -11,6 +11,7 @@ import {
   LineBasicMaterial,
   Mesh,
   MeshBasicMaterial,
+  Object3D,
   Raycaster,
   Sphere,
   Spherical,
@@ -26,8 +27,18 @@ import BvhWorker from './bvh-worker?worker';
 export class Collider extends Mesh {}
 Collider.prototype.raycast = acceleratedRaycast;
 
+/** Subconjunto mínimo da cena necessário ao visualizador de debug da BVH.
+ *  Mantém o motor desacoplado da classe de cena concreta (basta um Object3D
+ *  com a lista de callbacks de render). */
+export interface DebugScene extends Object3D {
+  beforeRenderCbs?: Array<() => void>;
+}
+
 export interface CollisionOptions {
   colliderMesh: Mesh;
+  /** Cena onde o visualizador de debug da BVH (`?debug=bvh`) é montado.
+   *  Sem isto a flag não tem efeito (o `CollisionPhysics` não tem cena própria). */
+  scene?: DebugScene;
   substeps?: number;
   positionForce?: number;
   jumpForce?: number;
@@ -98,12 +109,14 @@ export class CollisionPhysics {
   private _b = new Box3();
   private _bvhVisualizer: MeshBVHVisualizer | null = null;
   private _bvhGroup: Group | null = null;
+  private _scene: DebugScene | null = null;
 
   constructor(characters: { _localObject: CharacterLocal; _camera: { spherical: Spherical } }, options: CollisionOptions) {
     this._characters = characters;
     this._camera = characters._camera;
     this._colliderMesh = options.colliderMesh;
     this._colliderMesh.geometry.computeBoundingSphere();
+    this._scene = options.scene ?? null;
     this._substeps = options.substeps ?? 4;
     this._positionForce = options.positionForce ?? 0.0045;
     this._jumpForce = options.jumpForce ?? 0.2;
@@ -415,18 +428,14 @@ export class CollisionPhysics {
 
   private _maybeEnableBvhDebug() {
     if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has('debug')) return;
-    const val = params.get('debug');
+    const val = new URLSearchParams(window.location.search).get('debug');
     if (val !== 'bvh' && val !== 'collider') return;
+    if (!this._scene || this._bvhGroup) return;
     if (!this._geometry || !(this._geometry as any).boundsTree) return;
 
-    const scene = this._characters as unknown as { scene?: { add: (obj: unknown) => void } };
-    const root = scene.scene;
-    if (!root) return;
-
     try {
-      this._bvhVisualizer = new MeshBVHVisualizer((this.collider as unknown as Mesh) ?? this._colliderMesh, 20);
+      const mesh = (this.collider as unknown as Mesh) ?? this._colliderMesh;
+      this._bvhVisualizer = new MeshBVHVisualizer(mesh, 20);
       (this._bvhVisualizer as any).displayParents = false;
       (this._bvhVisualizer as any).displayEdges = true;
       (this._bvhVisualizer as any).opacity = 0.15;
@@ -434,22 +443,23 @@ export class CollisionPhysics {
       (this._bvhVisualizer as any).meshMaterial = new MeshBasicMaterial({ color: 0x00ff88, wireframe: true, transparent: true, opacity: 0.05 });
       this._bvhVisualizer.update();
       this._bvhGroup = new Group();
+      this._bvhGroup.name = 'bvh-debug';
       this._bvhGroup.add(this._bvhVisualizer);
-      root.add(this._bvhGroup);
-      (scene as any).beforeRenderCbs?.push?.(() => {
-        if (this._bvhVisualizer) this._bvhVisualizer.update();
-      });
+      this._scene.add(this._bvhGroup);
+      this._scene.beforeRenderCbs?.push(() => this._bvhVisualizer?.update());
     } catch {
       // ignore debug failures
     }
   }
 
   disposeBvhDebug() {
-    if (this._bvhGroup && (this._characters as any)?.scene) {
-      try {
-        (this._characters as any).scene.remove(this._bvhGroup);
-      } catch {}
+    if (this._bvhVisualizer) {
+      const v = this._bvhVisualizer as any;
+      v.edgeMaterial?.dispose?.();
+      v.meshMaterial?.dispose?.();
+      v.dispose?.();
     }
+    if (this._bvhGroup) this._scene?.remove(this._bvhGroup);
     this._bvhGroup = null;
     this._bvhVisualizer = null;
   }

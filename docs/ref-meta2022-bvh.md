@@ -93,6 +93,6 @@ Mesma ideia com uma esfera de raio **0.5**: caixa AABB `position ± 0.5`, shapec
 | Só aplicar gravidade no ar + `velocity.set(0)` em chão | Já temos (fricção/damp + gravidade condicional) — mantido |
 | Vários mapas de colisão por shapecast | ⏳ Futuro: permitir `colliderMeshes[]` em vez de só `collider.bin` |
 | Colisão de câmara por sphere sweep (r=0.5) | ⏸️ Não adotado (raycast atual é suficiente; sweep mudaria o *feel* da órbita) |
-| Visualizador de BVH (`map-debug`) | ⏳ Futuro: flag `?debug=bvh` opcional |
+| Visualizador de BVH (`map-debug`) | ✅ **Adotado**: flag `?debug=bvh` (ou `?debug=collider`) monta um `MeshBVHVisualizer` por cima do collider; `disposeBvhDebug()` liberta-o no `dispose` do personagem |
 | cannon-es / física rígida | ❌ Rejeitado — BVH-only é mais leve e suficiente para o tipo de mundo |
 | `PhysicsUpdate` com `updateX/Y/Z` | ❌ Rejeitado (bug no original: `updateY()`/`updateZ()` gravam só `this.x`) |

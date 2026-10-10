@@ -374,6 +374,12 @@ html {
   margin: 0 0 1.3em;
 }
 
+/* Grand Secret finale: the overlay title glows gold. */
+#info .cnt article h1.grand-title {
+  color: #c79a24;
+  text-shadow: 0 0 22px rgba(233, 191, 68, 0.5);
+}
+
 #info p {
   font-size: 30px;
   letter-spacing: -0.03em;

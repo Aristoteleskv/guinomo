@@ -385,6 +385,7 @@ export class CharactersModule extends SceneModule {
     this.mesh = new Characters(skinned, clips, {
       animationsOptions: [{ speed: 1 }, { speed: 1.1 }, { speed: 1 }, { speed: 1 }],
       colliderMesh,
+      scene: this.scene,
       radiusPercentage: 0.2,
       floorDetectInclination: 0.8,
       positionForce: 0.005,

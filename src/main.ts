@@ -13,6 +13,9 @@ import { mountLightTrailHud } from './components/lightTrailHud';
 import { mountPairHud } from './components/pairHud';
 import { awardPoints, POINTS, readPoints } from './core/adventurePoints';
 import { isGoldenHour } from './core/goldenHour';
+import { allSecretsFound, foundSecretCount, isGrandSecretUnlocked, maybeUnlockGrandSecret, nextSecretToFind, unlockGrandSecret } from './core/secrets';
+import { WORLDS } from './core/worlds';
+import { mountSealsSync } from './core/sealsSync';
 import { showToast } from './components/toast';
 import { assetUrl } from './core/assets';
 import './styles.css';
@@ -34,6 +37,11 @@ function loadDisplayFont(): void {
 }
 loadDisplayFont();
 
+// Players who completed the collection before the Grand Secret finale shipped
+// keep the trophy: the mark (album seal + profile sync) is granted silently,
+// without replaying the finale modal.
+if (allSecretsFound() && !isGrandSecretUnlocked()) unlockGrandSecret();
+
 const ui = new UiController(document.getElementById('app') ?? document.body);
 mountPosterButton();
 mountStreakHud();
@@ -41,6 +49,7 @@ mountAlbum();
 mountGoldenHourHud();
 mountLightTrailHud();
 mountPairHud();
+mountSealsSync();
 
 CustomEase.create('inOut1', 'M0,0 C0.5,0 0.1,1 1,1');
 CustomEase.create('inOut2', 'M0,0 C0.56,0 0,1 1,1');
@@ -74,6 +83,13 @@ function start() {
 
   // Engagement points: secrets and posters award adventure points, doubled
   // while the daily golden hour is active.
+  const onGrandSecret = () => {
+    const gained = awardPoints(POINTS.grandSecret, isGoldenHour(new Date()));
+    events.emit('webgl_points_changed', readPoints());
+    ui.showGrandSecret();
+    const english = window.GUINOMO_PROFILE?.language === 'en';
+    showToast(english ? `👑 +${gained} XP · Grand Secret` : `👑 +${gained} XP · Grande Segredo`, 'gold');
+  };
   const onSecretFound = () => {
     const golden = isGoldenHour(new Date());
     const gained = awardPoints(POINTS.secret, golden);
@@ -81,6 +97,24 @@ function start() {
     if (golden) {
       const english = window.GUINOMO_PROFILE?.language === 'en';
       showToast(english ? `✨ +${gained} XP · golden hour` : `✨ +${gained} XP · hora dourada`, 'gold');
+    }
+    // The 5/5 finale unlocks once, when the last secret is found.
+    if (maybeUnlockGrandSecret()) events.emit('webgl_grand_secret_unlocked');
+
+    // Guide the player to the next secret: the compass re-targets to its world
+    // and this callout names the destination.
+    const found = foundSecretCount();
+    const next = nextSecretToFind();
+    if (next) {
+      const english = window.GUINOMO_PROFILE?.language === 'en';
+      const world = WORLDS.find((entry) => entry.id === next.world);
+      const destination = world ? (english ? world.label.en : world.label.pt) : next.world;
+      showToast(
+        english
+          ? `🎉 Secret found (${found}/5) — now find the next one: travel to ${destination}, the compass will point the way.`
+          : `🎉 Encontraste um segredo (${found}/5) — agora vai à procura do próximo: viaja para ${destination}, a bússola aponta-te o caminho.`,
+        'violet',
+      );
     }
   };
   const onPosterCaptured = () => {
@@ -94,6 +128,7 @@ function start() {
   events.on('webgl_audio_update_mute', onMute);
   events.on('webgl_character_update_color', onColor);
   events.on('webgl_secret_found', onSecretFound);
+  events.on('webgl_grand_secret_unlocked', onGrandSecret);
   events.on('webgl_poster_captured', onPosterCaptured);
   events.on('keyup', onKeyUp);
 
@@ -143,6 +178,7 @@ function start() {
       events.off('webgl_audio_update_mute', onMute);
       events.off('webgl_character_update_color', onColor);
       events.off('webgl_secret_found', onSecretFound);
+      events.off('webgl_grand_secret_unlocked', onGrandSecret);
       events.off('webgl_poster_captured', onPosterCaptured);
       events.off('keyup', onKeyUp);
     },

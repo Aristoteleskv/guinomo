@@ -9,8 +9,10 @@
 
 import './photo.css';
 import { engine } from './globals';
+import { events } from '../core/events';
 import { getWorldId, WORLDS } from '../core/worlds';
 import { GOLDEN_STREAK_DAYS, readStreak } from '../core/streak';
+import { duoCountToday } from '../core/friendsLight';
 
 export interface PosterOptions {
   /** Overrides the caption (defaults to the world label). */
@@ -45,6 +47,9 @@ export function drawPoster(frame: HTMLCanvasElement, opts: PosterOptions = {}): 
   // Golden poster: unlocked by reaching GOLDEN_STREAK_DAYS consecutive visits.
   const streak = readStreak();
   const golden = streak >= GOLDEN_STREAK_DAYS;
+
+  // Duo poster: unlocked by following a friend's light trail today.
+  const duo = duoCountToday(new Date()) > 0;
 
   const photoWidth = frame.width;
   const photoHeight = frame.height;
@@ -104,6 +109,20 @@ export function drawPoster(frame: HTMLCanvasElement, opts: PosterOptions = {}): 
     context.fillStyle = '#7a5910';
     context.font = `600 ${Math.max(10, Math.round(fontSize * 0.9))}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
     context.fillText(`🔥 ${streak}`, width - margin, margin + photoHeight + captionHeight / 2 + 1);
+    context.textAlign = 'center';
+  }
+
+  if (duo) {
+    // Duo poster: violet inner frame + pair mark (bottom-left) — the keepsake
+    // of following a friend's light trail.
+    const inner = Math.max(2, Math.round(margin * 0.1));
+    context.strokeStyle = '#a75fd6';
+    context.lineWidth = inner;
+    context.strokeRect(inner * 1.6, inner * 1.6, width - inner * 3.2, height - inner * 3.2);
+    context.textAlign = 'left';
+    context.fillStyle = '#8a3fb8';
+    context.font = `600 ${Math.max(10, Math.round(fontSize * 0.9))}px system-ui, -apple-system, 'Segoe UI', sans-serif`;
+    context.fillText('👥 2', margin, margin + photoHeight + captionHeight / 2 + 1);
     context.textAlign = 'center';
   }
 
@@ -217,6 +236,7 @@ export function mountPosterButton(): void {
         if (!blob) return;
         const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         downloadPoster(blob, `guinomo-${world}-${stamp}.png`);
+        events.emit('webgl_poster_captured');
       })
       .catch((error) => {
         console.warn('Unable to create the poster:', error);

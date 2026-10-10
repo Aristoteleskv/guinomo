@@ -4,6 +4,7 @@
 
 import { WORLDS, type WorldId } from '../core/worlds';
 import { events } from '../core/events';
+import { readGoldenSeals } from './setpieces';
 import './album.css';
 
 const SECRETS_STORAGE_KEY = 'guinomo_secrets';
@@ -84,6 +85,7 @@ function readFoundSeals(): string[] {
 
 function renderAlbum(panel: HTMLDivElement, english: boolean): void {
   const found = new Set(readFoundSeals());
+  const goldenFound = new Set(readGoldenSeals());
   const total = SEALS.length;
   const count = SEALS.filter((seal) => found.has(seal.id)).length;
 
@@ -92,14 +94,26 @@ function renderAlbum(panel: HTMLDivElement, english: boolean): void {
 
   const cards = SEALS.map((seal) => {
     const isFound = found.has(seal.id);
+    const isGolden = isFound && goldenFound.has(seal.id);
     const world = WORLDS.find((entry) => entry.id === seal.world);
     const worldLabel = english ? world?.label.en : world?.label.pt;
     const rarity = english ? RARITY_LABEL[seal.rarity].en : RARITY_LABEL[seal.rarity].pt;
     const name = english ? seal.label.en : seal.label.pt;
-    const hint = isFound ? (english ? 'Found' : 'Encontrado') : english ? seal.hint.en : seal.hint.pt;
+    const hint = isGolden
+      ? english
+        ? 'Found during golden hour'
+        : 'Encontrado na hora dourada'
+      : isFound
+        ? english
+          ? 'Found'
+          : 'Encontrado'
+        : english
+          ? seal.hint.en
+          : seal.hint.pt;
 
     return `
-      <article class="album-seal ${isFound ? 'found' : ''} rarity-${seal.rarity}">
+      <article class="album-seal ${isFound ? 'found' : ''} ${isGolden ? 'golden' : ''} rarity-${seal.rarity}">
+        ${isGolden ? '<span class="album-seal-gold" aria-hidden="true">✨</span>' : ''}
         ${isFound ? '<span class="album-seal-check" aria-hidden="true">✓</span>' : ''}
         <div class="album-seal-icon" aria-hidden="true">${seal.icon}</div>
         <h3>${name}</h3>

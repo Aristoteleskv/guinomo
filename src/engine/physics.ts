@@ -155,8 +155,44 @@ export class CollisionPhysics {
   private _initializeGeometry(options: CollisionOptions) {
     const mesh = this._colliderMesh;
     mesh.updateMatrixWorld(true);
-    const worker = new BvhWorker();
+
+    let settled = false;
+    // A construção na main thread é adiada para um microtask: `onCollisionsReady`
+    // tem de disparar de forma assíncrona (como acontecia com o worker), senão é
+    // invocado durante o construtor de CollisionPhysics — antes de
+    // `Characters._collisionPhysics` ser atribuído — e `_setInitialPosition`
+    // falhava a ler `.collider`.
+    const buildHere = () => {
+      if (settled) return;
+      settled = true;
+      queueMicrotask(() => this._buildBoundsTreeOnMainThread(options));
+    };
+
+    // Os workers têm de ser same-origin com a página. Em desenvolvimento com a
+    // página servida pelo PHP (porta 8081) e os módulos pelo Vite (porta 5173),
+    // o URL do worker pertence a outra origem: com `server.origin` o construtor
+    // lança SecurityError e sem ele o URL relativo dá 404 na 8081. Detectamos a
+    // origem cruzada e construímos o BVH aqui mesmo (sem nunca criar o worker),
+    // caso contrário o collider nunca ficaria pronto e o mundo aparecia preto.
+    const moduleOrigin = new URL(import.meta.url).origin;
+    if (moduleOrigin !== window.location.origin) {
+      buildHere();
+      return;
+    }
+
+    let worker: Worker;
+    try {
+      worker = new BvhWorker();
+    } catch {
+      // Safety net: se a construção do worker falhar, o mundo não pode ficar
+      // bloqueado — construímos o BVH na main thread.
+      buildHere();
+      return;
+    }
+
     worker.onmessage = (e: MessageEvent) => {
+      if (settled) return;
+      settled = true;
       const { serialized, position } = e.data;
       this._geometry = new BufferGeometry();
       this._geometry.setAttribute('position', new BufferAttribute(position, 3));
@@ -169,6 +205,13 @@ export class CollisionPhysics {
       worker.terminate();
       options.onCollisionsReady?.();
     };
+    // Se o worker não carregar (por exemplo, um 404 do URL relativo em dev),
+    // não bloqueamos o arranque do mundo: construímos o BVH na main thread.
+    worker.onerror = () => {
+      worker.terminate();
+      buildHere();
+    };
+
     const position = (mesh.geometry.attributes.position.array as Float32Array).slice();
     const sourceIndex = mesh.geometry.index?.array as Uint16Array | Uint32Array | undefined;
     const index = sourceIndex ? new Uint32Array(sourceIndex) : null;
@@ -180,6 +223,27 @@ export class CollisionPhysics {
       },
       [position.buffer, ...(index ? [index.buffer] : [])],
     );
+  }
+
+  /** Builds the collider BVH synchronously. Mirrors `bvh-worker.ts` (world
+   *  space transform + `MeshBVH`) and is used as a fallback whenever the
+   *  worker cannot run, so the world always finishes loading. */
+  private _buildBoundsTreeOnMainThread(options: CollisionOptions) {
+    const mesh = this._colliderMesh;
+    const geometry = new BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new BufferAttribute((mesh.geometry.attributes.position.array as Float32Array).slice(), 3),
+    );
+    if (mesh.geometry.index) {
+      geometry.setIndex(new BufferAttribute(new Uint32Array(mesh.geometry.index.array), 1));
+    }
+    geometry.applyMatrix4(mesh.matrixWorld);
+    geometry.computeBoundingBox();
+    geometry.boundsTree = new MeshBVH(geometry);
+    this._geometry = geometry;
+    (this as any).collider = new Collider(geometry);
+    options.onCollisionsReady?.();
   }
 
   /** Advance the character one physics frame. `move` is the input vector. */

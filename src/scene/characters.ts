@@ -11,6 +11,12 @@ import { appEndpointUrl } from '../core/assets';
 import { signIfEnabled } from '../core/hmac';
 import { getWorldId, getWorldRoomSeed } from '../core/worlds';
 
+/** Converte um array RGB 0..1 em hex (para o editor de avatar). */
+function charactersHex(rgb: number[] | undefined, fallback: string): string {
+  if (!rgb || rgb.length < 3) return fallback;
+  return `#${new Color(rgb[0], rgb[1], rgb[2]).getHexString()}`;
+}
+
 export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
@@ -43,6 +49,7 @@ export class CharactersModule extends SceneModule {
       userData.gender = data.gender;
       userData.role = data.role;
       this.ensureNameTag(clientId, data.name, clientId === 'local' ? this._localNameTagColor || data.nameTagColor : data.nameTagColor, uid, clientId === 'local' ? this._localRole || data.role : data.role);
+      if (clientId === 'local') this.emitLocalAvatarState(data);
       return;
     }
 
@@ -103,6 +110,7 @@ export class CharactersModule extends SceneModule {
       if (clientId === 'local' && data.isOwner) {
         events.emit('ui_show_hat_button', true);
       }
+      if (clientId === 'local') this.emitLocalAvatarState(data);
     } catch (e) {
       console.warn('Unable to load avatar profile:', e);
       const hue = (uid * 137.5) % 360 / 360;
@@ -283,12 +291,55 @@ export class CharactersModule extends SceneModule {
     if (uid > 0) await this._saveAvatarConfig(uid, 'role', role);
   }
 
+  /** Aplica e guarda a cor de camisa/pele do avatar local (dono guarda no perfil). */
+  private async setLocalColor(kind: 'shirt' | 'skin', hex: unknown) {
+    if (!this.isValidNameTagColor(hex)) return;
+    const local = this.mesh?._localObject;
+    const uid = local?.userData.uid ?? window.GUINOMO_UID ?? 0;
+    const isOwner = Boolean(local?.userData.isOwner);
+
+    const color = new Color(hex).toArray();
+    if (local) {
+      if (kind === 'shirt') local.userData.colorShirt = color;
+      else local.userData.colorSkin = color;
+      const cached = this._avatarCache.get(uid);
+      if (cached) {
+        if (kind === 'shirt') cached.shirt = color;
+        else cached.skin = color;
+      }
+    }
+    if (uid > 0 && isOwner) {
+      await this._saveAvatarConfig(uid, kind === 'shirt' ? 'shirt_color' : 'skin_color', hex);
+    }
+    this.emitLocalAvatarState({
+      shirt: kind === 'shirt' ? color : local?.userData.colorShirt,
+      skin: kind === 'skin' ? color : local?.userData.colorSkin,
+      isOwner: true,
+    });
+  }
+
+  /** Avisa a UI do editor de avatar: mostra o painel (dono) e as cores atuais. */
+  private emitLocalAvatarState(data: { shirt?: number[]; skin?: number[]; isOwner?: boolean }) {
+    if (!data?.isOwner) return;
+    events.emit('ui_show_avatar_editor', true);
+    events.emit('webgl_character_colors', {
+      shirt: charactersHex(data.shirt, '#3a86ff'),
+      skin: charactersHex(data.skin, '#e5b299'),
+    });
+  }
+
   protected async init() {
     events.on('webgl_character_set_name_tag_color', (color: string) => {
       void this.setLocalNameTagColor(color);
     });
     events.on('webgl_character_set_role', (role: string) => {
       void this.setLocalRole(role || '');
+    });
+    events.on('webgl_character_set_shirt_color', (hex: string) => {
+      void this.setLocalColor('shirt', hex);
+    });
+    events.on('webgl_character_set_skin_color', (hex: string) => {
+      void this.setLocalColor('skin', hex);
     });
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -515,5 +566,13 @@ export class CharactersModule extends SceneModule {
     while (Math.abs(hue - seed) < 0.2) hue = Math.random();
     this.seed = color + hue;
     this.updateLocalCharacterSeed();
+
+    // Além da semente, aleatoriza as cores reais de camisa e pele. O dono
+    // guarda no perfil (PHP); um convidado só altera a sessão local.
+    const shirtHex = `#${new Color().setHSL(Math.random(), 0.55, 0.5).getHexString()}`;
+    const skinPalette = ['#f2c8a0', '#e5b299', '#d7916e', '#b06c46', '#8c4f2b', '#5d3a1f'];
+    const skinHex = skinPalette[Math.floor(Math.random() * skinPalette.length)];
+    void this.setLocalColor('shirt', shirtHex);
+    void this.setLocalColor('skin', skinHex);
   };
 }

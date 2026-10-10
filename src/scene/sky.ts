@@ -238,12 +238,14 @@ export class Sky extends SceneModule {
       uniforms.uAlienBlend.value = this.theme === 'alien' ? 1 : 0;
       if (this.stars) (this.stars.material as PointsMaterial).opacity = this.theme === 'alien' ? 0.7 : this.nightBlend * 0.8;
 
+      // O sol/lua ficam À FRENTE da câmara (+z, direção de visão da câmara de
+      // seguimento) em vez de atrás, para serem visíveis no céu à nossa frente.
       const distance = 88;
       const x = Math.cos(angle) * distance * 0.58;
       const y = Math.sin(angle) * distance * 0.58;
-      this.sun?.position.set(cameraPosition.x + x, cameraPosition.y + y, cameraPosition.z - distance * 0.72);
+      this.sun?.position.set(cameraPosition.x + x, cameraPosition.y + y, cameraPosition.z + distance * 0.72);
       this.sunGlow?.position.copy(this.sun?.position ?? cameraPosition);
-      this.moon?.position.set(cameraPosition.x - x, cameraPosition.y - y, cameraPosition.z - distance * 0.72);
+      this.moon?.position.set(cameraPosition.x - x, cameraPosition.y - y, cameraPosition.z + distance * 0.72);
       this.moonGlow?.position.copy(this.moon?.position ?? cameraPosition);
       const sunVisible = this.theme === 'cycle' && daylight > 0.12;
       const moonVisible = this.theme === 'night' || (this.theme === 'cycle' && daylight <= 0.5);

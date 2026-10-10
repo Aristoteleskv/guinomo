@@ -6,11 +6,10 @@
 </p>
 
 A rewritten vanilla TypeScript port of **Guinomo**, the
-WebGL art experiment by [Vicente Lucendo](https://summer-afternoon.vlucendo.com),
+WebGL art experiment by [Kivova],
 rebuilt from a fully decompiled copy of the original deployed site.
 
-> **Summer Afternoon** · A WebGL experiment by Vicente Lucendo
-> https://summer-afternoon.vlucendo.com
+> **Guinomo** 
 
 ## Run it
 
@@ -172,7 +171,7 @@ src/
 
 multiplayer/         # Rust workspace: iroh P2P room (see section above)
 ├── shared/          # SummerNode: endpoint + gossip + pkarr room beacon
-├── browser-wasm/    # wasm-bindgen wrapper → pkg/ (committed, consumed as `summer-iroh`)
+├── browser-wasm/    # wasm-bindgen wrapper → pkg/ (committed, consumed as `guinomo-browser`)
 └── cli/             # native tester that joins the same room from a terminal
 ```
 
@@ -190,8 +189,7 @@ This port has been customized to integrate with a PHP-based social network (Noop
 
 ## Credits & disclaimer
 
-- Original experience: **Summer Afternoon** by **Vicente Lucendo**,
-  https://summer-afternoon.vlucendo.com
+- Original experience: **Guinomo**
 - All 3D assets, textures, audio, fonts and the original code belong to their
   respective authors; this is a reverse-engineering and learning project,
   not affiliated with or endorsed by the original author.

@@ -21,7 +21,7 @@
 // header + msg type + UTF-8 JSON payload), so purely positional frames (v2) stay
 // readable by every client. See stateCodec.ts for the exact layout.
 
-import { SummerNode, type RoomChannel } from 'guinomo-browser';
+import { SummerNode as GuinomoNode, type RoomChannel } from 'guinomo-browser';
 import { encodeState, decodeEnvelope, encodeChat, encodeTyping, type P2PData, type P2PClientData, type P2PChatMessage, type P2PTyping } from './stateCodec';
 
 export {
@@ -80,7 +80,7 @@ export class P2PConnection {
   private _prevData = '{}';
   private _lastFullSent = 0;
   private _connected = false;
-  private _node: SummerNode | null = null;
+  private _node: GuinomoNode | null = null;
   private _channel: RoomChannel | null = null;
   private _reader: ReadableStreamDefaultReader<P2PEvent> | null = null;
   private _closed = false;
@@ -115,7 +115,7 @@ export class P2PConnection {
   /** Spawns the iroh node and joins its world room; retries until it succeeds. */
   private async _init(roomSeed?: Uint8Array) {
     try {
-      const node = await SummerNode.spawn();
+      const node = await GuinomoNode.spawn();
       this._node = node;
       const channel = await node.join_room(roomSeed ?? DEFAULT_ROOM_SEED);
       if (this._closed) return;

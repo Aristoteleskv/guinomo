@@ -164,6 +164,19 @@
   font-weight: 700;
 }
 
+/* Golden seal: a secret discovered while the golden hour was active. */
+.album-seal-gold {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  font-size: 13px;
+}
+
+.album-seal.found.golden {
+  border-color: rgba(233, 191, 68, 0.9);
+  box-shadow: 0 0 16px rgba(233, 191, 68, 0.35);
+}
+
 /* Rarity accents on uncovered seals. */
 .album-seal.rarity-common.found {
   border-color: rgba(159, 227, 208, 0.55);

@@ -94,6 +94,11 @@ export class UiController {
   private readonly nameTagColorButton: HTMLButtonElement;
   private readonly soundButton: HTMLButtonElement;
   private readonly hatButton: HTMLButtonElement;
+  private readonly avatarEditor: HTMLDivElement;
+  private readonly avatarEditorRandom: HTMLButtonElement;
+  private readonly avatarEditorShirtInput: HTMLInputElement;
+  private readonly avatarEditorSkinInput: HTMLInputElement;
+  private avatarEditorOwner = false;
   private readonly count: HTMLDivElement;
   /** Left-side identity card: photo + username + elements found. */
   private readonly badge: HTMLDivElement;
@@ -133,6 +138,21 @@ export class UiController {
       <button class="button color-button" type="button" aria-label="${language === 'en' ? 'Randomize avatar color' : 'Randomizar cor do avatar'}" title="${language === 'en' ? 'Randomize avatar color' : 'Randomizar cor do avatar'}"><div class="color-square"></div></button>
       <button class="button name-tag-color-button" type="button" aria-label="${language === 'en' ? 'Choose name color' : 'Escolher cor do nome'}" title="${language === 'en' ? 'Choose name color' : 'Escolher cor do nome'}">Aa</button>
       <input class="name-tag-color-input" type="color" aria-label="${language === 'en' ? 'Name tag color' : 'Cor da etiqueta do nome'}" tabindex="-1">
+      <div class="avatar-editor" role="dialog" aria-label="${language === 'en' ? 'Edit your avatar' : 'Editar o teu avatar'}" aria-hidden="true" hidden>
+        <strong class="avatar-editor-title">${language === 'en' ? 'Edit your avatar' : 'Editar o teu avatar'}</strong>
+        <label class="avatar-editor-row">
+          <span class="avatar-editor-label">${language === 'en' ? 'Shirt' : 'Camisa'}</span>
+          <span class="avatar-editor-swatches" data-part="shirt"></span>
+          <input class="avatar-editor-input" type="color" data-part="shirt" tabindex="-1" aria-label="${language === 'en' ? 'Shirt color' : 'Cor da camisa'}">
+        </label>
+        <label class="avatar-editor-row">
+          <span class="avatar-editor-label">${language === 'en' ? 'Skin' : 'Pele'}</span>
+          <span class="avatar-editor-swatches" data-part="skin"></span>
+          <input class="avatar-editor-input" type="color" data-part="skin" tabindex="-1" aria-label="${language === 'en' ? 'Skin color' : 'Cor da pele'}">
+        </label>
+        <button class="button avatar-editor-random" type="button">🎲 ${language === 'en' ? 'Random' : 'Aleatório'}</button>
+        <p class="avatar-editor-note">${language === 'en' ? 'Saved to your profile — friends see it too.' : 'Guardado no teu perfil — os amigos também o veem.'}</p>
+      </div>
       <button class="button about-button" type="button" aria-label="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}" title="${language === 'en' ? 'About Guinomo' : 'Sobre o Guinomo'}">${infoIcon}</button>
       <button class="button guide-button" type="button" aria-label="${language === 'en' ? 'Help and guide' : 'Ajuda e guia'}" title="${language === 'en' ? 'Help and guide' : 'Ajuda e guia'}">${guideIcon}</button>
       <button class="button map-button" type="button" aria-label="${language === 'en' ? 'World map' : 'Mapa de mundos'}" title="${language === 'en' ? 'World map' : 'Mapa de mundos'}">${mapIcon}</button>
@@ -204,6 +224,11 @@ export class UiController {
     const nameTagColorInput = this.nav.querySelector<HTMLInputElement>('.name-tag-color-input')!;
     const infoButton = this.nav.querySelector<HTMLButtonElement>('.about-button')!;
 
+    this.avatarEditor = this.nav.querySelector<HTMLDivElement>('.avatar-editor')!;
+    this.avatarEditorRandom = this.avatarEditor.querySelector<HTMLButtonElement>('.avatar-editor-random')!;
+    this.avatarEditorShirtInput = this.avatarEditor.querySelector<HTMLInputElement>('.avatar-editor-input[data-part="shirt"]')!;
+    this.avatarEditorSkinInput = this.avatarEditor.querySelector<HTMLInputElement>('.avatar-editor-input[data-part="skin"]')!;
+
     this.colorSquare = colorButton.querySelector('.color-square')!;
     this.soundButton.innerHTML = speakerIcon;
     nameTagColorInput.value = window.GUINOMO_PROFILE?.nameTagColor || '#e5b299';
@@ -222,7 +247,11 @@ export class UiController {
 
     this.soundButton.addEventListener('click', () => events.emit('webgl_audio_mute_toggle'));
     this.hatButton.addEventListener('click', () => events.emit('webgl_character_toggle_hat'));
-    colorButton.addEventListener('click', () => events.emit('webgl_character_randomize_color'));
+    colorButton.addEventListener('click', () => {
+      // Dono: o botão abre o editor de avatar; convidado: mantém a cor aleatória.
+      if (this.avatarEditorOwner) this.toggleAvatarEditor();
+      else events.emit('webgl_character_randomize_color');
+    });
     infoButton.addEventListener('click', () => this.toggleOverlay('about'));
     const guideButton = this.nav.querySelector<HTMLButtonElement>('.guide-button')!;
     const mapButton = this.nav.querySelector<HTMLButtonElement>('.map-button')!;
@@ -232,6 +261,44 @@ export class UiController {
     // Ouvir evento para mostrar o botão de chapéu apenas para o dono
     events.on('ui_show_hat_button', (show: boolean) => {
       this.hatButton.style.display = show ? 'inline-block' : 'none';
+    });
+
+    // Editor de avatar (cores de camisa/pele), apenas para o dono. O painel
+    // usa swatches + inputs de cor; cada alteração é emitida para a cena e
+    // guardada no perfil (PHP) pelo lado da cena.
+    const buildSwatches = (container: HTMLElement, palette: string[], onPick: (hex: string) => void) => {
+      palette.forEach((hex) => {
+        const swatch = document.createElement('button');
+        swatch.type = 'button';
+        swatch.className = 'avatar-editor-swatch';
+        swatch.style.backgroundColor = hex;
+        swatch.setAttribute('aria-label', hex);
+        swatch.addEventListener('click', () => onPick(hex));
+        container.append(swatch);
+      });
+    };
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="shirt"]')!, ['#e63946', '#ef8354', '#ffd166', '#06d6a0', '#118ab2', '#3a86ff', '#8338ec', '#f4f0e6', '#3b2f2a'], (hex) => this.pickAvatarColor('shirt', hex));
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="skin"]')!, ['#f2c8a0', '#e5b299', '#d7916e', '#b06c46', '#8c4f2b', '#5d3a1f'], (hex) => this.pickAvatarColor('skin', hex));
+    this.avatarEditorShirtInput.addEventListener('change', () => this.pickAvatarColor('shirt', this.avatarEditorShirtInput.value));
+    this.avatarEditorSkinInput.addEventListener('change', () => this.pickAvatarColor('skin', this.avatarEditorSkinInput.value));
+    this.avatarEditorRandom.addEventListener('click', () => {
+      events.emit('webgl_character_randomize_color');
+    });
+    events.on('ui_show_avatar_editor', (show: boolean) => {
+      this.avatarEditorOwner = Boolean(show);
+      if (!show) this.closeAvatarEditor();
+    });
+    events.on('webgl_character_colors', (colors: { shirt?: string; skin?: string }) => {
+      if (!colors) return;
+      if (this.isHexColor(colors.shirt)) {
+        this.avatarEditorShirtInput.value = colors.shirt;
+        this.setActiveSwatch('shirt', colors.shirt);
+      }
+      if (this.isHexColor(colors.skin)) {
+        this.avatarEditorSkinInput.value = colors.skin;
+        this.setActiveSwatch('skin', colors.skin);
+      }
+      if (this.isHexColor(colors.shirt)) this.colorSquare.style.backgroundColor = colors.shirt;
     });
 
     this.createSocialSidebar(appPath);
@@ -258,7 +325,9 @@ export class UiController {
     this.loader.remove();
     const unsupported = document.createElement('div');
     unsupported.id = 'unsupported';
-    unsupported.textContent = 'Seems like WebGL2 is not supported by your browser 😰 Please update it to access the experience.';
+    unsupported.textContent = getLanguage() === 'en'
+      ? 'Seems like WebGL2 is not supported by your browser 😰 Please update it to access the experience.'
+      : 'Parece que o teu navegador não suporta WebGL2 😰 Atualiza-o para acederes à experiência.';
     this.webglContainer.parentElement?.append(unsupported);
   }
 
@@ -355,6 +424,46 @@ export class UiController {
 
   setCharacterColor(color: string) {
     this.colorSquare.style.backgroundColor = color;
+  }
+
+  /** Emite a escolha de cor (camisa/pele) para a cena + ativa o swatch. */
+  private pickAvatarColor(part: 'shirt' | 'skin', hex: string) {
+    if (!this.isHexColor(hex)) return;
+    const input = part === 'shirt' ? this.avatarEditorShirtInput : this.avatarEditorSkinInput;
+    input.value = hex;
+    this.setActiveSwatch(part, hex);
+    events.emit(part === 'shirt' ? 'webgl_character_set_shirt_color' : 'webgl_character_set_skin_color', hex);
+  }
+
+  private setActiveSwatch(part: 'shirt' | 'skin', hex: string) {
+    const container = this.avatarEditor.querySelector<HTMLElement>(`.avatar-editor-swatches[data-part="${part}"]`);
+    if (!container) return;
+    const value = this.isHexColor(hex) ? hex.toLowerCase() : '';
+    container.querySelectorAll<HTMLButtonElement>('.avatar-editor-swatch').forEach((swatch) => {
+      const matches = value && swatch.style.backgroundColor
+        && this.rgbToHex(swatch.style.backgroundColor) === value;
+      swatch.classList.toggle('active', Boolean(matches));
+    });
+  }
+
+  private rgbToHex(rgb: string): string {
+    const match = rgb.match(/\d+/g);
+    if (!match || match.length < 3) return '';
+    return `#${match.slice(0, 3).map((n) => parseInt(n, 10).toString(16).padStart(2, '0')).join('')}`;
+  }
+
+  private isHexColor(color: unknown): color is string {
+    return typeof color === 'string' && /^#[0-9a-f]{6}$/i.test(color);
+  }
+
+  private toggleAvatarEditor() {
+    this.avatarEditor.hidden = !this.avatarEditor.hidden;
+    this.avatarEditor.setAttribute('aria-hidden', String(this.avatarEditor.hidden));
+  }
+
+  private closeAvatarEditor() {
+    this.avatarEditor.hidden = true;
+    this.avatarEditor.setAttribute('aria-hidden', 'true');
   }
 
   private createSocialSidebar(appPath: string) {

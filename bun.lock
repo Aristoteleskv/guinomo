@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "summer-afternoon-port",
+      "name": "guinomo",
       "dependencies": {
         "gsap": "3.11.3",
         "guinomo-browser": "file:multiplayer/browser-wasm/pkg",

@@ -85,8 +85,11 @@
         varying vec3 vColorShirt;
         varying vec3 vColorSkin;
         varying float vHatVisible;
-        varying vec3 vLocalPos;
-        varying vec3 vLocalNormal;
+        // Posição/normal BIND (pré-skinning, atributos crus `position`/`normal`).
+        // A máscara de cabelo e boca fica presa AO VÉRTICE: acompanha a cabeça em
+        // qualquer pose/rotação dos ossos e é imune à escala/rotação da instância.
+        varying vec3 vBindPos;
+        varying vec3 vBindNormal;
     #endif
 
     #include <shadowmap_pars_vertex>
@@ -106,8 +109,8 @@
             vColorShirt = instanceColorShirt;
             vColorSkin = instanceColorSkin;
             vHatVisible = instanceHatVisible;
-            vLocalPos = transformed;
-            vLocalNormal = normalize(objectNormal);
+            vBindPos = position;
+            vBindNormal = normalize(normal);
         #endif
 
         #ifdef RANDOM_ATTRIB

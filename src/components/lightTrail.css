@@ -1,0 +1,38 @@
+/* Friends' light trail HUD: presence chip (top-center, under the points). */
+
+#light-trail-chip {
+  position: fixed;
+  top: 106px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 62;
+  box-sizing: border-box;
+  max-width: min(420px, 88vw);
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 140, 240, 0.55);
+  background: rgba(74, 30, 98, 0.62);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 0 14px rgba(167, 95, 214, 0.25);
+  color: #f3dcff;
+  font-family: var(--default-font, Arial, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#light-trail-chip[hidden] {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  #light-trail-chip {
+    top: 96px;
+  }
+}

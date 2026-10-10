@@ -4,6 +4,7 @@
 
 import { AnimationMixer, Mesh, Object3D } from 'three';
 import { events } from '../core/events';
+import { isGoldenHour } from '../core/goldenHour';
 import { radians } from '../core/math';
 import { clock } from '../engine/clock';
 import { geometryLoader } from '../engine/loaders/geometries';
@@ -11,6 +12,7 @@ import { phongMaterial } from './materials';
 import { SceneModule } from './SceneModule';
 
 const SECRETS_STORAGE_KEY = 'guinomo_secrets';
+const GOLDEN_SEALS_KEY = 'guinomo.golden_seals.v1';
 
 /** Bilingual secret copy. The English text doubles as the stable storage id so
  *  secrets already found by players are not reset when the UI language changes. */
@@ -30,6 +32,16 @@ function localizedSecret(copy: SecretCopy): { id: string; text: string } {
 function readFoundSecrets(): string[] {
   try {
     const parsed = JSON.parse(localStorage.getItem(SECRETS_STORAGE_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Secret ids discovered during the golden hour (persisted for the album). */
+export function readGoldenSeals(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(GOLDEN_SEALS_KEY) || '[]');
     return Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === 'string') : [];
   } catch {
     return [];
@@ -68,6 +80,15 @@ export class Secret {
       if (!found.includes(this._id)) {
         found.push(this._id);
         localStorage.setItem(SECRETS_STORAGE_KEY, JSON.stringify(found));
+      }
+      // Rare-secret moment: secrets found while the golden hour is active are
+      // stamped so the album can show them as golden keepsakes.
+      if (isGoldenHour(new Date())) {
+        const golden = readGoldenSeals();
+        if (!golden.includes(this._id)) {
+          golden.push(this._id);
+          localStorage.setItem(GOLDEN_SEALS_KEY, JSON.stringify(golden));
+        }
       }
       events.emit('webgl_show_modal', this._text);
       events.emit('webgl_secret_found');

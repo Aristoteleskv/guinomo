@@ -3,6 +3,8 @@
 
 import './streak.css';
 import { bumpStreak, GOLDEN_STREAK_DAYS } from '../core/streak';
+import { claimDailyStreakPoints } from '../core/adventurePoints';
+import { events } from '../core/events';
 
 export function mountStreakHud(): void {
   if (document.getElementById('streak-hud')) return;
@@ -10,6 +12,9 @@ export function mountStreakHud(): void {
   const language = window.GUINOMO_PROFILE?.language || document.documentElement.lang.slice(0, 2);
   const english = language === 'en';
   const days = bumpStreak();
+
+  // Fixed habit reward: 10 adventure points once per local day.
+  if (claimDailyStreakPoints() > 0) events.emit('webgl_points_changed');
 
   const hud = document.createElement('div');
   hud.id = 'streak-hud';

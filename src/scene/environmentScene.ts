@@ -21,7 +21,9 @@ import { CharactersModule } from './characters';
 import { ForestLife } from './forestLife';
 import { WorldLocations } from './worldLocations';
 import { Notes } from './notes';
+import { LightTrailScene } from './lightTrailScene';
 import { mountCompass } from '../components/compass';
+import { isGoldenHour } from '../core/goldenHour';
 import type { MainController } from './mainController';
 
 gsap.registerPlugin(CustomEase);
@@ -55,6 +57,7 @@ export class EnvironmentScene extends BaseScene {
   declare forestLife: ForestLife;
   declare worldLocations: WorldLocations;
   declare notes: Notes;
+  declare lightTrail: LightTrailScene;
 
   constructor(_mainController: MainController) {
     super();
@@ -94,6 +97,7 @@ export class EnvironmentScene extends BaseScene {
       ['forestLife', ForestLife],
       ['worldLocations', WorldLocations],
       ['notes', Notes],
+      ['lightTrail', LightTrailScene],
     ];
     await Promise.all(
       modules.map(([name, Module]) => {
@@ -193,6 +197,10 @@ export class EnvironmentScene extends BaseScene {
     const alienSky = new Color('#631aa1');
     const nightGround = new Color('#20243b');
     const alienGround = new Color('#193d56');
+    // Warm golden-hour tint: gently pulls the light toward sunset gold while
+    // the daily golden window is active.
+    const goldenTint = new Color('#ffd9a0');
+    const goldenGround = new Color('#d8b06a');
     const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
     const daySky =
       world === 'forest'
@@ -217,9 +225,10 @@ export class EnvironmentScene extends BaseScene {
     this.beforeRenderCbs.push(() => {
       const night = this.sky.nightIntensity;
       const alien = this.sky.alienIntensity;
-      hemi.intensity = 0.7 - night * 0.38 + alien * 0.18;
-      hemi.color.copy(daySky).lerp(nightSky, night).lerp(alienSky, alien);
-      hemi.groundColor.copy(dayGround).lerp(nightGround, night).lerp(alienGround, alien);
+      const golden = isGoldenHour(new Date()) ? 1 : 0;
+      hemi.intensity = (0.7 - night * 0.38 + alien * 0.18) * (1 + golden * 0.28);
+      hemi.color.copy(daySky).lerp(nightSky, night).lerp(alienSky, alien).lerp(goldenTint, golden * 0.42);
+      hemi.groundColor.copy(dayGround).lerp(nightGround, night).lerp(alienGround, alien).lerp(goldenGround, golden * 0.34);
     });
 
     const sun = new FollowSunLight({

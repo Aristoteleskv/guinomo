@@ -20,8 +20,8 @@
         varying vec3 vColorShirt;
         varying vec3 vColorSkin;
         varying float vHatVisible;
-        varying vec3 vLocalPos;
-        varying vec3 vLocalNormal;
+        varying vec3 vBindPos;
+        varying vec3 vBindNormal;
     #endif
 
     #ifdef IS_TERRAIN
@@ -241,25 +241,60 @@
                         discard;
                     }
 
-                    if (vColorInfo.y < 0.01) { // Partes fixas (cabelo, sapatos)
-                        float rampY = getRamp(vColorInfo.r);
-                        diffuseSpecular = texture2D(tRamp, vec2(rampX, rampY)).rgb;
+                    if (vColorInfo.y < 0.01) { // Partes fixas (sapatos, olhos, fita, chapéu)
+                        if (abs(vColorInfo.r - 74.0) < 0.5) {
+                            // 74 = camisa/tronco (branca na rampa): passa a usar a cor do
+                            // perfil em vez do branco fixo. Antes só o calção mudava de
+                            // cor e a camisa ficava sempre branca — corrigido aqui.
+                            diffuseSpecular = vColorShirt * (0.6 + floor(rampX * 2.99) * 0.2);
+                        } else {
+                            float rampY = getRamp(vColorInfo.r);
+                            diffuseSpecular = texture2D(tRamp, vec2(rampX, rampY)).rgb;
+                        }
                     } else if (vColorInfo.y < 1.01) {
                         // Pele - Usa a cor vinda do atributo (PHP/UID)
                         float lumaSkin = 0.6 + floor(rampX * 2.99) * 0.2;
+                        // NOTA DE ESPAÇOS: antes usávamos vLocalPos/vLocalNormal, que
+                        // são PÓS-skinning em espaço objeto (transformed / objectNormal
+                        // já passado por skinnormal_vertex). Numa rotação forte da cabeça
+                        // (ações que não a caminhada) a máscara fixa de espaço objeto
+                        // deixava de coincidir com a face e a boca "descolava". Passamos
+                        // a usar a posição/normal BIND (atributos crus `position`/`normal`):
+                        // a máscara fica presa AO VÉRTICE e segue a cabeça em qualquer
+                        // pose, e é imune à escala/rotação da instância.
                         // Cabelo curto (buzzcut) quando o chapéu está desligado: a
                         // calote do crânio (esfera centrada em ~(0, 1.37, 0.06) com
-                        // raio ~0.36, em coordenadas locais esfoladas) é repintada de
-                        // castanho escuro, excluindo a face (normal local +z), o
-                        // pescoço (y baixo) e os olhos (parte fixa 77, nunca tocada).
+                        // raio ~0.36, em coordenadas bind) é repintada de castanho
+                        // escuro, excluindo a face (normal bind +z), o pescoço (y baixo)
+                        // e os olhos (parte fixa 77, nunca tocada).
                         vec3 headCenter = vec3(0.0, 1.37, 0.06);
-                        float distHead = distance(vLocalPos, headCenter);
+                        float distHead = distance(vBindPos, headCenter);
                         float inHead = 1.0 - smoothstep(0.26, 0.36, distHead);
-                        float faceSide = smoothstep(0.08, 0.30, vLocalNormal.z);
-                        float neckCut = smoothstep(1.18, 1.26, vLocalPos.y);
+                        float faceSide = smoothstep(0.08, 0.30, vBindNormal.z);
+                        float neckCut = smoothstep(1.18, 1.26, vBindPos.y);
                         float hair = inHead * (1.0 - faceSide) * neckCut * (1.0 - vHatVisible);
                         vec3 darkHair = vec3(0.33, 0.25, 0.18);
                         diffuseSpecular = mix(vColorSkin, darkHair, hair) * lumaSkin;
+                        // Boca: linha fina, ligeiramente curvada, pontas arredondadas.
+                        // Coordenadas BIND (pré-skinning, presas ao vértice): a máscara
+                        // acompanha a cabeça em qualquer animação — valida o referencial
+                        // que faltava confirmar. Âncora y≈1.245 provisória (depende da
+                        // escala e orientação reais de kid.bin — se desviar, ajustar
+                        // primeiro 1.245; se ficar grossa, reduzir 0.006/0.013).
+                        // Nunca atinge os olhos (77), o chapéu (75/76) nem os calçados
+                        // (esses vivem no ramo fixo vColorInfo.y < 0.01).
+                        float mouthWidth = 0.052;
+                        // Curvatura discreta: o centro desce ~0.006 nas pontas. NOTA:
+                        // pow(x, 2.0) é indefinido em GLSL para x<0 — usa-se x*x.
+                        float mouthCurve = 1.245
+                            - 0.006 * (vBindPos.x * vBindPos.x) / (mouthWidth * mouthWidth);
+                        float mouthY = 1.0 - smoothstep(0.006, 0.013, abs(vBindPos.y - mouthCurve));
+                        float mouthX = 1.0 - smoothstep(mouthWidth - 0.008, mouthWidth, abs(vBindPos.x));
+                        float mouthNormal = smoothstep(0.30, 0.60, vBindNormal.z);
+                        float mouthZ = smoothstep(0.035, 0.075, vBindPos.z);
+                        float mouth = inHead * mouthNormal * mouthZ * mouthX * mouthY;
+                        vec3 mouthColor = vec3(0.25, 0.105, 0.095) * lumaSkin;
+                        diffuseSpecular = mix(diffuseSpecular, mouthColor, clamp(mouth, 0.0, 1.0));
                     } else {
                         // Camisa - Usa a cor vinda do atributo (PHP/UID)
                         diffuseSpecular = vColorShirt * (0.6 + floor(rampX * 2.99) * 0.2);

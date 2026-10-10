@@ -35,14 +35,6 @@ html body #app {
   overflow: hidden;
 }
 
-@font-face {
-  font-family: Stylish;
-  src: url(fonts/Stylish-Regular.woff2) format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 html {
   --default-font: 'Stylish', sans-serif;
 }
@@ -757,6 +749,111 @@ nav .cnt {
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* ---- avatar editor (shirt/skin colors, owner-only) ---- */
+.avatar-editor {
+  position: absolute;
+  right: 130px;
+  top: -6px;
+  z-index: 30;
+  width: min(238px, 62vw);
+  padding: 12px 12px 8px;
+  background-color: #f9efdc;
+  border-radius: 12px;
+  corner-shape: superellipse(1.4);
+  box-shadow: 2px 2px 0 0 #716c66;
+  color: #333;
+  font-family: var(--default-font);
+  text-align: left;
+}
+
+.avatar-editor[hidden] {
+  display: none;
+}
+
+.avatar-editor-title {
+  display: block;
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #514d48;
+}
+
+.avatar-editor-row {
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  align-items: center;
+  gap: 6px 8px;
+  margin-bottom: 8px;
+}
+
+.avatar-editor-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #514d48;
+}
+
+.avatar-editor-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.avatar-editor-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(113, 108, 102, 0.45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+}
+
+.avatar-editor-swatch:hover {
+  transform: translateY(-1px);
+}
+
+.avatar-editor-swatch.active {
+  outline: 2px solid #2f5bb0;
+  outline-offset: 1px;
+  border-color: #fff;
+}
+
+.avatar-editor-input[type="color"] {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 22px;
+  padding: 0;
+  border: 1px solid rgba(113, 108, 102, 0.45);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.avatar-editor-random.button {
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 8px auto 0;
+  padding: 5px 12px;
+  font: 600 12px var(--default-font);
+  color: #514d48;
+  transform: none;
+  border-radius: 10px;
+}
+
+.avatar-editor-random.button:hover {
+  transform: translateY(-1px);
+}
+
+.avatar-editor-note {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #716c66;
+  text-align: center;
 }
 
 html.guinomo-chat-open nav .social-link {

@@ -37,7 +37,7 @@ import { ticker } from '../core/ticker';
 import { clock } from './clock';
 import type { FollowCamera } from './camera';
 import { Controls } from './controls';
-import { CollisionPhysics } from './physics';
+import { CollisionPhysics, type DebugScene } from './physics';
 import { quaternionFromSpherical } from './quaternion';
 import type { P2PClientData, P2PConnection } from './multiplayer/iroh';
 
@@ -163,6 +163,8 @@ export interface CharacterInstance {
 export interface CharacterOptions {
   animationsOptions?: Array<{ speed: number }>;
   colliderMesh: Mesh;
+  /** Cena usada apenas pelo debug opcional da BVH (`?debug=bvh`). */
+  scene?: DebugScene;
   radiusPercentage?: number;
   floorDetectInclination?: number;
   positionForce?: number;
@@ -377,6 +379,7 @@ export class Characters extends CharacterSkinnedMesh {
     });
     this._collisionPhysics = new CollisionPhysics(this as unknown as CharacterInstance, {
       colliderMesh: options.colliderMesh,
+      scene: options.scene,
       radiusPercentage: options.radiusPercentage,
       floorDetectInclination: options.floorDetectInclination,
       positionForce: options.positionForce,
@@ -660,6 +663,7 @@ export class Characters extends CharacterSkinnedMesh {
     (this.skeleton as any).dispose?.();
     this._controls.disable();
     this._connection?._dispose();
+    this._collisionPhysics.disposeBvhDebug();
     this._collisionPhysics.geometry?.dispose();
   }
 }

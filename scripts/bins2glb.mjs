@@ -14,9 +14,10 @@
 //   clip  (type 1): Draco POINT_CLOUD: position/quaternion/scale, layout
 //                   `[frame][bone]`, `userData { fps, frames }`.
 //
-// Caveats: the mesh has no UVs (it shades by the per-vertex `colorInfo` zone);
-// inverse bind matrices are reconstructed from the bones' bind TRS, matching
-// the engine, which binds the skeleton without explicit inverses (createSkin).
+// Caveats: the mesh has no UVs (it shades by the per-vertex `colorInfo` zone,
+// exported as COLOR_0 — VEC2 is padded to VEC3); inverse bind matrices are
+// reconstructed from the bones' bind TRS, matching the engine, which binds the
+// skeleton without explicit inverses (createSkin).
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -115,13 +116,20 @@ function decodeBin(draco, filePath) {
   for (let id = 0; id < (header.attributes ?? []).length; id++) {
     const [name, typeIndex] = header.attributes[id];
     const attribute = decoder.GetAttributeByUniqueId(geometry, id);
-    if (!attribute || attribute.ptr === 0) throw new Error(`${filePath}: missing attribute "${name}" (unique id ${id})`);
+    if (!attribute || attribute.ptr === 0)
+      throw new Error(`${filePath}: missing attribute "${name}" (unique id ${id})`);
     const Ctor = ARRAY_CTORS[typeIndex] ?? Float32Array;
     const itemSize = attribute.num_components();
     const numValues = numPoints * itemSize;
     const byteLength = numValues * Ctor.BYTES_PER_ELEMENT;
     const ptr = draco._malloc(byteLength);
-    decoder.GetAttributeDataArrayForAllPoints(geometry, attribute, dracoDataType(draco, Ctor), byteLength, ptr);
+    decoder.GetAttributeDataArrayForAllPoints(
+      geometry,
+      attribute,
+      dracoDataType(draco, Ctor),
+      byteLength,
+      ptr,
+    );
     const array = new Ctor(draco.HEAPF32.buffer, ptr, numValues).slice();
     draco._free(ptr);
     attributes[name] = { array, itemSize };
@@ -224,7 +232,12 @@ function buildSkeleton(bones) {
   for (let i = 0; i < count; i++) {
     local[i] = new Matrix4().compose(
       new Vector3(position[i * 3], position[i * 3 + 1], position[i * 3 + 2]),
-      new Quaternion(quaternion[i * 4], quaternion[i * 4 + 1], quaternion[i * 4 + 2], quaternion[i * 4 + 3]).normalize(),
+      new Quaternion(
+        quaternion[i * 4],
+        quaternion[i * 4 + 1],
+        quaternion[i * 4 + 2],
+        quaternion[i * 4 + 3],
+      ).normalize(),
       new Vector3(scale[i * 3], scale[i * 3 + 1], scale[i * 3 + 2]),
     );
   }
@@ -259,20 +272,33 @@ function buildGlb({ name, mesh, bones, clips }) {
   };
   const skinIndex = mesh.attributes.skinIndex;
   if (skinIndex) {
-    const joints = skinIndex.array instanceof Uint16Array ? skinIndex.array : Uint16Array.from(skinIndex.array);
+    const joints =
+      skinIndex.array instanceof Uint16Array ? skinIndex.array : Uint16Array.from(skinIndex.array);
     primitiveAttributes.JOINTS_0 = builder.addAccessor(joints, skinIndex.itemSize, { type: 'VEC4' });
   }
   const skinWeight = mesh.attributes.skinWeight;
-  if (skinWeight) primitiveAttributes.WEIGHTS_0 = builder.addAccessor(skinWeight.array, skinWeight.itemSize, { type: 'VEC4' });
+  if (skinWeight)
+    primitiveAttributes.WEIGHTS_0 = builder.addAccessor(skinWeight.array, skinWeight.itemSize, {
+      type: 'VEC4',
+    });
 
   const colorInfo = mesh.attributes.colorInfo;
-  if (colorInfo && colorInfo.itemSize >= 3) {
-    primitiveAttributes.COLOR_0 = builder.addAccessor(colorInfo.array, colorInfo.itemSize, {
-      type: colorInfo.itemSize === 4 ? 'VEC4' : 'VEC3',
+  if (colorInfo) {
+    // Export as COLOR_0 so Blender keeps the data as a standard vertex color
+    // through an edit round-trip (it may drop custom `_`-attributes). VEC2
+    // zone data is padded to VEC3; glb2bins truncates it back to the `.bin`
+    // schema, and the shader only reads the first two components.
+    const count = colorInfo.array.length / colorInfo.itemSize;
+    const components = colorInfo.itemSize >= 4 ? 4 : 3;
+    const colorArray = new Float32Array(count * components);
+    for (let i = 0; i < count; i++) {
+      for (let c = 0; c < components && c < colorInfo.itemSize; c++) {
+        colorArray[i * components + c] = colorInfo.array[i * colorInfo.itemSize + c];
+      }
+    }
+    primitiveAttributes.COLOR_0 = builder.addAccessor(colorArray, components, {
+      type: components === 4 ? 'VEC4' : 'VEC3',
     });
-  } else if (colorInfo) {
-    // Zone data (VEC2) is not a valid COLOR_0; keep it as a custom attribute.
-    primitiveAttributes._COLORINFO = builder.addAccessor(colorInfo.array, colorInfo.itemSize, { type: 'VEC2' });
   }
 
   const primitive = { attributes: primitiveAttributes, material: 0, mode: 4 };
@@ -340,7 +366,12 @@ function buildGlb({ name, mesh, bones, clips }) {
           translation[f * 3 + c] = positions[base * 3 + c];
           scale[f * 3 + c] = scales[base * 3 + c];
         }
-        const q = new Quaternion(quaternions[base * 4], quaternions[base * 4 + 1], quaternions[base * 4 + 2], quaternions[base * 4 + 3]).normalize();
+        const q = new Quaternion(
+          quaternions[base * 4],
+          quaternions[base * 4 + 1],
+          quaternions[base * 4 + 2],
+          quaternions[base * 4 + 3],
+        ).normalize();
         rotation[f * 4] = q.x;
         rotation[f * 4 + 1] = q.y;
         rotation[f * 4 + 2] = q.z;
@@ -353,14 +384,25 @@ function buildGlb({ name, mesh, bones, clips }) {
       ];
       for (const [path, output] of paths) {
         const sampler = animation.samplers.length;
-        animation.samplers.push({ input, output: builder.addAccessor(output, output.length / frames), interpolation: 'LINEAR' });
+        animation.samplers.push({
+          input,
+          output: builder.addAccessor(output, output.length / frames),
+          interpolation: 'LINEAR',
+        });
         animation.channels.push({ sampler, target: { node: b, path } });
       }
     }
     gltf.animations.push(animation);
   }
 
-  return { buffer: builder.finish(), stats: { bones: skeleton.count, vertices: mesh.numPoints, triangles: mesh.index ? mesh.index.length / 3 : 0 } };
+  return {
+    buffer: builder.finish(),
+    stats: {
+      bones: skeleton.count,
+      vertices: mesh.numPoints,
+      triangles: mesh.index ? mesh.index.length / 3 : 0,
+    },
+  };
 }
 
 async function main() {
@@ -385,12 +427,16 @@ async function main() {
   }
   console.log(`bones  : ${bones.attributes.position.array.length / 3}`);
   for (const { key, data } of clipData) {
-    console.log(`clip ${key.padEnd(5)}: ${data.header.userData?.frames} frames @ ${data.header.userData?.fps}fps`);
+    console.log(
+      `clip ${key.padEnd(5)}: ${data.header.userData?.frames} frames @ ${data.header.userData?.fps}fps`,
+    );
   }
 
   const { buffer, stats } = buildGlb({ name, mesh, bones, clips: clipData });
   writeFileSync(resolve(out), buffer);
-  console.log(`wrote  : ${resolve(out)} (${(buffer.length / 1024).toFixed(1)} KB) — ${stats.vertices} verts, ${stats.triangles} tris, ${stats.bones} bones`);
+  console.log(
+    `wrote  : ${resolve(out)} (${(buffer.length / 1024).toFixed(1)} KB) — ${stats.vertices} verts, ${stats.triangles} tris, ${stats.bones} bones`,
+  );
 }
 
 main().catch((err) => {

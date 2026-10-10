@@ -160,6 +160,42 @@ ufo/alien/cats/sloth/gossip each hide one of the 5 secrets.
 
  
 
+## Editing the character: `.bin` ↔ GLB round-trip
+
+The kid's rigged geometry lives in `public/assets/geometries/` as a custom
+`.bin` set: `kid.bin` (skinned mesh), `kid-bones.bin` (the 22-bone hierarchy)
+and one `kid-<clip>.bin` per animation (`idle`, `run`, `air`, `bored`). These
+are what the engine loads at runtime; `kid.glb` is only an **editing artifact**.
+
+To edit the character in Blender and put the result back:
+
+```bash
+# .bin set → kid.glb (mesh + skeleton + clips)
+node scripts/bins2glb.mjs kid --dir public/assets/geometries \
+  --clips idle,run,air,bored --out kid.glb --draco <path-to-draco3d>
+
+# … open kid.glb in Blender, edit, then export as glTF-Binary (.glb) …
+
+# kid.glb → .bin set (rewrites public/assets/geometries/kid*.bin in place)
+node scripts/glb2bins.mjs kid.glb --schema public/assets/geometries \
+  --out public/assets/geometries --draco <path-to-draco3d> --verify
+```
+
+Both scripts need a `draco3d` package (encoder + decoder); it is not vendored,
+so pass `--draco <dir>`. `glb2bins` preserves the attribute schema of the
+existing `.bin` files, so the loader needs **no code change**:
+
+- keep the **22 bones** with the same names and order (a bone's index in the
+  skin is its `.bin` index; reordering, adding or removing bones breaks the rig);
+- keep the four actions named `idle` / `run` / `air` / `bored` (override the
+  mapping with `--clips key=Action,...`);
+- keep the vertex color `COLOR_0` (the `colorInfo` zone — padded VEC2→VEC3 on
+  export, truncated back on import). If it is dropped, `glb2bins` fails loudly
+  instead of guessing.
+
+Then run the gate (`typecheck`, `lint`, `vitest`, `build`, `check:bundle`) and
+commit the changed `public/assets/geometries/kid*.bin`.
+
 ## Layout
 
 ```

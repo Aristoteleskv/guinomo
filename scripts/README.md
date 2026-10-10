@@ -5,6 +5,10 @@
   `node scripts/pack-bin.mjs input.glb [output.bin]`
 - `unpack-bin.mjs` — inspect/unpack a `.bin` back into a `.glb` outline:
   `node scripts/unpack-bin.mjs input.bin [output.glb] [--info]`
+- `bins2glb.mjs` — rebuild a rigged, animated `.glb` (mesh + bones + clips)
+  from a `.bin` set, for editing in Blender:
+  `node scripts/bins2glb.mjs kid --dir public/assets/geometries --draco <path>`
+  (needs a `draco3d` decoder; see `--draco`)
 
 ## About the `.bin` format
 

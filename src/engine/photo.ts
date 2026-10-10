@@ -208,7 +208,9 @@ function promptCaption(defaultCaption: string): Promise<string | null> {
   });
 }
 
-/** Mounts the floating poster button. */
+/** Mounts the floating poster button. When the corner nav exists the button
+ *  is embedded in it (right column) so it stays visible alongside the other
+ *  controls; otherwise it keeps the floating bottom-right placement. */
 export function mountPosterButton(): void {
   if (document.getElementById('poster-btn')) return;
   const label = uiLanguage() === 'en' ? 'Poster' : 'Cartaz';
@@ -242,5 +244,12 @@ export function mountPosterButton(): void {
         console.warn('Unable to create the poster:', error);
       });
   });
-  document.body.append(button);
+
+  const nav = document.querySelector('nav');
+  if (nav) {
+    button.classList.add('in-nav');
+    nav.append(button);
+  } else {
+    document.body.append(button);
+  }
 }

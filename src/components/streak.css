@@ -30,6 +30,17 @@
   line-height: 1.2;
 }
 
+/* Inside the identity card: compact pill, no fixed overlay. */
+#streak-hud.in-badge {
+  position: static;
+  padding: 2px 9px;
+  box-shadow: none;
+}
+
+#streak-hud.in-badge.golden {
+  box-shadow: 0 0 0 2px rgba(201, 154, 46, 0.25);
+}
+
 /* Golden mode: GOLDEN_STREAK_DAYS+ consecutive days (matches the poster frame). */
 #streak-hud.golden {
   border-color: rgba(201, 154, 46, 0.85);

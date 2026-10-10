@@ -40,6 +40,47 @@
   bottom: calc(env(safe-area-inset-bottom, 0px) + 64px);
 }
 
+/* Embedded in the corner nav: icon-only, matching the other nav buttons. */
+nav #notes-compose.in-nav {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: rotate(10deg);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  background: #f9efdc;
+  box-shadow: 2px 2px #716c66;
+  color: #514d48;
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  white-space: normal;
+  backdrop-filter: none;
+}
+
+nav #notes-compose.in-nav:hover,
+nav #notes-compose.in-nav:focus-visible {
+  background: #fdf4e4;
+  outline: none;
+  transform: rotate(10deg) translateY(-2px);
+}
+
+nav #notes-compose.in-nav:active {
+  transform: rotate(10deg) translateY(2px);
+  box-shadow: 1px 1px #716c66;
+}
+
+@media (max-width: 1200px) {
+  nav #notes-compose.in-nav {
+    margin-bottom: 12px;
+  }
+}
+
 #notes-panel {
   position: fixed;
   z-index: 32;

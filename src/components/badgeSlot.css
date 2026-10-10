@@ -1,0 +1,10 @@
+/* Extra chips inside the identity card (daily streak + explorer seal). The
+   container is a small row under the user meta — the card itself is styled by
+   styles.css (`.guinomo-badge`); this file only lays out what we insert. */
+
+.guinomo-badge-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}

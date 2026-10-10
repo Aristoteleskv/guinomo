@@ -30,6 +30,32 @@
   transform: scale(0.96);
 }
 
+/* Inside the identity card: tiny seal chip, no floating circle. */
+#album-btn.in-badge {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  background: rgba(249, 239, 220, 0.94);
+  box-shadow: none;
+  color: #514d48;
+  font-size: 15px;
+  line-height: 1;
+  transform: none;
+  font-family: var(--default-font);
+}
+
+#album-btn.in-badge:hover {
+  transform: translateY(-1px);
+  background: #f9efdc;
+}
+
+#album-btn.in-badge:active {
+  transform: translateY(0);
+}
+
 #album-overlay {
   position: fixed;
   inset: 0;

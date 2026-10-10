@@ -137,6 +137,15 @@ export class Notes extends SceneModule {
     this.compose.textContent = this.text('Leave a note', 'Deixar recado');
     this.compose.setAttribute('aria-label', this.compose.textContent);
 
+    // The compose control lives in the corner nav (right column) as an icon
+    // button; only the "read the note I'm near" action stays floating.
+    const nav = document.querySelector('nav');
+    if (nav) {
+      this.compose.classList.add('in-nav');
+      this.compose.textContent = '📝';
+      nav.append(this.compose);
+    }
+
     const panel = document.createElement('div');
     panel.id = 'notes-panel';
     panel.setAttribute('role', 'dialog');

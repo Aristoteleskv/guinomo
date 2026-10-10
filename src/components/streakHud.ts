@@ -5,6 +5,7 @@ import './streak.css';
 import { bumpStreak, GOLDEN_STREAK_DAYS } from '../core/streak';
 import { claimDailyStreakPoints } from '../core/adventurePoints';
 import { events } from '../core/events';
+import { badgeChipsSlot } from './badgeSlot';
 
 export function mountStreakHud(): void {
   if (document.getElementById('streak-hud')) return;
@@ -35,5 +36,14 @@ export function mountStreakHud(): void {
 
   hud.append(flame, count);
   if (days >= GOLDEN_STREAK_DAYS) hud.classList.add('golden');
-  document.body.append(hud);
+
+  // With a visible identity card the streak sits inside the badge (compact
+  // pill); without one it falls back to the floating top-right HUD.
+  const host = badgeChipsSlot();
+  if (host) {
+    hud.classList.add('in-badge');
+    host.append(hud);
+  } else {
+    document.body.append(hud);
+  }
 }

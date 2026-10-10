@@ -5,6 +5,7 @@
 import { WORLDS, type WorldId } from '../core/worlds';
 import { events } from '../core/events';
 import { readGoldenSeals } from './setpieces';
+import { badgeChipsSlot } from '../components/badgeSlot';
 import './album.css';
 
 const SECRETS_STORAGE_KEY = 'guinomo_secrets';
@@ -182,5 +183,14 @@ export function mountAlbum(): void {
     if (!panel.hidden) renderAlbum(panel, uiLanguage() === 'en');
   });
 
-  document.body.append(button, panel);
+  // With a visible identity card the seal button lives inside the badge as a
+  // small chip; otherwise it keeps the floating bottom-left circle.
+  const host = badgeChipsSlot();
+  if (host) {
+    button.classList.add('in-badge');
+    host.append(button);
+  } else {
+    document.body.append(button);
+  }
+  document.body.append(panel);
 }

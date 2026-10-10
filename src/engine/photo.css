@@ -36,6 +36,42 @@
   }
 }
 
+/* Embedded in the corner nav: matches the style of the other nav buttons. */
+nav #poster-btn.in-nav {
+  position: static;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 16px;
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  background: #f9efdc;
+  backdrop-filter: none;
+  box-shadow: 2px 2px #716c66;
+  color: #514d48;
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  transform: rotate(10deg);
+}
+
+nav #poster-btn.in-nav:hover {
+  transform: rotate(10deg) translateY(-2px);
+  background: #fdf4e4;
+}
+
+nav #poster-btn.in-nav:active {
+  transform: rotate(10deg) translateY(2px);
+  box-shadow: 1px 1px #716c66;
+}
+
+@media (max-width: 1200px) {
+  nav #poster-btn.in-nav {
+    margin-bottom: 12px;
+  }
+}
+
 /* Caption dialog shown before the poster is captured/downloaded. */
 #poster-dialog {
   position: fixed;

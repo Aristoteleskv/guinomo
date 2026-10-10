@@ -217,6 +217,17 @@
   box-shadow: 0 0 14px rgba(233, 191, 68, 0.28);
 }
 
+/* Master seal: the 5/5 Grand Secret finale trophy. */
+.album-seal.master .album-seal-icon {
+  font-size: 34px;
+}
+
+.album-seal.master.found {
+  border-color: rgba(233, 191, 68, 0.95);
+  box-shadow: 0 0 22px rgba(233, 191, 68, 0.45);
+  background: linear-gradient(180deg, rgba(233, 191, 68, 0.16), rgba(255, 250, 240, 0.05));
+}
+
 @media (prefers-reduced-motion: reduce) {
   #album-btn {
     transition: none;

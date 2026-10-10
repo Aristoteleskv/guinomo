@@ -74,6 +74,23 @@ const avatarRoles = [
   { id: 'none', icon: '🙂', label: { pt: 'Sem papel', en: 'No role' } },
 ] as const;
 
+const grandSecretContent = {
+  pt: {
+    title: 'O Grande Segredo',
+    body: [
+      'O céu abre-se e a nave paira silenciosa sobre Noop City. Encontraste os 5 segredos.',
+      'O selo lendário «Mestre dos Segredos» foi adicionado ao teu álbum de explorador e os teus troféus ficam visíveis para os outros jogadores no teu perfil.',
+    ],
+  },
+  en: {
+    title: 'The Great Secret',
+    body: [
+      'The sky opens and the craft hovers silently above Noop City. You found all 5 secrets.',
+      'The legendary “Master of Secrets” seal was added to your explorer album, and your trophies are now visible to other players on your profile.',
+    ],
+  },
+} as const;
+
 type InfoName = keyof typeof infoContent;
 
 /** Default language is Portuguese; only an explicit profile `'en'` switches the
@@ -394,6 +411,16 @@ export class UiController {
       this.count.textContent = this.easterEggs + '/' + this.totalEasterEggs;
       this.maybeGrantReward(false);
     }, 750);
+  }
+
+  /** The 5/5 finale: a golden overlay announcing the Grand Secret. */
+  showGrandSecret() {
+    playSfx('open');
+    const lang = getLanguage();
+    const { title, body } = grandSecretContent[lang];
+    this.showInfoPanel(
+      `<h1 class="grand-title">👑 ${title}</h1>${body.map((paragraph) => `<p>${paragraph}</p>`).join('')}`,
+    );
   }
 
   incrementEasterEggs(alreadyFound = false) {

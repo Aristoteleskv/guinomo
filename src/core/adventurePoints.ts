@@ -15,6 +15,8 @@ export const POINTS = {
   streakVisit: 10,
   friendMeet: 25,
   pair: 40,
+  /** One-time 5/5 finale bonus (the Grand Secret). */
+  grandSecret: 200,
 } as const;
 
 interface PointsState {

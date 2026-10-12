@@ -772,6 +772,8 @@ nav .cnt {
   color: #333;
   font-family: var(--default-font);
   text-align: left;
+  max-height: min(70vh, 420px);
+  overflow-y: auto;
 }
 
 .avatar-editor[hidden] {
@@ -789,7 +791,7 @@ nav .cnt {
 
 .avatar-editor-row {
   display: grid;
-  grid-template-columns: 36px 1fr;
+  grid-template-columns: 46px 1fr;
   align-items: center;
   gap: 6px 8px;
   margin-bottom: 8px;

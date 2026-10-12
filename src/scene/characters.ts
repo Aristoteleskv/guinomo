@@ -21,7 +21,7 @@ export class CharactersModule extends SceneModule {
   declare mesh: Characters;
   seed = 0;
 
-  private _avatarCache = new Map<number, { shirt: number[], skin: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string, role: string }>();
+  private _avatarCache = new Map<number, { shirt: number[], skin: number[], hair: number[], hat: number[], shoes: number[], name: string, nameTagColor: string, hatVisible: number, h: number, isOwner: boolean, ageScale: number, gender: string, role: string }>();
   private _nameTags = new Map<string, HTMLDivElement>();
   private _nameTagsContainer: HTMLDivElement | null = null;
   private _localNameTagColor: string | null = null;
@@ -41,6 +41,9 @@ export class CharactersModule extends SceneModule {
       const data = this._avatarCache.get(uid)!;
       userData.colorShirt = data.shirt;
       userData.colorSkin = data.skin;
+      userData.colorHair = data.hair;
+      userData.colorHat = data.hat;
+      userData.colorShoe = data.shoes;
       userData.name = data.name;
       userData.hatVisible = data.hatVisible ?? data.h ?? 1;
       userData.h = data.h ?? data.hatVisible ?? 1;
@@ -64,6 +67,9 @@ export class CharactersModule extends SceneModule {
       const shirt = new Color(dna['shirt-hex'] || '#4c80e5');
       const skinHex = dna['skin-hex'] || '#e5b299';
       const skin = new Color(skinHex);
+      const hair = new Color(dna['hair-hex'] || '#4a2f1b');
+      const hat = new Color(dna['hat-hex'] || '#ffffff');
+      const shoes = new Color(dna['shoe-hex'] || '#ffffff');
       const name = dna['username'] || (clientId === 'local' ? window.GUINOMO_PROFILE?.username : '') || `User ${uid}`;
       const nameTagColor = clientId === 'local' && this._localNameTagColor
         ? this._localNameTagColor
@@ -78,6 +84,9 @@ export class CharactersModule extends SceneModule {
       const data = {
         shirt: [shirt.r, shirt.g, shirt.b],
         skin: [skin.r, skin.g, skin.b],
+        hair: [hair.r, hair.g, hair.b],
+        hat: [hat.r, hat.g, hat.b],
+        shoes: [shoes.r, shoes.g, shoes.b],
         name: name,
         nameTagColor,
         hatVisible,
@@ -92,6 +101,9 @@ export class CharactersModule extends SceneModule {
       this._avatarCache.set(uid, data);
       userData.colorShirt = data.shirt;
       userData.colorSkin = data.skin;
+      userData.colorHair = data.hair;
+      userData.colorHat = data.hat;
+      userData.colorShoe = data.shoes;
       userData.name = data.name;
       userData.hatVisible = data.hatVisible;
       userData.h = data.h;
@@ -117,6 +129,9 @@ export class CharactersModule extends SceneModule {
       const c = new Color().setHSL(hue, 0.5, 0.5);
       userData.colorShirt = [c.r, c.g, c.b];
       userData.colorSkin = [0.9, 0.7, 0.6];
+      userData.colorHair = [0.33, 0.25, 0.18];
+      userData.colorHat = [1, 1, 1];
+      userData.colorShoe = [1, 1, 1];
       userData.name = `User ${uid}`;
       userData.hatVisible = 1;
       userData.h = 1;
@@ -291,40 +306,64 @@ export class CharactersModule extends SceneModule {
     if (uid > 0) await this._saveAvatarConfig(uid, 'role', role);
   }
 
-  /** Aplica e guarda a cor de camisa/pele do avatar local (dono guarda no perfil). */
-  private async setLocalColor(kind: 'shirt' | 'skin', hex: unknown) {
+  /** Aplica e guarda uma cor do avatar local (o dono guarda no perfil). */
+  private async setLocalColor(kind: 'shirt' | 'skin' | 'hair' | 'hat' | 'shoes', hex: unknown) {
     if (!this.isValidNameTagColor(hex)) return;
     const local = this.mesh?._localObject;
     const uid = local?.userData.uid ?? window.GUINOMO_UID ?? 0;
     const isOwner = Boolean(local?.userData.isOwner);
 
     const color = new Color(hex).toArray();
+    const fields: Record<typeof kind, string> = {
+      shirt: 'colorShirt',
+      skin: 'colorSkin',
+      hair: 'colorHair',
+      hat: 'colorHat',
+      shoes: 'colorShoe',
+    };
+    const cacheKeys: Record<typeof kind, string> = {
+      shirt: 'shirt',
+      skin: 'skin',
+      hair: 'hair',
+      hat: 'hat',
+      shoes: 'shoes',
+    };
+    const saveKeys: Record<typeof kind, string> = {
+      shirt: 'shirt_color',
+      skin: 'skin_color',
+      hair: 'hair_color',
+      hat: 'hat_color',
+      shoes: 'shoe_color',
+    };
+
     if (local) {
-      if (kind === 'shirt') local.userData.colorShirt = color;
-      else local.userData.colorSkin = color;
-      const cached = this._avatarCache.get(uid);
-      if (cached) {
-        if (kind === 'shirt') cached.shirt = color;
-        else cached.skin = color;
-      }
+      local.userData[fields[kind]] = color;
+      const cached = this._avatarCache.get(uid) as Record<string, unknown> | undefined;
+      if (cached) cached[cacheKeys[kind]] = color;
     }
     if (uid > 0 && isOwner) {
-      await this._saveAvatarConfig(uid, kind === 'shirt' ? 'shirt_color' : 'skin_color', hex);
+      await this._saveAvatarConfig(uid, saveKeys[kind], hex);
     }
     this.emitLocalAvatarState({
-      shirt: kind === 'shirt' ? color : local?.userData.colorShirt,
-      skin: kind === 'skin' ? color : local?.userData.colorSkin,
+      shirt: local?.userData.colorShirt,
+      skin: local?.userData.colorSkin,
+      hair: local?.userData.colorHair,
+      hat: local?.userData.colorHat,
+      shoes: local?.userData.colorShoe,
       isOwner: true,
     });
   }
 
   /** Avisa a UI do editor de avatar: mostra o painel (dono) e as cores atuais. */
-  private emitLocalAvatarState(data: { shirt?: number[]; skin?: number[]; isOwner?: boolean }) {
+  private emitLocalAvatarState(data: { shirt?: number[]; skin?: number[]; hair?: number[]; hat?: number[]; shoes?: number[]; isOwner?: boolean }) {
     if (!data?.isOwner) return;
     events.emit('ui_show_avatar_editor', true);
     events.emit('webgl_character_colors', {
       shirt: charactersHex(data.shirt, '#3a86ff'),
       skin: charactersHex(data.skin, '#e5b299'),
+      hair: charactersHex(data.hair, '#4a2f1b'),
+      hat: charactersHex(data.hat, '#ffffff'),
+      shoes: charactersHex(data.shoes, '#ffffff'),
     });
   }
 
@@ -340,6 +379,15 @@ export class CharactersModule extends SceneModule {
     });
     events.on('webgl_character_set_skin_color', (hex: string) => {
       void this.setLocalColor('skin', hex);
+    });
+    events.on('webgl_character_set_hair_color', (hex: string) => {
+      void this.setLocalColor('hair', hex);
+    });
+    events.on('webgl_character_set_hat_color', (hex: string) => {
+      void this.setLocalColor('hat', hex);
+    });
+    events.on('webgl_character_set_shoe_color', (hex: string) => {
+      void this.setLocalColor('shoes', hex);
     });
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -357,6 +405,21 @@ export class CharactersModule extends SceneModule {
     skinned.geometry.setAttribute('instanceColorShirt', new InstancedBufferAttribute(new Float32Array(128 * 3), 3));
     skinned.geometry.setAttribute('instanceColorSkin', new InstancedBufferAttribute(new Float32Array(128 * 3), 3));
     skinned.geometry.setAttribute('instanceHatVisible', new InstancedBufferAttribute(new Float32Array(128), 1));
+
+    // Cores por slot do editor de avatar: cabelo, chapéu e sapatos. Os valores
+    // por omissão preservam o aspeto atual (branco = sem tinta no chapéu/sapato;
+    // castanho = cabelo curto).
+    const hairAttr = new InstancedBufferAttribute(new Float32Array(128 * 3), 3);
+    const hatAttr = new InstancedBufferAttribute(new Float32Array(128 * 3), 3);
+    const shoeAttr = new InstancedBufferAttribute(new Float32Array(128 * 3), 3);
+    for (let i = 0; i < 128; i++) {
+      hairAttr.setXYZ(i, 0.33, 0.25, 0.18);
+      hatAttr.setXYZ(i, 1, 1, 1);
+      shoeAttr.setXYZ(i, 1, 1, 1);
+    }
+    skinned.geometry.setAttribute('instanceColorHair', hairAttr);
+    skinned.geometry.setAttribute('instanceColorHat', hatAttr);
+    skinned.geometry.setAttribute('instanceColorShoe', shoeAttr);
     skinned.material = phongMaterial({ isCharacters: true });
     skinned.customDepthMaterial = depthCharsMaterial();
 
@@ -412,6 +475,13 @@ export class CharactersModule extends SceneModule {
         this.mesh.geometry.attributes.instanceColorShirt.setXYZ(instanceId, shirt[0], shirt[1], shirt[2]);
         this.mesh.geometry.attributes.instanceColorSkin.setXYZ(instanceId, skin[0], skin[1], skin[2]);
         this.mesh.geometry.attributes.instanceHatVisible.setX(instanceId, hat);
+
+        const hair = local.userData.colorHair || [0.33, 0.25, 0.18];
+        const hatColor = local.userData.colorHat || [1, 1, 1];
+        const shoe = local.userData.colorShoe || [1, 1, 1];
+        this.mesh.geometry.attributes.instanceColorHair.setXYZ(instanceId, hair[0], hair[1], hair[2]);
+        this.mesh.geometry.attributes.instanceColorHat.setXYZ(instanceId, hatColor[0], hatColor[1], hatColor[2]);
+        this.mesh.geometry.attributes.instanceColorShoe.setXYZ(instanceId, shoe[0], shoe[1], shoe[2]);
       },
     });
 
@@ -420,6 +490,9 @@ export class CharactersModule extends SceneModule {
       this.mesh.geometry.attributes.instanceColorShirt.needsUpdate = true;
       this.mesh.geometry.attributes.instanceColorSkin.needsUpdate = true;
       this.mesh.geometry.attributes.instanceHatVisible.needsUpdate = true;
+      this.mesh.geometry.attributes.instanceColorHair.needsUpdate = true;
+      this.mesh.geometry.attributes.instanceColorHat.needsUpdate = true;
+      this.mesh.geometry.attributes.instanceColorShoe.needsUpdate = true;
       this.mesh.update();
       this._updateNameTagPositions();
 
@@ -573,7 +646,10 @@ export class CharactersModule extends SceneModule {
     const shirtHex = `#${new Color().setHSL(Math.random(), 0.55, 0.5).getHexString()}`;
     const skinPalette = ['#f2c8a0', '#e5b299', '#d7916e', '#b06c46', '#8c4f2b', '#5d3a1f'];
     const skinHex = skinPalette[Math.floor(Math.random() * skinPalette.length)];
+    const hairPalette = ['#2f2118', '#4a2f1b', '#6b4423', '#8a5a2b', '#c9a227', '#1c1c1c', '#8d4b2f'];
+    const hairHex = hairPalette[Math.floor(Math.random() * hairPalette.length)];
     void this.setLocalColor('shirt', shirtHex);
     void this.setLocalColor('skin', skinHex);
+    void this.setLocalColor('hair', hairHex);
   };
 }

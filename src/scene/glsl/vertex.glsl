@@ -80,10 +80,16 @@
         attribute float instanceSeed;
         attribute vec3 instanceColorShirt;
         attribute vec3 instanceColorSkin;
+        attribute vec3 instanceColorHair;
+        attribute vec3 instanceColorHat;
+        attribute vec3 instanceColorShoe;
         attribute float instanceHatVisible;
         varying float vSeed;
         varying vec3 vColorShirt;
         varying vec3 vColorSkin;
+        varying vec3 vColorHair;
+        varying vec3 vColorHat;
+        varying vec3 vColorShoe;
         varying float vHatVisible;
         // Posição/normal BIND (pré-skinning, atributos crus `position`/`normal`).
         // A máscara de cabelo e boca fica presa AO VÉRTICE: acompanha a cabeça em
@@ -108,6 +114,9 @@
             vSeed = instanceSeed;
             vColorShirt = instanceColorShirt;
             vColorSkin = instanceColorSkin;
+            vColorHair = instanceColorHair;
+            vColorHat = instanceColorHat;
+            vColorShoe = instanceColorShoe;
             vHatVisible = instanceHatVisible;
             vBindPos = position;
             vBindNormal = normalize(normal);

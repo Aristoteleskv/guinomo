@@ -56,8 +56,8 @@ $value = filter_input(INPUT_POST, 'value', FILTER_UNSAFE_RAW);
 
 // Lista de chaves que o 3D tem permissão para alterar.
 // Mantenha em sincronia com os eventos emitidos pelo cliente
-// (src/scene/characters.ts: hat_visible, name_tag_color).
-$allowed_keys = ['hat_visible', 'name_tag_color'];
+// (src/scene/characters.ts: hat_visible, name_tag_color, *_color).
+$allowed_keys = ['hat_visible', 'name_tag_color', 'shirt_color', 'skin_color', 'hair_color', 'hat_color', 'shoe_color'];
 
 if (!in_array($key, $allowed_keys, true)) {
     echo json_encode(['success' => false, 'error' => 'Chave de configuração inválida']);
@@ -67,10 +67,10 @@ if (!in_array($key, $allowed_keys, true)) {
 // Tratamento específico por tipo de dado
 if ($key === 'hat_visible') {
     $value = ($value === 'true' || $value === '1');
-} elseif ($key === 'name_tag_color') {
+} elseif (substr($key, -6) === '_color') {
     // Mesmo formato aceito pelo cliente (isValidNameTagColor): #rrggbb
     if (!is_string($value) || !preg_match('/^#[0-9a-f]{6}$/i', $value)) {
-        echo json_encode(['success' => false, 'error' => 'Cor da etiqueta inválida']);
+        echo json_encode(['success' => false, 'error' => 'Cor inválida']);
         exit;
     }
     $value = strtolower($value);

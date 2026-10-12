@@ -19,6 +19,9 @@
         varying float vSeed;
         varying vec3 vColorShirt;
         varying vec3 vColorSkin;
+        varying vec3 vColorHair;
+        varying vec3 vColorHat;
+        varying vec3 vColorShoe;
         varying float vHatVisible;
         varying vec3 vBindPos;
         varying vec3 vBindNormal;
@@ -249,7 +252,16 @@
                             diffuseSpecular = vColorShirt * (0.6 + floor(rampX * 2.99) * 0.2);
                         } else {
                             float rampY = getRamp(vColorInfo.r);
-                            diffuseSpecular = texture2D(tRamp, vec2(rampX, rampY)).rgb;
+                            vec3 partColor = texture2D(tRamp, vec2(rampX, rampY)).rgb;
+                            if (abs(vColorInfo.r - 78.0) < 0.5) {
+                                // 78 = sapatos: tinge a cor base com a cor escolhida
+                                // (branco por omissão = aspeto original).
+                                partColor *= vColorShoe;
+                            } else if (abs(vColorInfo.r - 75.0) < 0.5 || abs(vColorInfo.r - 76.0) < 0.5) {
+                                // 75/76 = chapéu (topo + fita): tinge com a cor escolhida.
+                                partColor *= vColorHat;
+                            }
+                            diffuseSpecular = partColor;
                         }
                     } else if (vColorInfo.y < 1.01) {
                         // Pele - Usa a cor vinda do atributo (PHP/UID)
@@ -264,17 +276,19 @@
                         // pose, e é imune à escala/rotação da instância.
                         // Cabelo curto (buzzcut) quando o chapéu está desligado: a
                         // calote do crânio (esfera centrada em ~(0, 1.37, 0.06) com
-                        // raio ~0.36, em coordenadas bind) é repintada de castanho
-                        // escuro, excluindo a face (normal bind +z), o pescoço (y baixo)
-                        // e os olhos (parte fixa 77, nunca tocada).
+                        // raio ~0.36, em coordenadas bind) é repintada com a cor de
+                        // cabelo escolhida no editor de avatar (atributo por instância,
+                        // por omissão castanho escuro), excluindo a face (normal bind
+                        // +z), o pescoço (y baixo) e os olhos (parte fixa 77, nunca
+                        // tocada).
                         vec3 headCenter = vec3(0.0, 1.37, 0.06);
                         float distHead = distance(vBindPos, headCenter);
                         float inHead = 1.0 - smoothstep(0.26, 0.36, distHead);
                         float faceSide = smoothstep(0.08, 0.30, vBindNormal.z);
                         float neckCut = smoothstep(1.18, 1.26, vBindPos.y);
                         float hair = inHead * (1.0 - faceSide) * neckCut * (1.0 - vHatVisible);
-                        vec3 darkHair = vec3(0.33, 0.25, 0.18);
-                        diffuseSpecular = mix(vColorSkin, darkHair, hair) * lumaSkin;
+                        vec3 hairColor = max(vColorHair, vec3(0.04));
+                        diffuseSpecular = mix(vColorSkin, hairColor, hair) * lumaSkin;
                         // Boca: linha fina, ligeiramente curvada, pontas arredondadas.
                         // Coordenadas BIND (pré-skinning, presas ao vértice): a máscara
                         // acompanha a cabeça em qualquer animação — valida o referencial

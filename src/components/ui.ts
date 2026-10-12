@@ -4,6 +4,18 @@ import { playSfx } from '../engine/sfx';
 import { EMOJI, STICKERS, createStickerNode, parseChatTokens, stickerToken } from './chatStickers';
 import './chatStickers.css';
 
+/** Slots personalizáveis no editor de avatar (cor por instância no shader). */
+type AvatarPart = 'shirt' | 'skin' | 'hair' | 'hat' | 'shoes';
+
+/** Paletas usadas nos swatches e na randomização do editor. */
+const AVATAR_PALETTES: Record<AvatarPart, string[]> = {
+  shirt: ['#e63946', '#ef8354', '#ffd166', '#06d6a0', '#118ab2', '#3a86ff', '#8338ec', '#f4f0e6', '#3b2f2a'],
+  skin: ['#f2c8a0', '#e5b299', '#d7916e', '#b06c46', '#8c4f2b', '#5d3a1f'],
+  hair: ['#2f2118', '#4a2f1b', '#6b4423', '#8a5a2b', '#c9a227', '#1c1c1c', '#8d4b2f', '#c9c9c9'],
+  hat: ['#f4f0e6', '#e63946', '#ffd166', '#06d6a0', '#118ab2', '#8338ec', '#3b2f2a'],
+  shoes: ['#ffffff', '#3b2f2a', '#e63946', '#118ab2', '#06d6a0', '#ffd166', '#8338ec'],
+};
+
 const speakerIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M10.189 0.228 6.13 3.332H4.168c-.512 0-.938.41-.938.938v4.384c0 .165.043.321.118.457L.816 10.907a1 1 0 1 0 1.157 1.631l4.153-2.946h.021l.026.02 5.756-4.082v-.054l3.694-2.62a1 1 0 0 0-1.157-1.631l-2.537 1.8V1.08c-.017-.904-1.041-1.399-1.74-.853Z" fill="#716C66"/></svg>';
 const mutedIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M6.96.228 2.9 3.332H.938A.94.94 0 0 0 0 4.27v4.384c0 .511.41.938.938.938h1.979l4.042 3.104a1 1 0 0 0 1.74-.853V1.08C8.682.177 7.659-.318 6.96.228Z" fill="#716C66"/></svg>';
 const infoIcon = '<svg class="info" viewBox="0 0 4 18" aria-hidden="true"><path d="M2 6a2 2 0 0 1 2 2v6.818a2 2 0 1 1-4 0V8a2 2 0 0 1 2-2ZM4 2a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" fill="#716C66"/></svg>';
@@ -115,8 +127,6 @@ export class UiController {
   private readonly hatButton: HTMLButtonElement;
   private readonly avatarEditor: HTMLDivElement;
   private readonly avatarEditorRandom: HTMLButtonElement;
-  private readonly avatarEditorShirtInput: HTMLInputElement;
-  private readonly avatarEditorSkinInput: HTMLInputElement;
   private avatarEditorOwner = false;
   private readonly count: HTMLDivElement;
   /** Left-side identity card: photo + username + elements found. */
@@ -168,6 +178,21 @@ export class UiController {
           <span class="avatar-editor-label">${language === 'en' ? 'Skin' : 'Pele'}</span>
           <span class="avatar-editor-swatches" data-part="skin"></span>
           <input class="avatar-editor-input" type="color" data-part="skin" tabindex="-1" aria-label="${language === 'en' ? 'Skin color' : 'Cor da pele'}">
+        </label>
+        <label class="avatar-editor-row">
+          <span class="avatar-editor-label">${language === 'en' ? 'Hair' : 'Cabelo'}</span>
+          <span class="avatar-editor-swatches" data-part="hair"></span>
+          <input class="avatar-editor-input" type="color" data-part="hair" tabindex="-1" aria-label="${language === 'en' ? 'Hair color' : 'Cor do cabelo'}">
+        </label>
+        <label class="avatar-editor-row">
+          <span class="avatar-editor-label">${language === 'en' ? 'Hat' : 'Chapéu'}</span>
+          <span class="avatar-editor-swatches" data-part="hat"></span>
+          <input class="avatar-editor-input" type="color" data-part="hat" tabindex="-1" aria-label="${language === 'en' ? 'Hat color' : 'Cor do chapéu'}">
+        </label>
+        <label class="avatar-editor-row">
+          <span class="avatar-editor-label">${language === 'en' ? 'Shoes' : 'Sapatos'}</span>
+          <span class="avatar-editor-swatches" data-part="shoes"></span>
+          <input class="avatar-editor-input" type="color" data-part="shoes" tabindex="-1" aria-label="${language === 'en' ? 'Shoes color' : 'Cor dos sapatos'}">
         </label>
         <button class="button avatar-editor-random" type="button">🎲 ${language === 'en' ? 'Random' : 'Aleatório'}</button>
         <p class="avatar-editor-note">${language === 'en' ? 'Saved to your profile — friends see it too.' : 'Guardado no teu perfil — os amigos também o veem.'}</p>
@@ -245,8 +270,6 @@ export class UiController {
 
     this.avatarEditor = this.nav.querySelector<HTMLDivElement>('.avatar-editor')!;
     this.avatarEditorRandom = this.avatarEditor.querySelector<HTMLButtonElement>('.avatar-editor-random')!;
-    this.avatarEditorShirtInput = this.avatarEditor.querySelector<HTMLInputElement>('.avatar-editor-input[data-part="shirt"]')!;
-    this.avatarEditorSkinInput = this.avatarEditor.querySelector<HTMLInputElement>('.avatar-editor-input[data-part="skin"]')!;
 
     this.colorSquare = colorButton.querySelector('.color-square')!;
     this.soundButton.innerHTML = speakerIcon;
@@ -296,27 +319,30 @@ export class UiController {
         container.append(swatch);
       });
     };
-    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="shirt"]')!, ['#e63946', '#ef8354', '#ffd166', '#06d6a0', '#118ab2', '#3a86ff', '#8338ec', '#f4f0e6', '#3b2f2a'], (hex) => this.pickAvatarColor('shirt', hex));
-    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="skin"]')!, ['#f2c8a0', '#e5b299', '#d7916e', '#b06c46', '#8c4f2b', '#5d3a1f'], (hex) => this.pickAvatarColor('skin', hex));
-    this.avatarEditorShirtInput.addEventListener('change', () => this.pickAvatarColor('shirt', this.avatarEditorShirtInput.value));
-    this.avatarEditorSkinInput.addEventListener('change', () => this.pickAvatarColor('skin', this.avatarEditorSkinInput.value));
-    this.avatarEditorRandom.addEventListener('click', () => {
-      events.emit('webgl_character_randomize_color');
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="shirt"]')!, AVATAR_PALETTES.shirt, (hex) => this.pickAvatarColor('shirt', hex));
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="skin"]')!, AVATAR_PALETTES.skin, (hex) => this.pickAvatarColor('skin', hex));
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="hair"]')!, AVATAR_PALETTES.hair, (hex) => this.pickAvatarColor('hair', hex));
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="hat"]')!, AVATAR_PALETTES.hat, (hex) => this.pickAvatarColor('hat', hex));
+    buildSwatches(this.avatarEditor.querySelector<HTMLElement>('.avatar-editor-swatches[data-part="shoes"]')!, AVATAR_PALETTES.shoes, (hex) => this.pickAvatarColor('shoes', hex));
+    this.avatarEditor.querySelectorAll<HTMLInputElement>('.avatar-editor-input').forEach((input) => {
+      const part = input.dataset.part as AvatarPart;
+      input.addEventListener('change', () => this.pickAvatarColor(part, input.value));
     });
+    this.avatarEditorRandom.addEventListener('click', () => this.randomizeAvatar());
     events.on('ui_show_avatar_editor', (show: boolean) => {
       this.avatarEditorOwner = Boolean(show);
       if (!show) this.closeAvatarEditor();
     });
-    events.on('webgl_character_colors', (colors: { shirt?: string; skin?: string }) => {
+    events.on('webgl_character_colors', (colors: Partial<Record<AvatarPart, string>>) => {
       if (!colors) return;
-      if (this.isHexColor(colors.shirt)) {
-        this.avatarEditorShirtInput.value = colors.shirt;
-        this.setActiveSwatch('shirt', colors.shirt);
-      }
-      if (this.isHexColor(colors.skin)) {
-        this.avatarEditorSkinInput.value = colors.skin;
-        this.setActiveSwatch('skin', colors.skin);
-      }
+      (Object.keys(AVATAR_PALETTES) as AvatarPart[]).forEach((part) => {
+        const hex = colors[part];
+        if (this.isHexColor(hex)) {
+          const input = this.avatarEditor.querySelector<HTMLInputElement>(`.avatar-editor-input[data-part="${part}"]`);
+          if (input) input.value = hex;
+          this.setActiveSwatch(part, hex);
+        }
+      });
       if (this.isHexColor(colors.shirt)) this.colorSquare.style.backgroundColor = colors.shirt;
     });
 
@@ -455,16 +481,31 @@ export class UiController {
     this.colorSquare.style.backgroundColor = color;
   }
 
-  /** Emite a escolha de cor (camisa/pele) para a cena + ativa o swatch. */
-  private pickAvatarColor(part: 'shirt' | 'skin', hex: string) {
+  /** Emite a escolha de cor do slot para a cena + ativa o swatch. */
+  private pickAvatarColor(part: AvatarPart, hex: string) {
     if (!this.isHexColor(hex)) return;
-    const input = part === 'shirt' ? this.avatarEditorShirtInput : this.avatarEditorSkinInput;
-    input.value = hex;
+    const input = this.avatarEditor.querySelector<HTMLInputElement>(`.avatar-editor-input[data-part="${part}"]`);
+    if (input) input.value = hex;
     this.setActiveSwatch(part, hex);
-    events.emit(part === 'shirt' ? 'webgl_character_set_shirt_color' : 'webgl_character_set_skin_color', hex);
+    const eventByPart: Record<AvatarPart, string> = {
+      shirt: 'webgl_character_set_shirt_color',
+      skin: 'webgl_character_set_skin_color',
+      hair: 'webgl_character_set_hair_color',
+      hat: 'webgl_character_set_hat_color',
+      shoes: 'webgl_character_set_shoe_color',
+    };
+    events.emit(eventByPart[part], hex);
   }
 
-  private setActiveSwatch(part: 'shirt' | 'skin', hex: string) {
+  /** Escolhe uma cor aleatória para cada slot (botão Aleatório). */
+  private randomizeAvatar() {
+    (Object.keys(AVATAR_PALETTES) as AvatarPart[]).forEach((part) => {
+      const palette = AVATAR_PALETTES[part];
+      this.pickAvatarColor(part, palette[Math.floor(Math.random() * palette.length)]);
+    });
+  }
+
+  private setActiveSwatch(part: AvatarPart, hex: string) {
     const container = this.avatarEditor.querySelector<HTMLElement>(`.avatar-editor-swatches[data-part="${part}"]`);
     if (!container) return;
     const value = this.isHexColor(hex) ? hex.toLowerCase() : '';

@@ -6,8 +6,8 @@ without the full PHP/MySQL application. **None of these are production code.**
 
 | Mock file | Client call | Response shape |
 |---|---|---|
-| `avatar.php` | `php/avatar.php?format=json`, `php/avatar.php?uid=N&format=json` | DNA object (`shirt-hex`, `skin-hex`, `username`, `name-tag-color`, `hat-visible`, `physique`, `age_group`, `is_owner`, `gender_category`) |
-| `avatar.php` | `php/avatar.php?uid=N` (as `<img src>`) | SVG avatar image |
+| `avatar.php` | `php/avatar.php?format=json`, `php/avatar.php?uid=N&format=json` | DNA object (`shirt-hex`, `skin-hex`, `username`, `name-tag-color`, `hat-visible`, `physique`, `age_group`, `is_owner`, `gender_category`, plus additive look traits: `hair-style`, `hair-hex`, `eye-style`, `mouth-style`, `accessory`, `freckles`) |
+| `avatar.php` | `php/avatar.php?uid=N` (as `<img src>`) | Flat SVG avatar image |
 | `save_avatar_3d.php` | `POST php/save_avatar_3d.php` (`uid`, `key`, `value`, `csrf_token`) | `{ "success": bool }` |
 | `notificacoes_action.php` | `php/notificacoes_action.php?action=recent&limit=5` | `{ "success": bool, "itens": [...] }` |
 | `api/guinomo/friends.php` | `GET api/guinomo/friends` | `{ "success": true, "friends": [...] }` |
@@ -42,6 +42,17 @@ a stub (see the guard that requires `../src/Services/AvatarService.php`).
 `avatar.php` uses `$_SESSION['hashtag_uid']` like the real app, falling back to
 `1` so the mocks are usable out of the box. `save_avatar_3d.php` still returns
 `401` without a session, matching production behavior.
+
+## Avatar look (2D SVG + additive DNA)
+
+The image response is a flat, deterministic SVG avatar. Beyond the colors, the
+look is picked per uid from a small part taxonomy — hair style/color, eyes,
+mouth, glasses, hat — inspired by the Bitstrips character builder but **drawn
+here from scratch** (no third-party art). The traits are derived in PHP
+(`avatar_pick`/`mock_dna`), echoed in the JSON as the additive keys above, and
+consumed by `avatar_svg()`. They are a mock seed: a real profile can supply the
+same keys and the image will follow. The 3D client ignores the extra keys, so
+the existing `shirt-hex`/`skin-hex`/`hat-visible` contract is unchanged.
 
 ## Presence is persisted (mocks, but stateful)
 

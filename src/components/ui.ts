@@ -1,6 +1,8 @@
 import { events } from '../core/events';
 import { DEFAULT_WORLD_ID, getWorldId, WORLDS } from '../core/worlds';
 import { playSfx } from '../engine/sfx';
+import { EMOJI, STICKERS, createStickerNode, parseChatTokens, stickerToken } from './chatStickers';
+import './chatStickers.css';
 
 const speakerIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M10.189 0.228 6.13 3.332H4.168c-.512 0-.938.41-.938.938v4.384c0 .165.043.321.118.457L.816 10.907a1 1 0 1 0 1.157 1.631l4.153-2.946h.021l.026.02 5.756-4.082v-.054l3.694-2.62a1 1 0 0 0-1.157-1.631l-2.537 1.8V1.08c-.017-.904-1.041-1.399-1.74-.853Z" fill="#716C66"/></svg>';
 const mutedIcon = '<svg class="sound sound2" viewBox="0 0 17 13" aria-hidden="true"><path d="M6.96.228 2.9 3.332H.938A.94.94 0 0 0 0 4.27v4.384c0 .511.41.938.938.938h1.979l4.042 3.104a1 1 0 0 0 1.74-.853V1.08C8.682.177 7.659-.318 6.96.228Z" fill="#716C66"/></svg>';
@@ -559,7 +561,9 @@ export class UiController {
         </header>
         <div class="guinomo-chat-messages" aria-live="polite"></div>
         <p class="guinomo-chat-typing" hidden></p>
+        <div class="guinomo-chat-stickers" hidden aria-label="${language === 'en' ? 'Stickers' : 'Stickers'}"></div>
         <form class="guinomo-chat-form" novalidate>
+          <button type="button" class="guinomo-chat-sticker-btn" aria-label="${language === 'en' ? 'Stickers and emoji' : 'Stickers e emojis'}" title="${language === 'en' ? 'Stickers and emoji' : 'Stickers e emojis'}">🙂</button>
           <input class="guinomo-chat-input" maxlength="200" autocomplete="off"
             aria-label="${language === 'en' ? 'Write a message' : 'Escreve uma mensagem'}"
             placeholder="${language === 'en' ? 'Say something to the world…' : 'Diz algo ao mundo…'}">
@@ -570,7 +574,10 @@ export class UiController {
       document.body.append(panel);
       this.chatPanel = panel;
 
+      this.buildStickerPanel(panel, language);
+
       panel.querySelector<HTMLButtonElement>('.guinomo-chat-close')?.addEventListener('click', () => this.closeChat());
+      panel.querySelector<HTMLButtonElement>('.guinomo-chat-sticker-btn')?.addEventListener('click', () => this.toggleStickers());
       panel.querySelector<HTMLFormElement>('.guinomo-chat-form')?.addEventListener('submit', (event) => {
         event.preventDefault();
         this.sendChatMessage();
@@ -592,6 +599,67 @@ export class UiController {
       events.on('p2p_chat', (chat: { uid?: number; name?: string; text?: string }) => this.receiveChatMessage(chat));
       events.on('p2p_typing', (typing: { uid?: number; name?: string }) => this.showTyping(typing.name || ''));
       events.on('p2p_ready', (ready: boolean) => this.setChatStatus(ready === true));
+  }
+
+  /** Fills the sticker/emoji panel with our catalog. Buttons are built from
+   *  trusted constants (see chatStickers.ts), never from user input. */
+  private buildStickerPanel(panel: HTMLElement, language: 'pt' | 'en') {
+      const tray = panel.querySelector<HTMLElement>('.guinomo-chat-stickers');
+      if (!tray) return;
+      for (const sticker of STICKERS) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'guinomo-chat-sticker';
+        button.title = sticker.label[language];
+        button.setAttribute('aria-label', sticker.label[language]);
+        const icon = createStickerNode(sticker.id);
+        if (icon) button.append(icon);
+        button.addEventListener('click', () => this.sendSticker(sticker.id));
+        tray.append(button);
+      }
+      for (const emoji of EMOJI) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'guinomo-chat-emoji';
+        button.textContent = emoji;
+        button.setAttribute('aria-label', emoji);
+        button.addEventListener('click', () => this.insertEmoji(emoji));
+        tray.append(button);
+      }
+  }
+
+  private toggleStickers() {
+      const tray = this.chatPanel?.querySelector<HTMLElement>('.guinomo-chat-stickers');
+      if (!tray) return;
+      this.setStickersOpen(tray.hidden);
+  }
+
+  private setStickersOpen(open: boolean) {
+      const tray = this.chatPanel?.querySelector<HTMLElement>('.guinomo-chat-stickers');
+      const button = this.chatPanel?.querySelector<HTMLElement>('.guinomo-chat-sticker-btn');
+      if (tray) tray.hidden = !open;
+      button?.classList.toggle('active', open);
+  }
+
+  private insertEmoji(emoji: string) {
+      const input = this.chatPanel?.querySelector<HTMLInputElement>('.guinomo-chat-input');
+      if (!input) return;
+      input.value = `${input.value}${emoji}`;
+      input.focus();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  /** Sends a sticker as its own message. The token rides the normal text
+   *  channel, so remote players render it too. */
+  private sendSticker(id: string) {
+      if (!this.chatPanel) return;
+      const language = getLanguage();
+      const text = stickerToken(id);
+      const name = window.GUINOMO_PROFILE?.username?.trim()
+        || (language === 'en' ? 'You' : 'Tu');
+      events.emit('p2p_send_chat', text);
+      this.appendChatMessage(name, text, true);
+      this.setStickersOpen(false);
   }
 
   private toggleChat() {
@@ -636,7 +704,22 @@ export class UiController {
       sender.textContent = name;
       const body = document.createElement('span');
       body.className = 'guinomo-chat-msg-text';
-      body.textContent = text;
+      const segments = parseChatTokens(text);
+      if (segments.length === 1 && segments[0].type === 'sticker') {
+        bubble.classList.add('guinomo-chat-msg-emoji');
+      }
+      for (const segment of segments) {
+        if (segment.type === 'sticker') {
+          const sticker = createStickerNode(segment.id);
+          if (sticker) {
+            body.append(sticker);
+            continue;
+          }
+          body.append(document.createTextNode(stickerToken(segment.id)));
+        } else {
+          body.append(document.createTextNode(segment.value));
+        }
+      }
       bubble.append(sender, body);
       list.append(bubble);
       list.scrollTop = list.scrollHeight;

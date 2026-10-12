@@ -1,0 +1,97 @@
+/* Chat emotes/stickers (see src/components/chatStickers.ts). Scoped to the
+   world chat panel so it never leaks into other HUD pieces. */
+
+#guinomo-room-chat .guinomo-chat-sticker-btn {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  align-self: center;
+  padding: 0;
+  border: 1px solid rgba(255, 250, 240, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.1);
+  color: inherit;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+}
+
+#guinomo-room-chat .guinomo-chat-sticker-btn:hover,
+#guinomo-room-chat .guinomo-chat-sticker-btn.active {
+  background: rgba(255, 250, 240, 0.22);
+}
+
+#guinomo-room-chat .guinomo-chat-stickers {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  max-height: 164px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 250, 240, 0.12);
+}
+
+#guinomo-room-chat .guinomo-chat-stickers[hidden] {
+  display: none;
+}
+
+#guinomo-room-chat .guinomo-chat-sticker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  line-height: 0;
+}
+
+#guinomo-room-chat .guinomo-chat-sticker:hover {
+  background: rgba(255, 250, 240, 0.14);
+}
+
+#guinomo-room-chat .guinomo-chat-emoji {
+  padding: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 19px;
+  line-height: 1;
+}
+
+#guinomo-room-chat .guinomo-chat-emoji:hover {
+  background: rgba(255, 250, 240, 0.14);
+}
+
+/* Sticker rendered inside a message bubble (and inside the picker buttons). */
+#guinomo-room-chat .guinomo-chat-sticker-inline {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+  vertical-align: middle;
+}
+
+#guinomo-room-chat .guinomo-chat-sticker-inline svg,
+#guinomo-room-chat .guinomo-chat-sticker-inline img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* A message that is just a sticker reads better slightly larger and without
+   the text line-height gap. */
+#guinomo-room-chat .guinomo-chat-msg-emoji {
+  padding: 4px 6px;
+  background: transparent;
+}
+
+#guinomo-room-chat .guinomo-chat-msg-emoji .guinomo-chat-msg-text {
+  display: block;
+}
+
+#guinomo-room-chat .guinomo-chat-msg-emoji .guinomo-chat-sticker-inline {
+  width: 48px;
+  height: 48px;
+}

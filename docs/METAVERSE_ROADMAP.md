@@ -140,6 +140,15 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".
 
+### Fontes de referência externa
+
+O que podemos (e não podemos) aproveitar de 5 repositórios pedidos pelo
+utilizador (Project-Summer-Island, GDevelop, 3d-game-shaders-for-beginners,
+pascalorg/editor, A-Frame) está documentado e licenciado com honestidade em
+[`docs/REFERENCE_REPOS.md`](./REFERENCE_REPOS.md). Nenhum entra como
+dependência nova; o mais acionável (pascalorg/editor, MIT, MCP) informa o futuro
+editor de cenários do pilar UGC.
+
 ## Pipeline de assets (áudio e texturas)
 
 Para "áudio e texturas melhores" sem estourar o budget de bundle:

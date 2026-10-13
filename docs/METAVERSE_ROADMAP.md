@@ -134,9 +134,27 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | **C7** | **Metamorfose pós-5/5 — o mundo acorda** — o finale deixa de ser fim: o mundo entra em fase "desperta" (fauna jamais apaga, alinhamento muda de cor, janela diária "Eco do Despertar") | `core/worldAwakening.ts` + hooks na fauna/alinhamento | Nenhuma (estado lido do `guinomo.grand_secret.v1`; sem tocar no WIP) | ✅ **feito** (commit `…`) |
 | **C8** | **Duelo de sombras** — recolher sombras no evento e duelar com projeções; replay determinístico arbitra sem servidor | `core/shadowDuel.ts` + `scene/shadowDuelScene.ts` | Netcode determinístico (Fase C do plano C++) | ✅ **feito** (commit `…`) |
 
+### Bloco D — 3D real e combate entre jogadores (2026-10-13)
+
+> Pedido do utilizador: "3D real" (não sprites 2D) e **guerra/duelo PvP real** entre
+> avatares. Tudo abaixo entra no gate normal e **não toca no WIP** do utilizador
+> (`scripts/glb2bins.mjs`, `src/scene/characters.ts`, `src/scene/glsl/*`, `materials.ts`).
+
+| Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
+|---|---|---|---|---|
+| **D1** | **Saudação 3D real (ossos)** — a saudação deixa de ser sprite 2D e passa a ser uma pose procedural nos **ossos reais do braço**, aplicada sobre a animação, com snapshot/restore para não vazar | `core/wavePose.ts` + injeção em `engine/characters.ts` (não-WIP) | Nenhuma — sem clipe nem shader novo (preserva o WIP `scene/characters.ts`) | ✅ **feito** |
+| **D2** | **Duelo PvP real entre avatares** — desafiar o avatar mais próximo (tecla `R`), aceitar, ambos enfrentam o **mesmo padrão determinístico** e trocam os registos de parry pelo canal de chat; arbitragem pura faz os dois clientes concordarem no vencedor, sem servidor | `core/avatarDuel.ts` + `scene/avatarDuelScene.ts` | Reutiliza `shadowDuel` e o chat P2P; desafiar exige sessão (`GUINOMO_UID`) | ✅ **feito** |
+| **D3** | **Bloom + vinheta de filme** no composer principal (RenderPass → Bloom → SMAA → Vinheta → Gamma), com grão temporal subtil | `core/postFxConfig.ts` + `engine/postfx.ts` + `engine/globals.ts` | `three/examples/jsm` já usado (sem dep nova); afinação por dispositivo | ✅ **feito** |
+| **D4** | **Raios de sol (god rays)** em espaço de ecrã: blur radial dos pixéis claros na direção do sol (projetado pela `sky`) | `core/postFxConfig.ts` + `engine/postfx.ts` + `scene/sky.ts` + `scene/mainController.ts` | Aproximação de ecrã (sem buffer de oclusão); por dispositivo | ✅ **feito** |
+| **D5** | **SSAO** — oclusão de ambiente no composer do ambiente | `scene/mainController.ts` (com `?ssao`) | O material de override é agressivo nos billboards com alpha; por isso **opt-in** para avaliação | 🟡 **feito (opt-in `?ssao`)** |
+| **D6** | **Água com reflexo** | `scene/sea.ts` | Já existia: `Reflector` planar + fresnel + espuma procedural | ✅ **já em produção** |
+
+Gates de cada item D: `typecheck · lint · vitest` verdes; verificação de runtime
+via `?audit` (passes do composer, projeção do sol, fluxo de rede do duelo).
+
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 ✅`.
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 (3D real, ossos) ✅ → duelos de sombras ✅ → **duelo PvP entre avatares** ✅ → **bloom + vinheta** ✅ → **god rays** ✅ → **SSAO (opt-in `?ssao`)** 🟡`.
 
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".

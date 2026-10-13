@@ -14,8 +14,9 @@ import { mountPairHud } from './components/pairHud';
 import { awardPoints, POINTS, readPoints } from './core/adventurePoints';
 import { isGoldenHour } from './core/goldenHour';
 import { allSecretsFound, foundSecretCount, isGrandSecretUnlocked, maybeUnlockGrandSecret, nextSecretToFind, unlockGrandSecret } from './core/secrets';
-import { WORLDS } from './core/worlds';
+import { WORLDS, getWorldId } from './core/worlds';
 import { mountSealsSync } from './core/sealsSync';
+import { minutesOf, worldEvent } from './core/worldRhythm';
 import { showToast } from './components/toast';
 import { assetUrl } from './core/assets';
 import './styles.css';
@@ -50,6 +51,16 @@ mountGoldenHourHud();
 mountLightTrailHud();
 mountPairHud();
 mountSealsSync();
+
+// Estado do mundo determinístico (UTC): anuncia o evento diário em curso no
+// mundo atual. O mesmo instante dá o mesmo estado em qualquer dispositivo —
+// sem rede, sem servidor.
+const worldNow = getWorldId(new URLSearchParams(window.location.search).get('world'));
+const activeEvent = worldEvent(worldNow, minutesOf(new Date()));
+if (activeEvent) {
+  const english = window.GUINOMO_PROFILE?.language === 'en';
+  showToast(`${activeEvent.icon} ${english ? activeEvent.title.en : activeEvent.title.pt} · hoje no mundo`, 'violet');
+}
 
 CustomEase.create('inOut1', 'M0,0 C0.5,0 0.1,1 1,1');
 CustomEase.create('inOut2', 'M0,0 C0.56,0 0,1 1,1');

@@ -87,11 +87,14 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | Moderação básica | Bloqueio/mute de utilizador P2P, reporte via PHP |
 
 ### Fase 3 — Persistência do mundo + UGC
-- **Spawn persistente**: o utilizador volta para onde estava (guardado no servidor).
+- **Spawn persistente** ✅: o utilizador volta para onde estava — `lib/spawn.php` +
+  `api/guinomo/spawn.php` (file/PDO, HMAC opcional); o engine restaura o ponto no
+  arranque e grava em movimento (12 s + saída da página).
 - **Criar/colocar objetos** (móveis simples, sinais, decorações) com gravação em DB.
 - Segredos/colecionáveis como **troféus visíveis** no perfil (badges) — ✅
-  endpoint pronto (`GET api/guinomo/seals?uid=N` público + POST com HMAC);
-  falta a renderização dos badges na app social.
+  endpoint pronto (`GET api/guinomo/seals?uid=N` público + POST com HMAC) e
+  badges renderizados no perfil da app social (5 chips na ordem de exploração,
+  encontrados dourados na hora dourada, coroa 👑 no 5/5).
 - **Economia soft**: moeda do mundo, lojas de cosméticos (cor/roupa/chapéu/papel).
 
 ### Fase 4 — UGC aberto + escala

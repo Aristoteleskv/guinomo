@@ -24,6 +24,7 @@ import { Notes } from './notes';
 import { LightTrailScene } from './lightTrailScene';
 import { PairLinkScene } from './pairLinkScene';
 import { mountCompass } from '../components/compass';
+import { mountSpawnSync } from '../core/spawnSync';
 import { isGoldenHour } from '../core/goldenHour';
 import type { MainController } from './mainController';
 
@@ -120,6 +121,19 @@ export class EnvironmentScene extends BaseScene {
     if (world === 'alien') {
       this.sky.setTheme('alien');
     }
+
+    // Spawn persistente: volta para o ponto onde o jogador estava neste mundo
+    // (lib/spawn.php + api/guinomo/spawn.php); inerte sem uid de sessão.
+    mountSpawnSync(
+      {
+        position: () => {
+          const p = this.characters.mesh._localObject.position;
+          return { x: p.x, y: p.y, z: p.z };
+        },
+        teleport: (point) => this.characters.mesh.snap([point.x, point.y, point.z]),
+      },
+      world,
+    );
 
     this.ready.resolve();
   }

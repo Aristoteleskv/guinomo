@@ -34,6 +34,7 @@ import { ShadowDuelScene } from './shadowDuelScene';
 import { GreetingScene } from './greetingScene';
 import { AvatarDuelScene } from './avatarDuelScene';
 import { RainScene } from './rainScene';
+import { InteriorScene } from './interiorScene';
 import { mountCompass } from '../components/compass';
 import { mountSpawnSync } from '../core/spawnSync';
 import { isGoldenHour } from '../core/goldenHour';
@@ -83,6 +84,7 @@ export class EnvironmentScene extends BaseScene {
   declare greeting: GreetingScene;
   declare avatarDuel: AvatarDuelScene;
   declare rain: RainScene;
+  declare interior: InteriorScene;
 
   constructor(_mainController: MainController) {
     super();
@@ -135,6 +137,7 @@ export class EnvironmentScene extends BaseScene {
       ['greeting', GreetingScene],
       ['avatarDuel', AvatarDuelScene],
       ['rain', RainScene],
+      ['interior', InteriorScene],
     ];
     await Promise.all(
       modules.map(([name, Module]) => {

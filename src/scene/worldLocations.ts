@@ -13,6 +13,7 @@ import {
 } from 'three';
 import { events } from '../core/events';
 import { alienCityPlan, type PlanPoint } from '../core/alienCity';
+import { type InteriorPortal } from '../core/interiors';
 import { getWorldId, type WorldId } from '../core/worlds';
 import { SceneModule } from './SceneModule';
 
@@ -32,6 +33,9 @@ export class WorldLocations extends SceneModule {
 
   /** Current secret to point the HUD compass at (empty when the world has none). */
   secretTargets: Array<{ id: string; position: Vector3 }> = [];
+
+  /** Enterable house doors (world position), consumed by scene/interiorScene.ts. */
+  housePortals: InteriorPortal[] = [];
 
   protected async init() {
     this.worldId = getWorldId(new URLSearchParams(window.location.search).get('world'));
@@ -369,6 +373,8 @@ export class WorldLocations extends SceneModule {
         { x: 40, z: -60, rot: 1.2 },
       ];
 
+      this.housePortals = positions.map((position, index) => ({ index, x: position.x, z: position.z }));
+
       this.scene.houses.meshes.forEach((mesh, i) => {
         const pos = positions[i % positions.length];
         mesh.visible = true;
@@ -544,6 +550,7 @@ export class WorldLocations extends SceneModule {
     }
 
     this.scene.ready.then(() => {
+      this.housePortals = plan.houses.map((house, index) => ({ index, x: house.x, z: house.z }));
       this.placeMeshes(this.scene.houses.meshes, plan.houses);
       this.placeMeshes(this.scene.warehouses.meshes, plan.warehouses);
       this.placeMeshes(this.scene.castles.meshes, plan.castles);

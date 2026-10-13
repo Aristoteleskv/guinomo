@@ -53,6 +53,8 @@ export class RainScene extends SceneModule {
   private lastRefresh = -Infinity;
   private readonly anchor = new Vector3();
   private readonly world: string;
+  /** Set by the interiors module while the player is indoors (no rain in a room). */
+  suspended = false;
 
   constructor(scene: EnvironmentScene) {
     super(scene);
@@ -108,6 +110,10 @@ export class RainScene extends SceneModule {
   }
 
   private update = () => {
+    if (this.suspended) {
+      this.mesh.visible = false;
+      return;
+    }
     this.refresh(false);
     const count = rainDropCount(this.state, this.drops);
     if (count === 0) return;

@@ -150,22 +150,28 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | **D6** | **Água com reflexo** | `scene/sea.ts` | Já existia: `Reflector` planar + fresnel + espuma procedural | ✅ **já em produção** |
 | **D7** | **Clima como estado (chuva)** — sereno (drizzle), chuva e tempestade determinística e **partilhada** (mundo + relógio UTC + viés por mundo); a cena desenha streaks que seguem o jogador | `core/weather.ts` + `scene/rainScene.ts` | Como o céu (A3): sem rede (ambos os clientes calculam o mesmo tempo); preview `?weather=drizzle\|rain\|storm\|clear` | ✅ **feito** |
 | **D8** | **Cidade alien maior e diversa** — o mundo `alien` passa a cidade real: praça com cristal, torres de cristal, bio-domes, plataformas flutuantes e pilones (procedural) + casas/armazéns/cidadelas/máquinas autorais, tudo a partir de um **plano puro testado**; zona de descanso incluída | `core/alienCity.ts` + `scene/worldLocations.ts` + `scene/environmentScene.ts` | Outros jogadores já partilham a cidade (presença por mundo/sala); sem dep nova | ✅ **feito** |
+| **D9** | **Interiores + dormir em casa** — cada porta de casa oferece "Entrar" (tecla `Q`); o jogador entra numa casa determinística (quarto com cama, mesa, tapete, prateleira, candeeiro e lareira), construída longe do centro sobre o próprio terreno (o chão do collider é o piso), escondida enquanto está fora; sair pelas paredes devolve-o à porta. A dormir reutiliza o descanso (`E`) com a zona de descanso posta na cama, e chove lá dentro? Não — a chuva fica suspensa | `core/interiors.ts` + `scene/interiorScene.ts` + `scene/worldLocations.ts` (portais) + `scene/rainScene.ts` (`suspended`) | Real 3D, sem assets nem dep nova; variedade determinística por `(mundo, índice)`; só os mundos com casas (`old-town`, `alien`) | ✅ **feito** |
 
 > **Reafinação D3/D4 (2026-10-13):** o bloom e os god rays liam-se exagerados
 > sobre a imagem em sRGB. `BLOOM` strength 0.6→0.3 e threshold 0.82→0.9;
-> `GODRAYS` intensity 0.5→0.24 e threshold 0.72→0.84; vinheta 0.8→0.68.
+> `GODRAYS` intensity 0.5→0.24 e threshold 0.72→0.84; vinheta 0.8→0.68. Além
+> disso, todos estes valores podem ser afinados **ao vivo por URL** (sem tocar no
+> código): `?bloom=`, `?bloomRadius=`, `?bloomThreshold=`, `?godrays=`,
+> `?godraysThreshold=`, `?godraysDecay=`, `?godraysDensity=`, `?vignette=`,
+> `?grain=`, `?vignetteOffset=` — valores inválidos ou vazios caem nos defaults.
 
 Gates de cada item D: `typecheck · lint · vitest` verdes; verificação de runtime
 via `?audit` (passes do composer, projeção do sol, fluxo de rede do duelo).
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 (3D real, ossos) ✅ → duelos de sombras ✅ → **duelo PvP entre avatares** ✅ → **bloom + vinheta** ✅ → **god rays** ✅ → **SSAO (opt-in `?ssao`)** 🟡 → **clima/chuva (D7)** ✅ → **cidade alien maior (D8)** ✅`.
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 (3D real, ossos) ✅ → duelos de sombras ✅ → **duelo PvP entre avatares** ✅ → **bloom + vinheta** ✅ → **god rays** ✅ → **SSAO (opt-in `?ssao`)** 🟡 → **clima/chuva (D7)** ✅ → **cidade alien maior (D8)** ✅ → **afinação visual ao vivo (URL)** ✅ → **olhar de lado por ossos** ✅ → **interiores + dormir em casa (D9)** ✅`.
 
 > **Fila seguinte (proposta, a confirmar com o utilizador):** *andar vs correr*
 > com velocidade de locomoção ligada à velocidade real da animação (menos
-> escorregamento) → *olhar de lado* por ossos (pescoço/cabeça, como a saudação)
-> → *entrar em casas / interiores* → *dormir e acordar dentro de casa*.
+> escorregamento) → *outros jogadores dentro das casas* (partilhar o interior
+> entre pares) → *mobilar/guardar objetos em casa* (persistência PHP) →
+> *decidir se o SSAO passa a default no desktop* → *afinar a água*.
 
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".

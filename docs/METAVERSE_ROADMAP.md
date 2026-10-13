@@ -148,13 +148,24 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | **D4** | **Raios de sol (god rays)** em espaço de ecrã: blur radial dos pixéis claros na direção do sol (projetado pela `sky`) | `core/postFxConfig.ts` + `engine/postfx.ts` + `scene/sky.ts` + `scene/mainController.ts` | Aproximação de ecrã (sem buffer de oclusão); por dispositivo | ✅ **feito** |
 | **D5** | **SSAO** — oclusão de ambiente no composer do ambiente | `scene/mainController.ts` (com `?ssao`) | O material de override é agressivo nos billboards com alpha; por isso **opt-in** para avaliação | 🟡 **feito (opt-in `?ssao`)** |
 | **D6** | **Água com reflexo** | `scene/sea.ts` | Já existia: `Reflector` planar + fresnel + espuma procedural | ✅ **já em produção** |
+| **D7** | **Clima como estado (chuva)** — sereno (drizzle), chuva e tempestade determinística e **partilhada** (mundo + relógio UTC + viés por mundo); a cena desenha streaks que seguem o jogador | `core/weather.ts` + `scene/rainScene.ts` | Como o céu (A3): sem rede (ambos os clientes calculam o mesmo tempo); preview `?weather=drizzle\|rain\|storm\|clear` | ✅ **feito** |
+| **D8** | **Cidade alien maior e diversa** — o mundo `alien` passa a cidade real: praça com cristal, torres de cristal, bio-domes, plataformas flutuantes e pilones (procedural) + casas/armazéns/cidadelas/máquinas autorais, tudo a partir de um **plano puro testado**; zona de descanso incluída | `core/alienCity.ts` + `scene/worldLocations.ts` + `scene/environmentScene.ts` | Outros jogadores já partilham a cidade (presença por mundo/sala); sem dep nova | ✅ **feito** |
+
+> **Reafinação D3/D4 (2026-10-13):** o bloom e os god rays liam-se exagerados
+> sobre a imagem em sRGB. `BLOOM` strength 0.6→0.3 e threshold 0.82→0.9;
+> `GODRAYS` intensity 0.5→0.24 e threshold 0.72→0.84; vinheta 0.8→0.68.
 
 Gates de cada item D: `typecheck · lint · vitest` verdes; verificação de runtime
 via `?audit` (passes do composer, projeção do sol, fluxo de rede do duelo).
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 (3D real, ossos) ✅ → duelos de sombras ✅ → **duelo PvP entre avatares** ✅ → **bloom + vinheta** ✅ → **god rays** ✅ → **SSAO (opt-in `?ssao`)** 🟡`.
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 (3D real, ossos) ✅ → duelos de sombras ✅ → **duelo PvP entre avatares** ✅ → **bloom + vinheta** ✅ → **god rays** ✅ → **SSAO (opt-in `?ssao`)** 🟡 → **clima/chuva (D7)** ✅ → **cidade alien maior (D8)** ✅`.
+
+> **Fila seguinte (proposta, a confirmar com o utilizador):** *andar vs correr*
+> com velocidade de locomoção ligada à velocidade real da animação (menos
+> escorregamento) → *olhar de lado* por ossos (pescoço/cabeça, como a saudação)
+> → *entrar em casas / interiores* → *dormir e acordar dentro de casa*.
 
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".

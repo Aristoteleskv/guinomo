@@ -204,7 +204,7 @@ export class EnvironmentScene extends BaseScene {
       });
     }
 
-    if (world !== 'old-town') {
+    if (world !== 'old-town' && world !== 'alien') {
       this.castles.meshes.forEach((mesh) => {
         mesh.visible = false;
       });

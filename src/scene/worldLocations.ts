@@ -12,12 +12,13 @@ import {
   Vector3,
 } from 'three';
 import { events } from '../core/events';
+import { alienCityPlan, type PlanPoint } from '../core/alienCity';
 import { getWorldId, type WorldId } from '../core/worlds';
 import { SceneModule } from './SceneModule';
 
-type CityWorld = 'floating-city' | 'tropical-city' | 'old-town';
+type CityWorld = 'floating-city' | 'tropical-city' | 'old-town' | 'alien';
 
-const CITY_WORLDS: CityWorld[] = ['floating-city', 'tropical-city', 'old-town'];
+const CITY_WORLDS: CityWorld[] = ['floating-city', 'tropical-city', 'old-town', 'alien'];
 const REST_X = 19;
 const REST_Z = -49;
 const REST_RADIUS = 4.5;
@@ -50,6 +51,7 @@ export class WorldLocations extends SceneModule {
       if (this.worldId === 'floating-city') this.createFloatingCity();
       else if (this.worldId === 'tropical-city') this.createTropicalCity();
       else if (this.worldId === 'old-town') this.createOldTown();
+      else if (this.worldId === 'alien') this.createAlienCity();
     }
 
     this.scene.ready.then(() => this.setupSecrets());
@@ -179,10 +181,17 @@ export class WorldLocations extends SceneModule {
 
   private createRestArea(ground: number) {
     const shelter = this.groundGroup(REST_X, REST_Z);
-    const wood = this.standard(this.worldId === 'old-town' ? '#71503a' : '#475b62');
-    const mattress = this.standard(this.worldId === 'tropical-city' ? '#d8b694' : '#c9d5d0');
+    const wood = this.standard(
+      this.worldId === 'old-town' ? '#71503a' : this.worldId === 'alien' ? '#3b2f63' : '#475b62',
+    );
+    const mattress = this.standard(
+      this.worldId === 'tropical-city' ? '#d8b694' : this.worldId === 'alien' ? '#9fe6d6' : '#c9d5d0',
+    );
     const pillow = this.standard('#f3e8d5');
-    const trim = this.standard(this.worldId === 'floating-city' ? '#6cd7e8' : '#d7b36b', 0.28);
+    const trim = this.standard(
+      this.worldId === 'floating-city' ? '#6cd7e8' : this.worldId === 'alien' ? '#c07bff' : '#d7b36b',
+      0.28,
+    );
 
     for (const x of [-1.05, 1.05]) {
       for (const z of [-0.7, 0.7]) {
@@ -194,7 +203,9 @@ export class WorldLocations extends SceneModule {
     this.add(shelter, new BoxGeometry(0.56, 0.2, 1.35), pillow, -0.76, 1.13, 0);
     this.add(shelter, new BoxGeometry(0.12, 0.07, 1.7), trim, 0.64, 1.06, 0);
 
-    const canopy = this.standard(this.worldId === 'old-town' ? '#8c6244' : '#4d7782');
+    const canopy = this.standard(
+      this.worldId === 'old-town' ? '#8c6244' : this.worldId === 'alien' ? '#573f8c' : '#4d7782',
+    );
     for (const x of [-1.32, 1.32]) {
       for (const z of [-0.95, 0.95]) {
         this.add(shelter, new CylinderGeometry(0.055, 0.08, 2.35, 6), canopy, x, 1.25, z);
@@ -375,6 +386,204 @@ export class WorldLocations extends SceneModule {
         mesh.position.set(x, this.groundAt(x, z), z);
         mesh.updateMatrixWorld(true);
       });
+    });
+  }
+
+  // The alien metropolis (user: "expand the alien city, make it bigger with
+  // diverse houses"). Layout is a pure, tested plan (core/alienCity.ts); this
+  // applies it: a plaza with a central crystal, crystal spires, bio-domes and
+  // floating platforms (procedural), plus the authored houses / warehouses /
+  // citadels / machines spread across the avenue. Boosted outdoor lighting is
+  // the sky's job — here we only add glowing alien materials.
+  private createAlienCity() {
+    const plan = alienCityPlan();
+    const stone = this.standard('#2b2444', 0.2);
+    const ridge = this.standard('#40356a', 0.3);
+    const glowTeal = new MeshBasicMaterial({ color: '#7bf5d0' });
+    const glowViolet = new MeshBasicMaterial({ color: '#c07bff' });
+    const glowAmber = new MeshBasicMaterial({ color: '#ffd76a' });
+    const crystal = new MeshStandardMaterial({
+      color: '#5fe6cf',
+      roughness: 0.22,
+      metalness: 0.5,
+      emissive: '#1d8f7c',
+      flatShading: true,
+    });
+    const crystalDeep = new MeshStandardMaterial({
+      color: '#9a6bff',
+      roughness: 0.26,
+      metalness: 0.45,
+      emissive: '#46208c',
+      flatShading: true,
+    });
+
+    // Plaza: concentric rings and a central crystal.
+    const plaza = this.groundGroup(plan.center.x, plan.center.z);
+    this.add(
+      plaza,
+      new CylinderGeometry(plan.plazaRadius, plan.plazaRadius + 2.5, 0.5, 18),
+      stone,
+      0,
+      0.25,
+      0,
+    );
+    this.add(
+      plaza,
+      new CylinderGeometry(plan.plazaRadius * 0.7, plan.plazaRadius * 0.7, 0.14, 18),
+      ridge,
+      0,
+      0.56,
+      0,
+    );
+    this.add(
+      plaza,
+      new CylinderGeometry(plan.plazaRadius * 0.38, plan.plazaRadius * 0.38, 0.1, 18),
+      glowViolet,
+      0,
+      0.65,
+      0,
+    );
+    this.add(
+      plaza,
+      new CylinderGeometry(plan.crystal.radius, plan.crystal.radius * 1.35, plan.crystal.height, 6),
+      crystal,
+      0,
+      plan.crystal.height / 2 + 0.65,
+      0,
+    );
+
+    for (const spire of plan.spires) {
+      const group = this.groundGroup(spire.x, spire.z);
+      const material = spire.deep ? crystalDeep : crystal;
+      this.add(
+        group,
+        new CylinderGeometry(spire.radius, spire.radius * 1.4, spire.height, 6),
+        material,
+        0,
+        spire.height / 2,
+        0,
+      );
+      this.add(
+        group,
+        new ConeGeometry(spire.radius * 1.1, spire.height * 0.45, 6),
+        material,
+        0,
+        spire.height + spire.height * 0.22,
+        0,
+      );
+      this.add(
+        group,
+        new CylinderGeometry(spire.radius * 0.4, spire.radius * 0.4, 0.12, 8),
+        spire.deep ? glowTeal : glowAmber,
+        0,
+        0.6,
+        0,
+      );
+    }
+
+    for (const dome of plan.domes) {
+      const group = this.groundGroup(dome.x, dome.z);
+      this.add(
+        group,
+        new CylinderGeometry(dome.radius, dome.radius * 1.15, dome.height, 12),
+        stone,
+        0,
+        dome.height / 2,
+        0,
+      );
+      this.add(
+        group,
+        new SphereGeometry(dome.radius, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        crystal,
+        0,
+        dome.height,
+        0,
+      );
+      this.add(
+        group,
+        new CylinderGeometry(dome.radius * 0.5, dome.radius * 0.5, 2.4, 8),
+        glowTeal,
+        0,
+        dome.height + dome.radius * 0.4,
+        0,
+      );
+    }
+
+    for (const platform of plan.platforms) {
+      const group = this.groundGroup(platform.x, platform.z);
+      this.add(
+        group,
+        new CylinderGeometry(platform.size * 0.2, platform.size * 0.35, platform.height * 2.4, 8),
+        ridge,
+        0,
+        platform.height * 1.2,
+        0,
+      );
+      this.add(
+        group,
+        new CylinderGeometry(platform.size, platform.size * 0.85, platform.size * 0.28, 10),
+        stone,
+        0,
+        platform.height * 2.4,
+        0,
+      );
+      this.add(
+        group,
+        new CylinderGeometry(platform.size * 0.55, platform.size * 0.55, 0.1, 12),
+        glowViolet,
+        0,
+        platform.height * 2.4 + platform.size * 0.16,
+        0,
+      );
+    }
+
+    for (const lamp of plan.lamps) {
+      const group = this.groundGroup(lamp.x, lamp.z);
+      this.add(group, new CylinderGeometry(0.16, 0.24, 5, 6), ridge, 0, 2.5, 0);
+      this.add(group, new SphereGeometry(0.34, 10, 8), glowTeal, 0, 5.1, 0);
+    }
+
+    this.scene.ready.then(() => {
+      this.placeMeshes(this.scene.houses.meshes, plan.houses);
+      this.placeMeshes(this.scene.warehouses.meshes, plan.warehouses);
+      this.placeMeshes(this.scene.castles.meshes, plan.castles);
+
+      this.scene.machines.meshes.forEach((mesh, i) => {
+        mesh.visible = true;
+        this.recenterInstanced(mesh);
+        const spot = plan.machines[i % plan.machines.length];
+        mesh.position.set(spot.x, this.groundAt(spot.x, spot.z), spot.z);
+        mesh.updateMatrixWorld(true);
+      });
+
+      // This city lights itself with the procedural pylons above, so hide the
+      // baked street lightposts (and their wires, which would not follow).
+      this.scene.lightposts.meshes.forEach((mesh) => {
+        mesh.visible = false;
+      });
+      this.scene.lightposts.meshWire.visible = false;
+    });
+  }
+
+  /**
+   * Spreads authored templates across plan slots, cloning when there are more
+   * slots than templates so the city can hold many diverse houses from the few
+   * baked models. Clones share the (already re-centred) geometry and material.
+   */
+  private placeMeshes(templates: Mesh[], slots: PlanPoint[]) {
+    if (templates.length === 0) return;
+    templates.forEach((mesh) => this.recenter(mesh));
+    slots.forEach((slot, i) => {
+      const template = templates[i % templates.length];
+      const mesh = i < templates.length ? template : template.clone();
+      mesh.visible = true;
+      mesh.position.set(slot.x, this.groundAt(slot.x, slot.z), slot.z);
+      if (slot.rot !== undefined) mesh.rotation.y = slot.rot;
+      mesh.updateMatrixWorld(true);
+      if (i >= templates.length) {
+        mesh.name = `${template.name || 'alien'}-${i}`;
+        this.scene.add(mesh);
+      }
     });
   }
 }

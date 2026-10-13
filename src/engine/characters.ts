@@ -35,6 +35,7 @@ import {
 import { gsap } from 'gsap';
 import { ticker } from '../core/ticker';
 import { WAVE_DURATION_MS, waveAngles } from '../core/wavePose';
+import { lookAngles } from '../core/lookPose';
 import { clock } from './clock';
 import type { FollowCamera } from './camera';
 import { Controls } from './controls';
@@ -48,7 +49,11 @@ const SECURE_EPS = 1e-4;
 const WAVE_BONE_UPPER = 'bone_21';
 const WAVE_BONE_FORE = 'bone_19';
 const WAVE_BONE_HAND = 'bone_18';
+// Neck/head bones of the kid rig, used by the procedural "look around".
+const LOOK_BONE_NECK = 'bone_13';
+const LOOK_BONE_HEAD = 'bone_14';
 const X_AXIS = new Vector3(1, 0, 0);
+const Y_AXIS = new Vector3(0, 1, 0);
 const Z_AXIS = new Vector3(0, 0, 1);
 
 /**
@@ -211,8 +216,10 @@ export class CharacterSkinnedMesh extends InstancedMesh {
   private _mixer: AnimationMixer;
   private _boneMatrix = new Matrix4();
   private _waveBones: { upper: Object3D; fore: Object3D; hand: Object3D } | null | undefined;
+  private _lookBones: { neck: Object3D; head: Object3D } | null | undefined;
   private _qWaveA = new Quaternion();
   private _qWaveB = new Quaternion();
+  private _qLook = new Quaternion();
   declare _localObject: CharacterLocal;
 
   constructor(
@@ -301,6 +308,23 @@ export class CharacterSkinnedMesh extends InstancedMesh {
       wave.hand.quaternion.multiply(this._qWaveB.setFromAxisAngle(Z_AXIS, angles.hand));
     }
 
+    // Optional look-around: a normal human glances to the sides while walking
+    // and idly. Same snapshot/restore discipline as the wave. Skipped while
+    // airborne or resting/asleep, where a wandering head would look wrong.
+    const look = this._resolveLookBones();
+    let savedLook: [Quaternion, Quaternion] | null = null;
+    if (look && (local.userData.a ?? 0) === 0) {
+      const angles = lookAngles(
+        ticker.time * 1000,
+        clamp(local.velocityHorizontal * 22, 0, 1),
+        local.animationOffset,
+      );
+      savedLook = [look.neck.quaternion.clone(), look.head.quaternion.clone()];
+      look.neck.quaternion.multiply(this._qLook.setFromAxisAngle(Y_AXIS, angles.neckYaw));
+      look.head.quaternion.multiply(this._qLook.setFromAxisAngle(Y_AXIS, angles.headYaw));
+      look.head.quaternion.multiply(this._qLook.setFromAxisAngle(X_AXIS, angles.pitch));
+    }
+
     this.children.forEach((child) => child.updateMatrixWorld());
 
     const offset = local.instanceID * this.skeleton.boneTextureSize * 4;
@@ -314,6 +338,10 @@ export class CharacterSkinnedMesh extends InstancedMesh {
       wave.fore.quaternion.copy(saved[1]);
       wave.hand.quaternion.copy(saved[2]);
     }
+    if (savedLook && look) {
+      look.neck.quaternion.copy(savedLook[0]);
+      look.head.quaternion.copy(savedLook[1]);
+    }
   }
 
   /** Resolves the rig's right-arm bones once (null on a different skeleton). */
@@ -325,6 +353,16 @@ export class CharacterSkinnedMesh extends InstancedMesh {
     const hand = find(WAVE_BONE_HAND);
     this._waveBones = upper && fore && hand ? { upper, fore, hand } : null;
     return this._waveBones;
+  }
+
+  /** Resolves the rig's neck/head bones once (null on a different skeleton). */
+  private _resolveLookBones(): { neck: Object3D; head: Object3D } | null {
+    if (this._lookBones !== undefined) return this._lookBones;
+    const find = (name: string) => this.skeleton.bones.find((bone: Object3D) => bone.name === name);
+    const neck = find(LOOK_BONE_NECK);
+    const head = find(LOOK_BONE_HEAD);
+    this._lookBones = neck && head ? { neck, head } : null;
+    return this._lookBones;
   }
 
   override updateMatrixWorld(force?: boolean): void {

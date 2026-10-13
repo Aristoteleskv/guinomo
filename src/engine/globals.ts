@@ -23,7 +23,7 @@ import { deferred, type Deferred } from '../core/deferred';
 import { events } from '../core/events';
 import { client } from '../core/client';
 import { ratioFPS } from '../core/math';
-import { bloomConfigFor, godRaysConfigFor } from '../core/postFxConfig';
+import { bloomConfigFor, godRaysConfigFor, vignetteFor } from '../core/postFxConfig';
 import { createBloomPass, createGodRaysPass, createVignettePass } from './postfx';
 import { initTouches } from './input';
 import { initTextureLoader } from './loaders/textures';
@@ -223,14 +223,16 @@ class Engine {
     this.renderPass = new RenderPass(new ComposerScene(), new PerspectiveCamera(50, 1, 0.1, 2000));
     this.composer.addPass(this.renderPass);
 
-    // Soft bloom on the whole 3D image (skipped on old iPhones).
-    const bloom = bloomConfigFor(client.device, client.oldIphone);
+    // Soft bloom on the whole 3D image (skipped on old iPhones). URL overrides
+    // (`?bloom=…`) let the look be tuned live.
+    const search = window.location.search;
+    const bloom = bloomConfigFor(client.device, client.oldIphone, search);
     if (bloom) {
       this.composer.addPass(createBloomPass(new Vector2(client.screen.w, client.screen.h), bloom));
     }
 
     // Screen-space sun shafts, fed each frame by the sky's sun position.
-    const godRays = godRaysConfigFor(client.device, client.oldIphone);
+    const godRays = godRaysConfigFor(client.device, client.oldIphone, search);
     if (godRays) {
       this.godRaysPass = createGodRaysPass(godRays);
       this.composer.addPass(this.godRaysPass);
@@ -239,7 +241,7 @@ class Engine {
     this.composer.addPass(new SMAAPass(1, 1));
 
     // Film vignette (+ subtle grain) before the final gamma correction.
-    this.vignettePass = createVignettePass();
+    this.vignettePass = createVignettePass(vignetteFor(search));
     this.composer.addPass(this.vignettePass);
 
     this.composer.addPass(new ShaderPass(GammaCorrectionShader));

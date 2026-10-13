@@ -8,6 +8,7 @@ import {
   bloomConfigFor,
   godRaysConfigFor,
   ssaoEnabled,
+  vignetteFor,
 } from '../src/core/postFxConfig';
 
 function expectBloom(config: { strength: number; radius: number; threshold: number }) {
@@ -75,5 +76,37 @@ describe('pós-processamento (postFxConfig)', () => {
     expect(ssaoEnabled('?world=lobby')).toBe(false);
     expect(ssaoEnabled('?ssao')).toBe(true);
     expect(ssaoEnabled('?world=lobby&ssao=1&audit=1')).toBe(true);
+  });
+
+  it('sem parâmetros devolve os valores por omissão (mesma referência)', () => {
+    expect(bloomConfigFor('desktop', false, '?world=lobby')).toBe(BLOOM);
+    expect(godRaysConfigFor('desktop', false, '?world=lobby')).toBe(GODRAYS);
+    expect(vignetteFor('?world=lobby')).toBe(VIGNETTE);
+  });
+
+  it('afina o bloom ao vivo por URL', () => {
+    const tuned = bloomConfigFor('desktop', false, '?bloom=0.5&bloomRadius=0.7&bloomThreshold=0.85');
+    expect(tuned).toEqual({ strength: 0.5, radius: 0.7, threshold: 0.85 });
+    // Só um campo: o resto fica por omissão.
+    expect(bloomConfigFor('desktop', false, '?bloom=0.5')).toEqual({ ...BLOOM, strength: 0.5 });
+    // iPhones antigos continuam sem bloom, mesmo com override.
+    expect(bloomConfigFor('desktop', true, '?bloom=0.5')).toBeNull();
+  });
+
+  it('afina os raios de sol ao vivo por URL', () => {
+    const tuned = godRaysConfigFor('desktop', false, '?godrays=0.4&godraysThreshold=0.9');
+    expect(tuned).toEqual({ ...GODRAYS, intensity: 0.4, threshold: 0.9 });
+    expect(godRaysConfigFor('mobile', false, '?godrays=0.4')).toEqual({ ...GODRAYS_MOBILE, intensity: 0.4 });
+  });
+
+  it('afina a vinheta e o grão ao vivo por URL', () => {
+    expect(vignetteFor('?vignette=0.4&grain=0.01')).toEqual({ ...VIGNETTE, darkness: 0.4, grain: 0.01 });
+    expect(vignetteFor('?vignetteOffset=1.2')).toEqual({ ...VIGNETTE, offset: 1.2 });
+  });
+
+  it('ignora valores de URL inválidos ou vazios', () => {
+    expect(bloomConfigFor('desktop', false, '?bloom=abc')).toBe(BLOOM);
+    expect(godRaysConfigFor('desktop', false, '?godrays=')).toBe(GODRAYS);
+    expect(vignetteFor('?vignette=NaN')).toBe(VIGNETTE);
   });
 });

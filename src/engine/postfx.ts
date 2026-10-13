@@ -9,7 +9,7 @@
 import { Vector2 } from 'three';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import type { BloomConfig, GodRaysConfig } from '../core/postFxConfig';
+import type { BloomConfig, GodRaysConfig, VignetteConfig } from '../core/postFxConfig';
 import { BLOOM, GODRAYS, VIGNETTE } from '../core/postFxConfig';
 
 export function createBloomPass(resolution: Vector2, config: BloomConfig = BLOOM): UnrealBloomPass {
@@ -59,8 +59,12 @@ export const VignetteShader = {
   `,
 };
 
-export function createVignettePass(): ShaderPass {
-  return new ShaderPass(VignetteShader);
+export function createVignettePass(config: VignetteConfig = VIGNETTE): ShaderPass {
+  const pass = new ShaderPass(VignetteShader);
+  pass.uniforms.uOffset.value = config.offset;
+  pass.uniforms.uDarkness.value = config.darkness;
+  pass.uniforms.uGrain.value = config.grain;
+  return pass;
 }
 
 /**

@@ -17,6 +17,7 @@ import { events } from '../core/events';
 import { getWorldId } from '../core/worlds';
 import { meetingSpotFor, type LightTrailInfo } from '../core/friendsLight';
 import { worldCallState } from '../core/worldCall';
+import { isWorldAwakened } from '../core/worldAwakening';
 import { clock } from '../engine/clock';
 import { SceneModule } from './SceneModule';
 
@@ -79,6 +80,11 @@ export class WorldCallScene extends SceneModule {
 
     const t = clock.time;
     const pulse = 0.9 + Math.sin(t * 1.8) * 0.1;
+    // Awakened worlds (C7) hold a violet-gold alignment instead of the golden one.
+    const awakened = isWorldAwakened();
+    (this.ringOuter.material as MeshBasicMaterial).color.set(awakened ? '#e6c8ff' : '#ffd166');
+    (this.ringInner.material as MeshBasicMaterial).color.set(awakened ? '#e6c8ff' : '#ffd166');
+    (this.beam.material as MeshBasicMaterial).color.set(awakened ? '#f7e8ff' : '#ffe08a');
     (this.ringOuter.material as MeshBasicMaterial).opacity = 0.8 * pulse;
     (this.ringInner.material as MeshBasicMaterial).opacity = 0.6 * pulse;
     (this.beam.material as MeshBasicMaterial).opacity = 0.34 * pulse;

@@ -8,6 +8,7 @@ import { AdditiveBlending, BufferAttribute, BufferGeometry, Color, Points, Point
 import { getWorldId } from '../core/worlds';
 import { faunaFor, writeFaunaPositions } from '../core/worldFauna';
 import { minutesOf, worldEvent } from '../core/worldRhythm';
+import { isWorldAwakened } from '../core/worldAwakening';
 import { SceneModule } from './SceneModule';
 
 /** Fauna opacity while the world's daily event is not running. */
@@ -72,9 +73,13 @@ export class WorldFaunaScene extends SceneModule {
     writeFaunaPositions(this.world, now, (this.points.geometry.getAttribute('position') as BufferAttribute).array as Float32Array);
     (this.points.geometry.getAttribute('position') as BufferAttribute).needsUpdate = true;
 
-    // The deterministic calendar drives the ambience density.
+    // The deterministic calendar drives the ambience density. Once the world
+    // awakens (C7), the fauna never falls back to idle — the metamorphosis is
+    // permanent and slightly larger.
     const active = worldEvent(this.world, minutesOf(new Date()));
-    this.material.opacity = active ? EVENT_OPACITY : IDLE_OPACITY;
-    this.material.size = config.size * (active ? EVENT_SIZE_MULTIPLIER : 1);
+    const awakened = isWorldAwakened();
+    const boosted = active !== null || awakened;
+    this.material.opacity = boosted ? EVENT_OPACITY : IDLE_OPACITY;
+    this.material.size = config.size * (boosted ? EVENT_SIZE_MULTIPLIER : 1) * (awakened ? 1.08 : 1);
   };
 }

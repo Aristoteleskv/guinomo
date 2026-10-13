@@ -1,0 +1,46 @@
+/* World polaroids (B5): the corner-nav capture button, matching the other
+   nav icon buttons (same family as the poster 📸 and notes 📝). */
+
+#polaroids-capture[hidden] {
+  display: none;
+}
+
+nav #polaroids-capture.in-nav {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: rotate(-6deg);
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(113, 108, 102, 0.32);
+  background: #f9efdc;
+  box-shadow: 2px 2px #716c66;
+  color: #514d48;
+  font-size: 15px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  white-space: normal;
+  backdrop-filter: none;
+}
+
+nav #polaroids-capture.in-nav:hover,
+nav #polaroids-capture.in-nav:focus-visible {
+  background: #fdf4e4;
+  outline: none;
+  transform: rotate(-6deg) translateY(-2px);
+}
+
+nav #polaroids-capture.in-nav:active {
+  transform: rotate(-6deg) translateY(2px);
+  box-shadow: 1px 1px #716c66;
+}
+
+@media (max-width: 1200px) {
+  nav #polaroids-capture.in-nav {
+    margin-bottom: 12px;
+  }
+}

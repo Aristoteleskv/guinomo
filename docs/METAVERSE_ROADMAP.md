@@ -115,7 +115,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
 |---|---|---|---|---|
 | **A1** | **Ecossistema determinístico** — fauna por mundo (pirilampos no Bosque, cardumes na Cidade Flutuante, poeira-estrela no Alien…) com o mesmo voo para todos os jogadores | `core/worldFauna.ts` + `scene/worldFaunaScene.ts` | Nenhuma (usa `THREE.Points`, não mexe em shaders); candidato wasm da Fase B do plano C++ | ✅ **feito** (commit `…`) |
-| **A2** | **O oceano que responde à maré** — nível da água sobe dentro da janela do evento (deslocamento de vértices dirigido pelo `worldRhythm`) | `scene/sea.ts` + shader | WIP do utilizador (`glsl`) — requer ok | Planeado |
+| **A2** | **O oceano que responde à maré** — nível da água sobe dentro da janela do evento (maré cheia 18:00–19:30 na Cidade Flutuante) e vaza depois; sem shaders | `core/seaTide.ts` + `scene/tideScene.ts` | Nenhuma (eleva o mesh do mar + brilho de espuma; não toca no WIP `glsl`) | ✅ **feito** (commit `…`) |
 | **A3** | **O céu como estado partilhado** — camadas atmosféricas por fase determinística (aurora, constelações) | `scene/sky.ts` | WIP do utilizador (`glsl`) — requer ok | Planeado |
 
 ### Bloco B — presença e memória (o mais ousado socialmente)
@@ -123,19 +123,23 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
 |---|---|---|---|---|
 | **B4** | **Espectros** — trajetórias dos amigos gravadas e reproduzidas como fantasmas translúcidos quando offline | `core/presenceEcho.ts` + `scene/echoScene.ts` | Reutiliza os arrays P2P do `characters` (padrão `pairLink`); persistência `guinomo.ghosts.v1` | ✅ **feito** (commit `…`) |
-| **B5** | **Polaroids no mundo** — a foto arrasta-se como quadro 3D no local onde foi tirada; amigos encontram e recolhem | `core/worldPhotos.ts` + `scene/photoScene.ts` + `api/guinomo/photos.php` | Backend novo no noop (padrão `spawn.php`) | Planeado |
+| **B5** | **Polaroids no mundo** — a foto arrasta-se como quadro 3D flutuante no local onde foi tirada; partilhada por todos via backend | `core/worldPolaroid.ts` + `scene/polaroidScene.ts` + `api/guinomo/photos.php` | Backend novo no noop (padrão `notes.php`); cap 40/mundo, thumb ~96×72 | ✅ **feito** (commit `…`) |
 | **B6** | **Inauguração sincronizada** — janela UTC fixa: com ≥N online, um alinhamento celeste dispara em todos os mundos e mune troféu coletivo | `core/worldCall.ts` + `components/worldCallHud.ts` + `scene/worldCallScene.ts` | Leve; consome a presença já existente (`light_trail_update`) | ✅ **feito** (commit `…`) |
 
 ### Bloco C — o limite como design
 
 | Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
 |---|---|---|---|---|
-| **C7** | **Metamorfose pós-5/5 — o mundo acorda** — o finale deixa de ser fim: o mundo entra em fase "desperta" (luzes, habitantes, ciclo novo). Progressão muda o mundo, não o jogador | `core/secrets` → estado "desperto" + iluminação | Engine (meu); pode tocar em `sky` (WIP) | Planeado |
+| **C7** | **Metamorfose pós-5/5 — o mundo acorda** — o finale deixa de ser fim: o mundo entra em fase "desperta" (fauna jamais apaga, alinhamento muda de cor, janela diária "Eco do Despertar") | `core/worldAwakening.ts` + hooks na fauna/alinhamento | Nenhuma (estado lido do `guinomo.grand_secret.v1`; sem tocar no WIP) | ✅ **feito** (commit `…`) |
 | **C8** | **Duelo de sombras** — recolher sombras no evento e duelar com projeções; replay determinístico arbitra sem servidor | `core/shadowDuel.ts` | Netcode determinístico (Fase C do plano C++) | Experimental |
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → B5 → C7 → A2/A3 (com ok do WIP glsl) → B8`.
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → A3 (com ok do WIP glsl) → B8 (Duelo de sombras) → Menu de mundo 3D + saudação 👋`.</think>
+
+<｜DSML｜tool_calls>
+<｜DSML｜invoke name="edit">
+<｜DSML｜parameter name="newString" string="true">`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → A3 (com ok do WIP glsl) → B8 (Duelo de sombras) → Menu de mundo 3D + saudação 👋`.
 
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".

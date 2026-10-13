@@ -26,6 +26,9 @@ import { PairLinkScene } from './pairLinkScene';
 import { WorldFaunaScene } from './worldFaunaScene';
 import { EchoScene } from './echoScene';
 import { WorldCallScene } from './worldCallScene';
+import { TideScene } from './tideScene';
+import { ConfettiScene } from './confettiScene';
+import { PolaroidScene } from './polaroidScene';
 import { mountCompass } from '../components/compass';
 import { mountSpawnSync } from '../core/spawnSync';
 import { isGoldenHour } from '../core/goldenHour';
@@ -67,6 +70,9 @@ export class EnvironmentScene extends BaseScene {
   declare fauna: WorldFaunaScene;
   declare echo: EchoScene;
   declare call: WorldCallScene;
+  declare tide: TideScene;
+  declare confetti: ConfettiScene;
+  declare polaroids: PolaroidScene;
 
   constructor(_mainController: MainController) {
     super();
@@ -111,6 +117,9 @@ export class EnvironmentScene extends BaseScene {
       ['fauna', WorldFaunaScene],
       ['echo', EchoScene],
       ['call', WorldCallScene],
+      ['tide', TideScene],
+      ['confetti', ConfettiScene],
+      ['polaroids', PolaroidScene],
     ];
     await Promise.all(
       modules.map(([name, Module]) => {

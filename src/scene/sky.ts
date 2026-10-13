@@ -1,5 +1,8 @@
-// Sky dome: skydome.bin + a custom shader with flowmapped drifting clouds.
-// Shader GLSL is verbatim from the original.
+// The sky dome: skydome.bin + a custom shader with flowmapped drifting clouds.
+// Shader GLSL is verbatim from the original. The colors, night mix and solar
+// angle are no longer driven by the device's local clock — they come from
+// core/skyState.ts (the *world's* deterministic UTC state), so everyone in a
+// world sees the same sky.
 
 import {
   AdditiveBlending,
@@ -20,7 +23,10 @@ import { geometryLoader } from '../engine/loaders/geometries';
 import { textureLoader } from '../engine/loaders/textures';
 import { globalUBO } from '../engine/globals';
 import { events } from '../core/events';
-import { getWorldId } from '../core/worlds';
+import { getWorldId, type WorldId } from '../core/worlds';
+import { minutesOf } from '../core/worldRhythm';
+import { isWorldAwakened } from '../core/worldAwakening';
+import { skyStateFor } from '../core/skyState';
 import { SceneModule } from './SceneModule';
 import easesGLSL from './glsl/eases.glsl?raw';
 import flowmapGLSL from './glsl/flowmap.glsl?raw';
@@ -28,13 +34,8 @@ import fitGLSL from './glsl/fit.glsl?raw';
 import falloffGLSL from './glsl/falloff.glsl?raw';
 import { globalUBODeclaration } from './materials';
 
-// The daylight cycle follows the user's local time (their timezone), not an
-// artificial timer: 06:00 → sunrise (angle 0), 12:00 → solar noon (π/2),
-// 18:00 → sunset (π), 00:00 → midnight (3π/2).
-function localSolarAngle(date: Date = new Date()): number {
-  const minutesOfDay = date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
-  return (minutesOfDay / 1440 - 0.25) * Math.PI * 2;
-}
+// The daylight cycle follows the *world's* clock (UTC), not the device's: the
+// same instant renders the same sky on every device. See core/skyState.ts.
 
 function createGlow(color: string, size: number): Sprite {
   const canvas = document.createElement('canvas');
@@ -64,6 +65,8 @@ function createGlow(color: string, size: number): Sprite {
 
 export class Sky extends SceneModule {
   declare mesh: Mesh;
+  private world: WorldId = getWorldId(new URLSearchParams(window.location.search).get('world'));
+  private awake = isWorldAwakened();
   private nightBlend = 0;
   private theme: 'cycle' | 'night' | 'alien' = 'cycle';
   private stars: Points | null = null;
@@ -86,15 +89,10 @@ export class Sky extends SceneModule {
   }
 
   protected async init() {
-    const world = getWorldId(new URLSearchParams(window.location.search).get('world'));
-    const palette = world === 'floating-city'
-      ? { horizon: '#b6d0d8', overlay: '#a2c6d2', sky: '#347a9e', clouds: '#c9e6e8' }
-      : world === 'tropical-city'
-        ? { horizon: '#f0c9a0', overlay: '#ffe0b0', sky: '#36a5a0', clouds: '#fff0cf' }
-        : world === 'old-town'
-          ? { horizon: '#e6cba8', overlay: '#e4c69e', sky: '#729bb0', clouds: '#f2dfc4' }
-          : null;
-    if (world === 'alien') {
+    const world = this.world;
+    const state = skyStateFor(world, minutesOf(new Date()), this.awake);
+    const palette = state.palette;
+    if (state.alien) {
       this.theme = 'alien';
     }
 
@@ -104,13 +102,13 @@ export class Sky extends SceneModule {
       uniforms: {
         tMap: { value: textureLoader.load('sky-srgb-highq.png', 'srgb-repeat') },
         tFlow: { value: textureLoader.load('skyflow-highq.ktx2', 'repeat') },
-        uColorHorizon: { value: new Color(palette?.horizon ?? '#cfeefc') },
-        uColorHorizonOverlay: { value: new Color(palette?.overlay ?? '#d8eeff') },
-        uColorSky: { value: new Color(palette?.sky ?? '#2b96d8') },
-        uColorClouds: { value: new Color(palette?.clouds ?? '#ffe9cf') },
+        uColorHorizon: { value: new Color(palette.horizon) },
+        uColorHorizonOverlay: { value: new Color(palette.overlay) },
+        uColorSky: { value: new Color(palette.sky) },
+        uColorClouds: { value: new Color(palette.clouds) },
         uNightBlend: { value: 0 },
         uAlienBlend: { value: 0 },
-        uForestBlend: { value: world === 'forest' ? 1 : 0 },
+        uForestBlend: { value: state.forest ? 1 : 0 },
       },
       vertexShader: `
         varying vec2 vUv;
@@ -225,18 +223,26 @@ export class Sky extends SceneModule {
       const cameraPosition = this.scene.camera.position;
       this.mesh.position.copy(cameraPosition);
       if (this.stars) this.stars.position.copy(cameraPosition);
-      const angle = localSolarAngle();
-      const sunHeight = Math.sin(angle);
-      const daylightProgress = Math.min(1, Math.max(0, (sunHeight + 0.12) / 0.24));
-      const daylight = daylightProgress * daylightProgress * (3 - 2 * daylightProgress);
+
+      // The world's deterministic sky state (UTC phase + mood + awakening).
+      const state = skyStateFor(this.world, minutesOf(new Date()), this.awake);
+      uniforms.uColorHorizon.value.set(state.palette.horizon);
+      uniforms.uColorHorizonOverlay.value.set(state.palette.overlay);
+      uniforms.uColorSky.value.set(state.palette.sky);
+      uniforms.uColorClouds.value.set(state.palette.clouds);
+      uniforms.uForestBlend.value = state.forest ? 1 : 0;
+
+      const angle = state.angle;
+      const daylight = 1 - state.nightBlend;
       if (this.theme === 'cycle') {
-        this.nightBlend = 1 - daylight;
+        this.nightBlend = state.nightBlend;
       } else {
         this.nightBlend = this.theme === 'night' ? 1 : 0;
       }
       uniforms.uNightBlend.value = this.nightBlend;
-      uniforms.uAlienBlend.value = this.theme === 'alien' ? 1 : 0;
+      uniforms.uAlienBlend.value = this.theme === 'alien' || state.alien ? 1 : 0;
       if (this.stars) (this.stars.material as PointsMaterial).opacity = this.theme === 'alien' ? 0.7 : this.nightBlend * 0.8;
+      if (this.sun) (this.sun.material as MeshBasicMaterial).color.set(state.palette.sun);
 
       // O sol/lua ficam À FRENTE da câmara (+z, direção de visão da câmara de
       // seguimento) em vez de atrás, para serem visíveis no céu à nossa frente.

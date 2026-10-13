@@ -1,0 +1,6 @@
+# build artefacts
+*.exe
+*.o
+*.obj
+*.wasm
+*.js

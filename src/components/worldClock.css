@@ -1,0 +1,45 @@
+/* World state HUD: UTC day phase + daily world event, always visible.
+   Free slot: top-left corner (compass/lightTrail are top-center, streak and
+   pair HUD are top-right, the golden hour chips sit below at 104px). */
+
+#world-chip {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  transform: none;
+  z-index: 62;
+  box-sizing: border-box;
+  max-width: min(400px, 92vw);
+  padding: 6px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(20, 28, 32, 0.55);
+  backdrop-filter: blur(6px);
+  color: #e8efe6;
+  font-family: var(--default-font, Arial, sans-serif);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-line;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#world-chip.active {
+  border-color: rgba(146, 190, 255, 0.75);
+  background: linear-gradient(135deg, rgba(30, 42, 66, 0.78), rgba(20, 28, 32, 0.6));
+  box-shadow:
+    0 0 0 3px rgba(120, 160, 230, 0.18),
+    1px 1px rgba(113, 108, 102, 0.4);
+}
+
+@media (max-width: 760px) {
+  #world-chip {
+    top: 14px;
+    left: 12px;
+    max-width: 70vw;
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+}

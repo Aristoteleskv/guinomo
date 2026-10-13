@@ -1,6 +1,7 @@
 import { events } from '../core/events';
 import { DEFAULT_WORLD_ID, getWorldId, WORLDS } from '../core/worlds';
 import { playSfx } from '../engine/sfx';
+import { isAvatarDuelText } from '../core/avatarDuel';
 import { EMOJI, STICKERS, createStickerNode, parseChatTokens, stickerToken } from './chatStickers';
 import './chatStickers.css';
 
@@ -727,6 +728,7 @@ export class UiController {
       const name = (chat.name || '').trim() || (language === 'en' ? 'Guest' : 'Visitante');
       const text = (chat.text || '').trim();
       if (!text) return;
+      if (isAvatarDuelText(text)) return; // duel control tokens are not chat
       this.appendChatMessage(name, text, false);
       if (this.chatPanel.hidden) {
         this.chatUnread += 1;

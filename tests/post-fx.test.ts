@@ -7,6 +7,7 @@ import {
   VIGNETTE,
   bloomConfigFor,
   godRaysConfigFor,
+  ssaoEnabled,
 } from '../src/core/postFxConfig';
 
 function expectBloom(config: { strength: number; radius: number; threshold: number }) {
@@ -67,5 +68,12 @@ describe('pós-processamento (postFxConfig)', () => {
     expect(godRaysConfigFor('desktop', false)).toBe(GODRAYS);
     expect(godRaysConfigFor('mobile', false)).toBe(GODRAYS_MOBILE);
     expect(godRaysConfigFor('tablet', false)).toBe(GODRAYS_MOBILE);
+  });
+
+  it('liga o SSAO apenas quando pedido explicitamente', () => {
+    expect(ssaoEnabled('')).toBe(false);
+    expect(ssaoEnabled('?world=lobby')).toBe(false);
+    expect(ssaoEnabled('?ssao')).toBe(true);
+    expect(ssaoEnabled('?world=lobby&ssao=1&audit=1')).toBe(true);
   });
 });

@@ -71,3 +71,13 @@ export function godRaysConfigFor(
   if (oldIphone) return null;
   return device === 'mobile' || device === 'tablet' ? GODRAYS_MOBILE : GODRAYS;
 }
+
+/**
+ * SSAO is opt-in (`?ssao`) on purpose: it renders the scene with override
+ * "normal"/"depth" materials, which look harsh on the stylised, alpha-tested
+ * vegetation (billboards become solid quads). Keeping it behind a flag lets it
+ * be evaluated without changing the default look.
+ */
+export function ssaoEnabled(search: string): boolean {
+  return new URLSearchParams(search).has('ssao');
+}

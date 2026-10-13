@@ -9,8 +9,10 @@ import {
 } from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { SSAOPass } from 'three/examples/jsm/postprocessing/SSAOPass.js';
 import { deferred, type Deferred } from '../core/deferred';
 import { events } from '../core/events';
+import { ssaoEnabled } from '../core/postFxConfig';
 import { engine, globalUniforms } from '../engine/globals';
 import { EnvironmentScene } from './environmentScene';
 import { BaseShader, IntroShader } from './shaders-post';
@@ -53,7 +55,20 @@ export class MainController {
     this.environment = new EnvironmentScene(this);
     this.environmentComposer = new EffectComposer(engine.renderer, createComposerTarget());
     this.environmentComposer.renderToScreen = false;
-    this.environmentComposer.addPass(new RenderPass(this.environment, this.environment.camera));
+    if (ssaoEnabled(window.location.search)) {
+      // Opt-in experiment: SSAOPass renders the scene itself (beauty + AO), so
+      // it replaces the plain RenderPass.
+      this.environmentComposer.addPass(
+        new SSAOPass(
+          this.environment,
+          this.environment.camera,
+          engine.renderer.domElement.width,
+          engine.renderer.domElement.height,
+        ),
+      );
+    } else {
+      this.environmentComposer.addPass(new RenderPass(this.environment, this.environment.camera));
+    }
     this.environmentComposer.setSize(engine.renderer.domElement.width, engine.renderer.domElement.height);
 
     events.on('resize', this.resizeEnvironment);

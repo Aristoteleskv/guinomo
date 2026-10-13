@@ -1,0 +1,74 @@
+/* 3D world menu (lobby): floating orbs mark the six worlds; each carries a
+   DOM chip projected onto its screen position (same math as the name tags),
+   so the menu is clickable on mouse and touch while the orbs stay in 3D. */
+
+#world-menu {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 60;
+}
+
+#world-menu .orb-chip {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  pointer-events: auto;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(22, 24, 20, 0.55);
+  backdrop-filter: blur(4px);
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.22);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#world-menu .orb-chip:hover,
+#world-menu .orb-chip:focus-visible {
+  transform: scale(1.18);
+  background: rgba(45, 50, 42, 0.82);
+  outline: none;
+}
+
+#world-menu .orb-label {
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fbeed0;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+
+#world-menu .menu-title {
+  position: fixed;
+  left: 50%;
+  top: 68px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #fbeed0;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  #world-menu .orb-chip {
+    width: 38px;
+    height: 38px;
+    margin: -19px 0 0 -19px;
+    font-size: 17px;
+  }
+}

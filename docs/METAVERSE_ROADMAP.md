@@ -135,7 +135,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → A3 (com ok do WIP glsl) → B8 (Duelo de sombras) → Menu de mundo 3D + saudação 👋`.</think>
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 (Duelo de sombras) → A3 (com ok do WIP glsl) → saudação 👋`.</think>
 
 <｜DSML｜tool_calls>
 <｜DSML｜invoke name="edit">

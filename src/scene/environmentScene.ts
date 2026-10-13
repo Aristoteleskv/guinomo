@@ -30,6 +30,7 @@ import { TideScene } from './tideScene';
 import { ConfettiScene } from './confettiScene';
 import { PolaroidScene } from './polaroidScene';
 import { WorldMenuScene } from './worldMenuScene';
+import { ShadowDuelScene } from './shadowDuelScene';
 import { mountCompass } from '../components/compass';
 import { mountSpawnSync } from '../core/spawnSync';
 import { isGoldenHour } from '../core/goldenHour';
@@ -75,6 +76,7 @@ export class EnvironmentScene extends BaseScene {
   declare confetti: ConfettiScene;
   declare polaroids: PolaroidScene;
   declare worldMenu: WorldMenuScene;
+  declare shadowDuel: ShadowDuelScene;
 
   constructor(_mainController: MainController) {
     super();
@@ -123,6 +125,7 @@ export class EnvironmentScene extends BaseScene {
       ['confetti', ConfettiScene],
       ['polaroids', PolaroidScene],
       ['worldMenu', WorldMenuScene],
+      ['shadowDuel', ShadowDuelScene],
     ];
     await Promise.all(
       modules.map(([name, Module]) => {

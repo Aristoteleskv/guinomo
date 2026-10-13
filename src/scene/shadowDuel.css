@@ -1,0 +1,114 @@
+/* B8 — Duelo de sombras HUD: banner, blade button and verdict chip. */
+
+#shadow-duel-banner {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(92vw, 480px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(18, 16, 32, 0.78);
+  border: 1px solid rgba(160, 140, 255, 0.45);
+  color: #efe6ff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px #000;
+  text-align: center;
+  pointer-events: none;
+  z-index: 70;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+#shadow-duel-blade {
+  position: fixed;
+  right: 18px;
+  bottom: 96px;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 2px solid rgba(190, 175, 255, 0.8);
+  background: rgba(28, 22, 52, 0.85);
+  color: #efe6ff;
+  font-size: 26px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 70;
+  box-shadow: 0 0 18px rgba(140, 110, 255, 0.45);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#shadow-duel-blade:active {
+  transform: scale(0.92);
+}
+
+#shadow-duel-result {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  transform: translate(-50%, -50%);
+  width: min(88vw, 320px);
+  padding: 18px 20px 14px;
+  border-radius: 18px;
+  background: rgba(16, 14, 30, 0.92);
+  border: 1px solid rgba(160, 140, 255, 0.5);
+  color: #f7f0ff;
+  text-align: center;
+  z-index: 80;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: shadow-duel-pop 0.22s ease-out;
+}
+
+@keyframes shadow-duel-pop {
+  from {
+    transform: translate(-50%, -50%) scale(0.82);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+#shadow-duel-result .duel-icon {
+  font-size: 34px;
+}
+
+#shadow-duel-result .duel-title {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 6px 0 2px;
+}
+
+#shadow-duel-result .duel-sub {
+  font-size: 12px;
+  color: #cbbdf0;
+  margin-bottom: 12px;
+}
+
+#shadow-duel-result .duel-close {
+  margin-top: 4px;
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f0ff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#shadow-duel-result.verdict-critical {
+  border-color: rgba(255, 215, 140, 0.8);
+  box-shadow: 0 12px 44px rgba(255, 190, 80, 0.35);
+}
+
+@media (max-width: 760px) {
+  #shadow-duel-banner {
+    font-size: 11px;
+    top: 58px;
+  }
+}

@@ -131,11 +131,11 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 | Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
 |---|---|---|---|---|
 | **C7** | **Metamorfose pós-5/5 — o mundo acorda** — o finale deixa de ser fim: o mundo entra em fase "desperta" (fauna jamais apaga, alinhamento muda de cor, janela diária "Eco do Despertar") | `core/worldAwakening.ts` + hooks na fauna/alinhamento | Nenhuma (estado lido do `guinomo.grand_secret.v1`; sem tocar no WIP) | ✅ **feito** (commit `…`) |
-| **C8** | **Duelo de sombras** — recolher sombras no evento e duelar com projeções; replay determinístico arbitra sem servidor | `core/shadowDuel.ts` | Netcode determinístico (Fase C do plano C++) | Experimental |
+| **C8** | **Duelo de sombras** — recolher sombras no evento e duelar com projeções; replay determinístico arbitra sem servidor | `core/shadowDuel.ts` + `scene/shadowDuelScene.ts` | Netcode determinístico (Fase C do plano C++) | ✅ **feito** (commit `…`) |
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 (Duelo de sombras) → A3 (com ok do WIP glsl) → saudação 👋`.</think>
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (com ok do WIP glsl) → saudação 👋`.</think>
 
 <｜DSML｜tool_calls>
 <｜DSML｜invoke name="edit">

@@ -1,0 +1,57 @@
+/* Synchronized inauguration HUD: the daily UTC alignment window chip, below
+   the world clock, same visual family. Gold pulses during the alignment. */
+
+#world-call-chip {
+  position: fixed;
+  top: 74px;
+  left: 18px;
+  z-index: 61;
+  box-sizing: border-box;
+  max-width: min(400px, 92vw);
+  padding: 5px 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  background: rgba(22, 24, 20, 0.55);
+  backdrop-filter: blur(6px);
+  color: #fbeed0;
+  font-family: var(--default-font, Arial, sans-serif);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: left;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#world-call-chip.active {
+  border-color: rgba(255, 209, 102, 0.9);
+  animation: world-call-pulse 1.3s ease-in-out infinite;
+}
+
+#world-call-chip.soon {
+  border-color: rgba(255, 209, 102, 0.6);
+}
+
+@keyframes world-call-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 209, 102, 0.25),
+      0 0 12px rgba(255, 209, 102, 0.2);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px rgba(255, 209, 102, 0.05),
+      0 0 22px rgba(255, 209, 102, 0.35);
+  }
+}
+
+@media (max-width: 760px) {
+  #world-call-chip {
+    top: 66px;
+    left: 12px;
+    max-width: 74vw;
+    font-size: 11.5px;
+    padding: 4px 9px;
+  }
+}

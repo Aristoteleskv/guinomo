@@ -124,7 +124,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 |---|---|---|---|---|
 | **B4** | **Espectros** — trajetórias dos amigos gravadas e reproduzidas como fantasmas translúcidos quando offline | `core/presenceEcho.ts` + `scene/echoScene.ts` | Reutiliza os arrays P2P do `characters` (padrão `pairLink`); persistência `guinomo.ghosts.v1` | ✅ **feito** (commit `…`) |
 | **B5** | **Polaroids no mundo** — a foto arrasta-se como quadro 3D no local onde foi tirada; amigos encontram e recolhem | `core/worldPhotos.ts` + `scene/photoScene.ts` + `api/guinomo/photos.php` | Backend novo no noop (padrão `spawn.php`) | Planeado |
-| **B6** | **Inauguração sincronizada** — janela UTC fixa: com ≥N online, um alinhamento celeste dispara em todos os mundos e mune troféu coletivo | `components/worldCallHud` + API de presença (já existe) | Leve; presença PHP funcional | Planeado |
+| **B6** | **Inauguração sincronizada** — janela UTC fixa: com ≥N online, um alinhamento celeste dispara em todos os mundos e mune troféu coletivo | `core/worldCall.ts` + `components/worldCallHud.ts` + `scene/worldCallScene.ts` | Leve; consome a presença já existente (`light_trail_update`) | ✅ **feito** (commit `…`) |
 
 ### Bloco C — o limite como design
 
@@ -135,7 +135,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 → B5 → C7 → A2/A3 (com ok do WIP glsl) → B8`.
+`A1 ✅ → B4 ✅ → B6 ✅ → B5 → C7 → A2/A3 (com ok do WIP glsl) → B8`.
 
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".

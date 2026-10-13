@@ -12,6 +12,7 @@ import { mountGoldenHourHud } from './components/goldenHourHud';
 import { mountLightTrailHud } from './components/lightTrailHud';
 import { mountPairHud } from './components/pairHud';
 import { mountWorldClockHud } from './components/worldClockHud';
+import { mountWorldCallHud } from './components/worldCallHud';
 import { awardPoints, POINTS, readPoints } from './core/adventurePoints';
 import { isGoldenHour } from './core/goldenHour';
 import { allSecretsFound, foundSecretCount, isGrandSecretUnlocked, maybeUnlockGrandSecret, nextSecretToFind, unlockGrandSecret } from './core/secrets';
@@ -52,6 +53,7 @@ mountLightTrailHud();
 mountPairHud();
 mountSealsSync();
 mountWorldClockHud();
+mountWorldCallHud();
 
 CustomEase.create('inOut1', 'M0,0 C0.5,0 0.1,1 1,1');
 CustomEase.create('inOut2', 'M0,0 C0.56,0 0,1 1,1');

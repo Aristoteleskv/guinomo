@@ -103,6 +103,43 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 - Mobile-first, performance (DPR adaptativo já existe), acesso com conta única.
 - **Monetização** apenas de cosméticos — nunca pay-to-win.
 
+## Visão pesada — os 8, organizados em blocos
+
+> Ideias "pesadas e inovadoras em 3D" pedidas pelo utilizador (2026-10-13),
+> com honestidade de limites: cada uma está desenhada para a stack atual
+> (three.js + P2P Rust/wasm + PHP de estado + núcleo determinístico) e indica
+> onde esbarra no WIP do utilizador (shaders/`glsl`, `characters`, `materials`).
+
+### Bloco A — o mundo respira por simulação (o mais 3D)
+
+| Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
+|---|---|---|---|---|
+| **A1** | **Ecossistema determinístico** — fauna por mundo (pirilampos no Bosque, cardumes na Cidade Flutuante, poeira-estrela no Alien…) com o mesmo voo para todos os jogadores | `core/worldFauna.ts` + `scene/worldFaunaScene.ts` | Nenhuma (usa `THREE.Points`, não mexe em shaders); candidato wasm da Fase B do plano C++ | ✅ **feito** (commit `…`) |
+| **A2** | **O oceano que responde à maré** — nível da água sobe dentro da janela do evento (deslocamento de vértices dirigido pelo `worldRhythm`) | `scene/sea.ts` + shader | WIP do utilizador (`glsl`) — requer ok | Planeado |
+| **A3** | **O céu como estado partilhado** — camadas atmosféricas por fase determinística (aurora, constelações) | `scene/sky.ts` | WIP do utilizador (`glsl`) — requer ok | Planeado |
+
+### Bloco B — presença e memória (o mais ousado socialmente)
+
+| Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
+|---|---|---|---|---|
+| **B4** | **Espectros** — trajetórias dos amigos gravadas e reproduzidas como fantasmas translúcidos quando offline | `core/presenceEcho.ts` + `scene/echoScene.ts` | Reutiliza arrays do `lightTrail`/`spawn`; sem servidor | **Próximo** |
+| **B5** | **Polaroids no mundo** — a foto arrasta-se como quadro 3D no local onde foi tirada; amigos encontram e recolhem | `core/worldPhotos.ts` + `scene/photoScene.ts` + `api/guinomo/photos.php` | Backend novo no noop (padrão `spawn.php`) | Planeado |
+| **B6** | **Inauguração sincronizada** — janela UTC fixa: com ≥N online, um alinhamento celeste dispara em todos os mundos e mune troféu coletivo | `components/worldCallHud` + API de presença (já existe) | Leve; presença PHP funcional | Planeado |
+
+### Bloco C — o limite como design
+
+| Ref | Ideia | Módulos previstos | Dependências / risco | Estado |
+|---|---|---|---|---|
+| **C7** | **Metamorfose pós-5/5 — o mundo acorda** — o finale deixa de ser fim: o mundo entra em fase "desperta" (luzes, habitantes, ciclo novo). Progressão muda o mundo, não o jogador | `core/secrets` → estado "desperto" + iluminação | Engine (meu); pode tocar em `sky` (WIP) | Planeado |
+| **C8** | **Duelo de sombras** — recolher sombras no evento e duelar com projeções; replay determinístico arbitra sem servidor | `core/shadowDuel.ts` | Netcode determinístico (Fase C do plano C++) | Experimental |
+
+### Sequência de execução
+
+`A1 ✅ → B4 → B6 → B5 → C7 → A2/A3 (com ok do WIP glsl) → B8`.
+
+Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
+quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".
+
 ## Pipeline de assets (áudio e texturas)
 
 Para "áudio e texturas melhores" sem estourar o budget de bundle:

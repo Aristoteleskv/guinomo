@@ -8,14 +8,16 @@ export interface BloomConfig {
   threshold: number;
 }
 
-/** Default bloom for capable devices — glints on secrets, foam and the sky. */
-export const BLOOM: BloomConfig = { strength: 0.6, radius: 0.55, threshold: 0.82 };
+/** Default bloom for capable devices — a faint glint on secrets, foam and the
+ *  sky. Kept subtle: the image is already sRGB-encoded, so bloom reads stronger
+ *  than in linear space. A high threshold means only real highlights bloom. */
+export const BLOOM: BloomConfig = { strength: 0.3, radius: 0.6, threshold: 0.9 };
 
 /** Weaker bloom for mobiles, which have far less fill rate to spare. */
-export const BLOOM_MOBILE: BloomConfig = { strength: 0.42, radius: 0.5, threshold: 0.86 };
+export const BLOOM_MOBILE: BloomConfig = { strength: 0.22, radius: 0.55, threshold: 0.92 };
 
 /** Film vignette: how much the corners darken and how strong the grain is. */
-export const VIGNETTE = { offset: 1.08, darkness: 0.8, grain: 0.028 };
+export const VIGNETTE = { offset: 1.08, darkness: 0.68, grain: 0.02 };
 
 /**
  * Picks the bloom settings for a device, or null to skip bloom entirely
@@ -48,19 +50,19 @@ export interface GodRaysConfig {
  * without needing an occlusion buffer (the sun is a sky shader, not geometry).
  */
 export const GODRAYS: GodRaysConfig = {
-  intensity: 0.5,
-  density: 0.85,
-  decay: 0.94,
-  threshold: 0.72,
+  intensity: 0.24,
+  density: 0.8,
+  decay: 0.93,
+  threshold: 0.84,
   samples: 28,
 };
 
 /** Cheaper sun shafts for mobiles. */
 export const GODRAYS_MOBILE: GodRaysConfig = {
-  intensity: 0.36,
-  density: 0.8,
-  decay: 0.92,
-  threshold: 0.78,
+  intensity: 0.18,
+  density: 0.75,
+  decay: 0.91,
+  threshold: 0.88,
   samples: 16,
 };
 

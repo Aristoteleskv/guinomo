@@ -23,6 +23,8 @@ import { deferred, type Deferred } from '../core/deferred';
 import { events } from '../core/events';
 import { client } from '../core/client';
 import { ratioFPS } from '../core/math';
+import { bloomConfigFor } from '../core/postFxConfig';
+import { createBloomPass, createVignettePass } from './postfx';
 import { initTouches } from './input';
 import { initTextureLoader } from './loaders/textures';
 import { clock } from './clock';
@@ -133,6 +135,7 @@ class Engine {
   renderer!: WebGLRenderer;
   composer!: EffectComposer;
   renderPass!: RenderPass;
+  vignettePass: ShaderPass | null = null;
   baseDPR = 1;
   adaptiveMultiplier = 1;
   active = false;
@@ -218,7 +221,19 @@ class Engine {
     this.composer = new EffectComposer(this.renderer, target);
     this.renderPass = new RenderPass(new ComposerScene(), new PerspectiveCamera(50, 1, 0.1, 2000));
     this.composer.addPass(this.renderPass);
+
+    // Soft bloom on the whole 3D image (skipped on old iPhones).
+    const bloom = bloomConfigFor(client.device, client.oldIphone);
+    if (bloom) {
+      this.composer.addPass(createBloomPass(new Vector2(client.screen.w, client.screen.h), bloom));
+    }
+
     this.composer.addPass(new SMAAPass(1, 1));
+
+    // Film vignette (+ subtle grain) before the final gamma correction.
+    this.vignettePass = createVignettePass();
+    this.composer.addPass(this.vignettePass);
+
     this.composer.addPass(new ShaderPass(GammaCorrectionShader));
   }
 
@@ -251,6 +266,7 @@ class Engine {
     if (!this.active) return;
     this.renderer.info.reset();
     for (const cb of this.mainScene.beforeRenderCbs) cb();
+    if (this.vignettePass) this.vignettePass.uniforms.uTime.value = clock.time;
     this.composer.render(delta);
     // A pending frame capture resolves right here, while the freshly drawn
     // frame is still in the drawing buffer (works without preserveDrawingBuffer).

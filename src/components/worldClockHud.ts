@@ -14,6 +14,18 @@ export const TICK_MS = 30_000;
 
 export const MINUTES_PER_DAY = 24 * 60;
 
+/** Below this time-to-start the chip shows a live countdown instead of the
+ *  scheduled time, and pulses. Deterministic for every player. */
+export const SOON_MINUTES = 60;
+
+/** Below this time-to-start a one-shot toast warns everyone in the world. */
+export const WARNING_MINUTES = 15;
+
+/** Whole minutes until `start` (ceiling, floored at 0). */
+export function minutesUntil(now: number, start: number): number {
+  return Math.max(0, Math.ceil(start - now));
+}
+
 /** Minute within the UTC day, 0..1439 (normalizes negatives like worldRhythm). */
 export function minuteOfDayUtc(minutes: number): number {
   return ((minutes % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
@@ -78,6 +90,12 @@ export function eventStatus(
       : `${active.icon} ${active.title.pt} · até ${utcClock(active.end)} UTC · ≈${mins} min`;
   }
   if (!next) return lang === 'en' ? 'no more events today' : 'sem mais eventos hoje';
+  const delta = minutesUntil(now, next.start);
+  if (delta > 0 && delta <= SOON_MINUTES) {
+    return lang === 'en'
+      ? `⏳ ${next.icon} ${next.title.en} · in ${delta} min (${utcClock(next.start)} UTC)`
+      : `⏳ ${next.icon} ${next.title.pt} · em ${delta} min (${utcClock(next.start)} UTC)`;
+  }
   const when = isSameUtcDay(now, next.start)
     ? lang === 'en'
       ? 'today at'
@@ -110,6 +128,8 @@ export function mountWorldClockHud(): void {
   document.body.append(chip);
 
   let wasActive = false;
+  let trackedWindowStart = -1;
+  let warnedNear = false;
 
   const render = () => {
     const lang = uiLanguage();
@@ -128,6 +148,7 @@ export function mountWorldClockHud(): void {
       now,
     )}`;
     chip.classList.toggle('active', active !== null);
+    chip.classList.toggle('soon', !active && next !== null && (next.start - now) <= SOON_MINUTES && next.start > now);
 
     if (active && !wasActive) {
       showToast(
@@ -138,6 +159,25 @@ export function mountWorldClockHud(): void {
       );
     }
     wasActive = active !== null;
+
+    // Aviso one-shot 15 min antes do evento do mundo atual (por janela).
+    if (!active && nextWindow) {
+      if (nextWindow.start !== trackedWindowStart) {
+        trackedWindowStart = nextWindow.start;
+        warnedNear = false;
+      }
+      const delta = minutesUntil(now, nextWindow.start);
+      if (!warnedNear && delta > 0 && delta <= WARNING_MINUTES) {
+        warnedNear = true;
+        const meta = next ?? { icon: world.icon, title: world.label, start: nextWindow.start, end: nextWindow.end };
+        showToast(
+          lang === 'en'
+            ? `⏳ ${meta.icon} ${meta.title.en} begins in ${world.label.en} in ${delta} min`
+            : `⏳ ${meta.icon} ${meta.title.pt} começa em ${world.label.pt} em ${delta} min`,
+          'violet',
+        );
+      }
+    }
   };
 
   render();

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SOON_MINUTES,
   eventStatus,
   isSameUtcDay,
+  minutesUntil,
   phaseStatus,
   remainingMinutes,
   utcClock,
@@ -29,11 +31,17 @@ describe('utcClock (relógio UTC do ri tmo do mundo)', () => {
   });
 });
 
-describe('remainingMinutes e isSameUtcDay', () => {
+describe('remainingMinutes, minutesUntil e isSameUtcDay', () => {
   it('conta os minutos até ao fim da janela, com piso em 0', () => {
     expect(remainingMinutes(utcMinutes(2026, 10, 13, 18, 30), utcMinutes(2026, 10, 13, 20, 0))).toBe(90);
     expect(remainingMinutes(utcMinutes(2026, 10, 13, 20, 0), utcMinutes(2026, 10, 13, 20, 0))).toBe(0);
     expect(remainingMinutes(utcMinutes(2026, 10, 13, 21, 0), utcMinutes(2026, 10, 13, 20, 0))).toBe(0);
+  });
+
+  it('conta os minutos até ao início do próximo evento, com piso em 0', () => {
+    expect(minutesUntil(utcMinutes(2026, 10, 13, 18, 0), utcMinutes(2026, 10, 13, 18, 43))).toBe(43);
+    expect(minutesUntil(utcMinutes(2026, 10, 13, 18, 43), utcMinutes(2026, 10, 13, 18, 43))).toBe(0);
+    expect(minutesUntil(utcMinutes(2026, 10, 13, 19, 0), utcMinutes(2026, 10, 13, 18, 43))).toBe(0);
   });
 
   it('compara dias UTC', () => {
@@ -52,6 +60,29 @@ describe('phaseStatus e eventStatus (linhas do chip)', () => {
     const now = utcMinutes(2026, 10, 13, 18, 30);
     expect(eventStatus('pt', MAR_ALTA, null, now)).toBe('🌊 Maré alta · até 20:00 UTC · ≈90 min');
     expect(eventStatus('en', MAR_ALTA, null, now)).toBe('🌊 High tide · till 20:00 UTC · ≈90 min');
+  });
+
+  it('evento iminente (≤60 min): contagem decrescente em vez da hora', () => {
+    const start = utcMinutes(2026, 10, 13, 18, 43);
+    const nextSoon = { ...MAR_ALTA, start, end: start + 90 };
+    expect(eventStatus('pt', null, nextSoon, utcMinutes(2026, 10, 13, 18, 0))).toBe(
+      '⏳ 🌊 Maré alta · em 43 min (18:43 UTC)',
+    );
+    expect(eventStatus('en', null, nextSoon, utcMinutes(2026, 10, 13, 18, 0))).toBe(
+      '⏳ 🌊 High tide · in 43 min (18:43 UTC)',
+    );
+  });
+
+  it('fronteira do SOON_MINUTES: 60 min → contagem; 61 min → hora marcada', () => {
+    expect(SOON_MINUTES).toBe(60);
+    const start60 = utcMinutes(2026, 10, 13, 19, 0);
+    const start61 = utcMinutes(2026, 10, 13, 19, 1);
+    expect(eventStatus('pt', null, { ...MAR_ALTA, start: start60, end: start60 + 90 }, utcMinutes(2026, 10, 13, 18, 0))).toBe(
+      '⏳ 🌊 Maré alta · em 60 min (19:00 UTC)',
+    );
+    expect(eventStatus('pt', null, { ...MAR_ALTA, start: start61, end: start61 + 90 }, utcMinutes(2026, 10, 13, 18, 0))).toBe(
+      '⏳ 🌊 Maré alta · hoje às 19:01 UTC',
+    );
   });
 
   it('linha 2 em espera: próximo evento, hoje ou amanhã', () => {

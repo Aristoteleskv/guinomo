@@ -94,6 +94,15 @@ export class MainController {
       this.baseMaterial.uniforms.tScene.value = sceneTexture;
       this.mainMesh.material = this.baseMaterial;
     }
+    // The sky's sun is current now (environment rendered above), so point the
+    // screen-space sun shafts at it before the main composer runs.
+    const godRays = engine.godRaysPass;
+    if (godRays) {
+      this.environment.sky.updateSunScreen(this.environment.camera);
+      const sun = this.environment.sky.sunScreen;
+      godRays.uniforms.uSun.value.set(sun.x, sun.y);
+      godRays.uniforms.uVisible.value = sun.visible;
+    }
   }
 
   private overlayAnimation = (value = 1) => {

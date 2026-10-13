@@ -28,3 +28,46 @@ export function bloomConfigFor(
   if (oldIphone) return null;
   return device === 'mobile' || device === 'tablet' ? BLOOM_MOBILE : BLOOM;
 }
+
+export interface GodRaysConfig {
+  /** Additive strength of the shafts. */
+  intensity: number;
+  /** How far the samples travel toward the sun (as a fraction of the ray). */
+  density: number;
+  /** Per-sample falloff along the ray. */
+  decay: number;
+  /** Luminance above which a pixel is treated as the light source. */
+  threshold: number;
+  /** Radial samples (compile-time; more is smoother and slower). */
+  samples: number;
+}
+
+/**
+ * Screen-space sun shafts. A screen-space approximation of crepuscular rays:
+ * it radially blurs the brightest pixels toward the sun, so it adds atmosphere
+ * without needing an occlusion buffer (the sun is a sky shader, not geometry).
+ */
+export const GODRAYS: GodRaysConfig = {
+  intensity: 0.5,
+  density: 0.85,
+  decay: 0.94,
+  threshold: 0.72,
+  samples: 28,
+};
+
+/** Cheaper sun shafts for mobiles. */
+export const GODRAYS_MOBILE: GodRaysConfig = {
+  intensity: 0.36,
+  density: 0.8,
+  decay: 0.92,
+  threshold: 0.78,
+  samples: 16,
+};
+
+export function godRaysConfigFor(
+  device: 'desktop' | 'mobile' | 'tablet',
+  oldIphone: boolean,
+): GodRaysConfig | null {
+  if (oldIphone) return null;
+  return device === 'mobile' || device === 'tablet' ? GODRAYS_MOBILE : GODRAYS;
+}

@@ -23,8 +23,8 @@ import { deferred, type Deferred } from '../core/deferred';
 import { events } from '../core/events';
 import { client } from '../core/client';
 import { ratioFPS } from '../core/math';
-import { bloomConfigFor } from '../core/postFxConfig';
-import { createBloomPass, createVignettePass } from './postfx';
+import { bloomConfigFor, godRaysConfigFor } from '../core/postFxConfig';
+import { createBloomPass, createGodRaysPass, createVignettePass } from './postfx';
 import { initTouches } from './input';
 import { initTextureLoader } from './loaders/textures';
 import { clock } from './clock';
@@ -136,6 +136,7 @@ class Engine {
   composer!: EffectComposer;
   renderPass!: RenderPass;
   vignettePass: ShaderPass | null = null;
+  godRaysPass: ShaderPass | null = null;
   baseDPR = 1;
   adaptiveMultiplier = 1;
   active = false;
@@ -226,6 +227,13 @@ class Engine {
     const bloom = bloomConfigFor(client.device, client.oldIphone);
     if (bloom) {
       this.composer.addPass(createBloomPass(new Vector2(client.screen.w, client.screen.h), bloom));
+    }
+
+    // Screen-space sun shafts, fed each frame by the sky's sun position.
+    const godRays = godRaysConfigFor(client.device, client.oldIphone);
+    if (godRays) {
+      this.godRaysPass = createGodRaysPass(godRays);
+      this.composer.addPass(this.godRaysPass);
     }
 
     this.composer.addPass(new SMAAPass(1, 1));

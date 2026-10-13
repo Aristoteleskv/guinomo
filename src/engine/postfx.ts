@@ -9,8 +9,8 @@
 import { Vector2 } from 'three';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import type { BloomConfig } from '../core/postFxConfig';
-import { BLOOM, VIGNETTE } from '../core/postFxConfig';
+import type { BloomConfig, GodRaysConfig } from '../core/postFxConfig';
+import { BLOOM, GODRAYS, VIGNETTE } from '../core/postFxConfig';
 
 export function createBloomPass(resolution: Vector2, config: BloomConfig = BLOOM): UnrealBloomPass {
   return new UnrealBloomPass(resolution, config.strength, config.radius, config.threshold);
@@ -61,4 +61,72 @@ export const VignetteShader = {
 
 export function createVignettePass(): ShaderPass {
   return new ShaderPass(VignetteShader);
+}
+
+/**
+ * Screen-space sun shafts. Radial samples walk from each pixel toward `uSun`
+ * (the sun's screen position, 0..1) and accumulate only the brightest pixels,
+ * decaying along the way — the classic screen-space god-rays approximation.
+ * `uVisible` fades the whole effect out at night or when the sun is behind the
+ * camera, and the sample count is baked into the shader (GLSL1 needs constant
+ * loops) so mobiles compile a cheaper variant.
+ */
+function godRaysFragment(samples: number): string {
+  return /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform vec2 uSun;
+    uniform float uVisible;
+    uniform float uIntensity;
+    uniform float uDensity;
+    uniform float uDecay;
+    uniform float uThreshold;
+    varying vec2 vUv;
+
+    void main() {
+      vec3 base = texture2D(tDiffuse, vUv).rgb;
+      if (uVisible <= 0.001) {
+        gl_FragColor = vec4(base, 1.0);
+        return;
+      }
+
+      vec2 delta = (uSun - vUv) * (uDensity / float(${samples}));
+      vec2 coord = vUv;
+      float decay = 1.0;
+      float accumulation = 0.0;
+      for (int i = 0; i < ${samples}; i++) {
+        coord += delta;
+        vec3 samp = texture2D(tDiffuse, coord).rgb;
+        float bright = smoothstep(uThreshold, 1.0, max(max(samp.r, samp.g), samp.b));
+        accumulation += bright * decay;
+        decay *= uDecay;
+      }
+      accumulation /= float(${samples});
+
+      vec3 shafts = uIntensity * uVisible * accumulation * vec3(1.0, 0.9, 0.74);
+      gl_FragColor = vec4(min(base + shafts, vec3(1.0)), 1.0);
+    }
+  `;
+}
+
+export function createGodRaysPass(config: GodRaysConfig = GODRAYS): ShaderPass {
+  const pass = new ShaderPass({
+    uniforms: {
+      tDiffuse: { value: null },
+      uSun: { value: new Vector2(0.5, 0.5) },
+      uVisible: { value: 0 },
+      uIntensity: { value: config.intensity },
+      uDensity: { value: config.density },
+      uDecay: { value: config.decay },
+      uThreshold: { value: config.threshold },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: godRaysFragment(config.samples),
+  });
+  return pass;
 }

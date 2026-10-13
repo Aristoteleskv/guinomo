@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { BLOOM, BLOOM_MOBILE, VIGNETTE, bloomConfigFor } from '../src/core/postFxConfig';
+import {
+  BLOOM,
+  BLOOM_MOBILE,
+  GODRAYS,
+  GODRAYS_MOBILE,
+  VIGNETTE,
+  bloomConfigFor,
+  godRaysConfigFor,
+} from '../src/core/postFxConfig';
 
 function expectBloom(config: { strength: number; radius: number; threshold: number }) {
   expect(config.strength).toBeGreaterThan(0);
@@ -34,5 +42,30 @@ describe('pós-processamento (postFxConfig)', () => {
     expect(bloomConfigFor('desktop', false)).toBe(BLOOM);
     expect(bloomConfigFor('mobile', false)).toBe(BLOOM_MOBILE);
     expect(bloomConfigFor('tablet', false)).toBe(BLOOM_MOBILE);
+  });
+
+  it('a afinação dos raios de sol está em intervalos são', () => {
+    for (const config of [GODRAYS, GODRAYS_MOBILE]) {
+      expect(config.intensity).toBeGreaterThan(0);
+      expect(config.intensity).toBeLessThanOrEqual(1.5);
+      expect(config.density).toBeGreaterThan(0);
+      expect(config.density).toBeLessThanOrEqual(1.5);
+      expect(config.decay).toBeGreaterThan(0);
+      expect(config.decay).toBeLessThanOrEqual(1);
+      expect(config.threshold).toBeGreaterThanOrEqual(0.5);
+      expect(config.threshold).toBeLessThanOrEqual(1);
+      expect(Number.isInteger(config.samples)).toBe(true);
+      expect(config.samples).toBeGreaterThanOrEqual(8);
+      expect(config.samples).toBeLessThanOrEqual(64);
+    }
+    // Telemóvel faz menos amostras.
+    expect(GODRAYS_MOBILE.samples).toBeLessThan(GODRAYS.samples);
+  });
+
+  it('escolhe os raios de sol por dispositivo e desliga em iPhones antigos', () => {
+    expect(godRaysConfigFor('desktop', true)).toBeNull();
+    expect(godRaysConfigFor('desktop', false)).toBe(GODRAYS);
+    expect(godRaysConfigFor('mobile', false)).toBe(GODRAYS_MOBILE);
+    expect(godRaysConfigFor('tablet', false)).toBe(GODRAYS_MOBILE);
   });
 });

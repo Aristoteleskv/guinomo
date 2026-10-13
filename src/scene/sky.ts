@@ -18,6 +18,8 @@ import {
   Sprite,
   SpriteMaterial,
   ShaderMaterial,
+  Vector3,
+  type Camera,
 } from 'three';
 import { geometryLoader } from '../engine/loaders/geometries';
 import { textureLoader } from '../engine/loaders/textures';
@@ -75,12 +77,40 @@ export class Sky extends SceneModule {
   private moon: Mesh | null = null;
   private moonGlow: Sprite | null = null;
 
+  /** Sun position in screen space (0..1) + a 0..1 visibility for the sun's
+   *  shafts. Recomputed from the live camera via `updateSunScreen`. */
+  readonly sunScreen = { x: 0.5, y: 0.5, visible: 0 };
+  private _sunNdc = new Vector3();
+
   get nightIntensity(): number {
     return this.nightBlend;
   }
 
   get alienIntensity(): number {
     return this.theme === 'alien' ? 1 : 0;
+  }
+
+  /**
+   * Projects the sun mesh into the given camera's clip space so the god-rays
+   * pass can blur toward it. Call after the environment render (camera matrices
+   * and the sun's world matrix are current at that point).
+   */
+  updateSunScreen(camera: Camera): void {
+    const sun = this.sun;
+    if (!sun || !sun.visible) {
+      this.sunScreen.visible = 0;
+      return;
+    }
+    this._sunNdc.setFromMatrixPosition(sun.matrixWorld).project(camera);
+    this.sunScreen.x = this._sunNdc.x * 0.5 + 0.5;
+    this.sunScreen.y = this._sunNdc.y * 0.5 + 0.5;
+    // Fade out when the sun is behind the camera (or the projection blows up).
+    const onScreen =
+      Number.isFinite(this._sunNdc.x) &&
+      Number.isFinite(this._sunNdc.y) &&
+      this._sunNdc.z <= 1 &&
+      sun.visible;
+    this.sunScreen.visible = onScreen ? 1 : 0;
   }
 
   /** Forces a sky theme; used by per-world presets. */

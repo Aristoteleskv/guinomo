@@ -81,7 +81,8 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 |---|---|
 | **Chat P2P no mundo** ✅ | Mensagens em tempo real entre quem está na mesma `room`, via o próprio canal gossip (envelope v3); janela de chat com badge de não-lidos; limite de 200 chars |
 | Presença "a escrever" ✅ | Indicador "X está a escrever…" a partir de frames `typing` P2P, auto-expira (2,5 s) |
-| Emojis no chat | Renderizar emojis (já suportados como UTF-8) num seletor rápido junto ao input |
+| Emojis no chat ✅ | Renderizar emojis (já suportados como UTF-8) num seletor rápido junto ao input |
+| **Saudação 👋** ✅ | Acenar (tecla `G`, botão 👋 ou emoji 👋 no chat) levanta um 👋 + anel de partículas **determinístico** sobre o avatar; difundido aos amigos pelo canal de chat (sem protocolo novo) |
 | **Festas/grupos** | Convidar vários amigos para a mesma `room`, manter rotação |
 | Voz | WebRTC/Datachannel opcional com toggle de privacidade (P2P, sem servidor) |
 | Moderação básica | Bloqueio/mute de utilizador P2P, reporte via PHP |
@@ -116,7 +117,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 |---|---|---|---|---|
 | **A1** | **Ecossistema determinístico** — fauna por mundo (pirilampos no Bosque, cardumes na Cidade Flutuante, poeira-estrela no Alien…) com o mesmo voo para todos os jogadores | `core/worldFauna.ts` + `scene/worldFaunaScene.ts` | Nenhuma (usa `THREE.Points`, não mexe em shaders); candidato wasm da Fase B do plano C++ | ✅ **feito** (commit `…`) |
 | **A2** | **O oceano que responde à maré** — nível da água sobe dentro da janela do evento (maré cheia 18:00–19:30 na Cidade Flutuante) e vaza depois; sem shaders | `core/seaTide.ts` + `scene/tideScene.ts` | Nenhuma (eleva o mesh do mar + brilho de espuma; não toca no WIP `glsl`) | ✅ **feito** (commit `…`) |
-| **A3** | **O céu como estado partilhado** — camadas atmosféricas por fase determinística (aurora, constelações) | `scene/sky.ts` | WIP do utilizador (`glsl`) — requer ok | Planeado |
+| **A3** | **O céu como estado partilhado** — o céu segue o relógio **UTC** como estado puro (dia/amanhecer/anoitecer/noite), com paletas por mundo e fase "desperta" | `core/skyState.ts` + `scene/sky.ts` | Nenhuma — dirigido só por **uniforms** a partir de estado (não usa `glsl/*`, preserva o WIP do utilizador) | ✅ **feito** |
 
 ### Bloco B — presença e memória (o mais ousado socialmente)
 
@@ -135,11 +136,7 @@ cosméticos (nunca punem), sem energia comprável nem notificações de culpa.
 
 ### Sequência de execução
 
-`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (com ok do WIP glsl) → saudação 👋`.</think>
-
-<｜DSML｜tool_calls>
-<｜DSML｜invoke name="edit">
-<｜DSML｜parameter name="newString" string="true">`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → A3 (com ok do WIP glsl) → B8 (Duelo de sombras) → Menu de mundo 3D + saudação 👋`.
+`A1 ✅ → B4 ✅ → B6 ✅ → A2 ✅ → B5 ✅ → C7 ✅ → Menu de mundo 3D ✅ → B8 ✅ → A3 (céu como estado) ✅ → saudação 👋 ✅`.
 
 Critério duro: cada item entra com o gate verde (`typecheck · lint · vitest`) e,
 quando aplicável, com teste de paridade (TS↔C++/wasm) antes de virar "núcleo".

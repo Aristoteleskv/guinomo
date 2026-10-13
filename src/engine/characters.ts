@@ -34,6 +34,7 @@ import {
 } from '../core/math';
 import { gsap } from 'gsap';
 import { ticker } from '../core/ticker';
+import { WAVE_DURATION_MS, waveAngles } from '../core/wavePose';
 import { clock } from './clock';
 import type { FollowCamera } from './camera';
 import { Controls } from './controls';
@@ -43,6 +44,12 @@ import type { P2PClientData, P2PConnection } from './multiplayer/iroh';
 
 const MAX_CHARS = 128;
 const SECURE_EPS = 1e-4;
+// Right-arm bones of the kid rig, used by the procedural greeting wave.
+const WAVE_BONE_UPPER = 'bone_21';
+const WAVE_BONE_FORE = 'bone_19';
+const WAVE_BONE_HAND = 'bone_18';
+const X_AXIS = new Vector3(1, 0, 0);
+const Z_AXIS = new Vector3(0, 0, 1);
 
 /**
  * Multiplayer is enabled by default and can be turned off with
@@ -203,6 +210,9 @@ export class CharacterSkinnedMesh extends InstancedMesh {
 
   private _mixer: AnimationMixer;
   private _boneMatrix = new Matrix4();
+  private _waveBones: { upper: Object3D; fore: Object3D; hand: Object3D } | null | undefined;
+  private _qWaveA = new Quaternion();
+  private _qWaveB = new Quaternion();
   declare _localObject: CharacterLocal;
 
   constructor(
@@ -270,6 +280,27 @@ export class CharacterSkinnedMesh extends InstancedMesh {
       action.setEffectiveWeight(weight);
     });
     this._mixer.setTime(ticker.time + local.animationOffset);
+
+    // Optional greeting: raise the real arm bones over the blended pose, bake
+    // this instance, then restore — the pose must never leak into the next
+    // instance (bones are shared; only the bone texture is per-instance).
+    const waveStart = local.userData.waveStart as number | undefined;
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const waveElapsed = waveStart === undefined ? -1 : now - waveStart;
+    const wave = this._resolveWaveBones();
+    let saved: [Quaternion, Quaternion, Quaternion] | null = null;
+    if (wave && waveElapsed >= 0 && waveElapsed < WAVE_DURATION_MS) {
+      const angles = waveAngles(waveElapsed);
+      saved = [
+        wave.upper.quaternion.clone(),
+        wave.fore.quaternion.clone(),
+        wave.hand.quaternion.clone(),
+      ];
+      wave.upper.quaternion.multiply(this._qWaveA.setFromAxisAngle(X_AXIS, angles.raise));
+      wave.fore.quaternion.multiply(this._qWaveB.setFromAxisAngle(Z_AXIS, angles.fore));
+      wave.hand.quaternion.multiply(this._qWaveB.setFromAxisAngle(Z_AXIS, angles.hand));
+    }
+
     this.children.forEach((child) => child.updateMatrixWorld());
 
     const offset = local.instanceID * this.skeleton.boneTextureSize * 4;
@@ -277,6 +308,23 @@ export class CharacterSkinnedMesh extends InstancedMesh {
       this._boneMatrix.multiplyMatrices(this.skeleton.bones[b].matrixWorld, this.skeleton.boneInverses[b]);
       this._boneMatrix.toArray(this.skeleton.boneMatrices, offset + b * 16);
     }
+
+    if (saved && wave) {
+      wave.upper.quaternion.copy(saved[0]);
+      wave.fore.quaternion.copy(saved[1]);
+      wave.hand.quaternion.copy(saved[2]);
+    }
+  }
+
+  /** Resolves the rig's right-arm bones once (null on a different skeleton). */
+  private _resolveWaveBones(): { upper: Object3D; fore: Object3D; hand: Object3D } | null {
+    if (this._waveBones !== undefined) return this._waveBones;
+    const find = (name: string) => this.skeleton.bones.find((bone: Object3D) => bone.name === name);
+    const upper = find(WAVE_BONE_UPPER);
+    const fore = find(WAVE_BONE_FORE);
+    const hand = find(WAVE_BONE_HAND);
+    this._waveBones = upper && fore && hand ? { upper, fore, hand } : null;
+    return this._waveBones;
   }
 
   override updateMatrixWorld(force?: boolean): void {

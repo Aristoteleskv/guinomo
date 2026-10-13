@@ -5,6 +5,7 @@
 // two clients with the same seed draw the same ring.
 
 import { mulberry32 } from './confetti';
+import { WAVE_DURATION_MS } from './wavePose';
 
 /** The glyph that means "wave" on the chat channel (already in the emoji tray). */
 export const GREETING_EMOJI = '👋';
@@ -17,8 +18,8 @@ export const GREETING_STICKER_ID = 'wave';
 
 const GREETING_TOKENS = [GREETING_EMOJI, `[[sticker:${GREETING_STICKER_ID}]]`];
 
-/** Seconds a greeting stays on screen. */
-export const GREETING_DURATION = 2.2;
+/** Seconds a greeting stays on screen (matches the procedural arm wave). */
+export const GREETING_DURATION = WAVE_DURATION_MS / 1000;
 
 /** Number of ring particles per greeting. */
 export const GREETING_PARTICLES = 14;

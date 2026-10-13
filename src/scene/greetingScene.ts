@@ -1,21 +1,22 @@
-// Saudação (greeting) — the non-invasive wave. A 👋 travels over the existing
-// plain-text P2P chat channel (no protocol change; see core/greeting.ts) and
-// every client lifts a floating 👋 + a ring of particles over the greeter's
-// avatar. Works locally and for friends: the remote is resolved by the chat's
-// `from` client id in the characters registry. The avatar's model is untouched
-// (no new animation clip needed).
+// Saudação (greeting) — the non-invasive wave, now in REAL 3D. A 👋 travels
+// over the existing plain-text P2P chat channel (no protocol change; see
+// core/greeting.ts); every client then raises the greeter's *actual arm bones*
+// (engine/characters.ts, core/wavePose.ts — no new animation clip) and lifts a
+// rising ring of particles. Works locally and for friends: the remote is
+// resolved by the chat's `from` client id in the characters registry. The
+// avatar's model/shaders are untouched.
 
 import { CanvasTexture, Group, Object3D, Sprite, SpriteMaterial, sRGBEncoding } from 'three';
 import { events } from '../core/events';
 import { clock } from '../engine/clock';
 import { playSfx } from '../engine/sfx';
 import { minutesOf } from '../core/worldRhythm';
+import { WAVE_DURATION_MS } from '../core/wavePose';
 import {
   greetingBurst,
   greetingMessage,
   greetingSeed,
   isGreetingText,
-  GREETING_DURATION,
   type GreetingParticle,
 } from '../core/greeting';
 import { SceneModule } from './SceneModule';
@@ -26,22 +27,19 @@ interface ActiveGreeting {
   born: number;
   seed: number;
   group: Group;
-  hand: Sprite;
   particles: Sprite[];
   burst: GreetingParticle[];
 }
 
 const GREET_COOLDOWN_MS = 1200;
-const HAND_Y = 2.1; // height of the raised hand above the avatar's feet
+const RING_DURATION_S = WAVE_DURATION_MS / 1000;
 
 export class GreetingScene extends SceneModule {
-  private handTexture: CanvasTexture | null = null;
   private dotTexture: CanvasTexture | null = null;
   private active: ActiveGreeting[] = [];
   private lastGreet = -Infinity;
 
   protected init() {
-    this.handTexture = makeHandTexture();
     this.dotTexture = makeDotTexture();
     this.mountButton();
 
@@ -66,7 +64,7 @@ export class GreetingScene extends SceneModule {
 
   /** Wave to the world: travels over the chat channel and lights up here too. */
   private greet(): void {
-    const now = performance.now();
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     if (now - this.lastGreet < GREET_COOLDOWN_MS) return;
     this.lastGreet = now;
     playSfx('open');
@@ -95,15 +93,13 @@ export class GreetingScene extends SceneModule {
   };
 
   private spawn(target: Object3D, seed: number): void {
-    if (!this.handTexture || !this.dotTexture) return;
+    if (!this.dotTexture) return;
+
+    // The engine reads this and poses the arm on top of the blended animation.
+    target.userData.waveStart =
+      typeof performance !== 'undefined' ? performance.now() : Date.now();
 
     const group = new Group();
-    const hand = new Sprite(
-      new SpriteMaterial({ map: this.handTexture, transparent: true, depthWrite: false }),
-    );
-    hand.scale.set(1.15, 1.15, 1);
-    group.add(hand);
-
     const burst = greetingBurst(seed);
     const particles = burst.map(() => {
       const sprite = new Sprite(
@@ -120,39 +116,34 @@ export class GreetingScene extends SceneModule {
     });
 
     this.scene.add(group);
-    this.active.push({ target, born: performance.now(), seed, group, hand, particles, burst });
+    this.active.push({ target, born: Date.now(), seed, group, particles, burst });
   }
 
   private update = () => {
     if (this.active.length === 0) return;
-    const now = performance.now();
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const time = clock.time;
 
     for (let i = this.active.length - 1; i >= 0; i--) {
       const greeting = this.active[i];
       const age = (now - greeting.born) / 1000;
-      if (age >= GREETING_DURATION) {
+      if (age >= RING_DURATION_S) {
         this.disposeGreeting(greeting);
         this.active.splice(i, 1);
         continue;
       }
 
-      const progress = age / GREETING_DURATION;
+      const progress = age / RING_DURATION_S;
       const fade = progress < 0.12 ? progress / 0.12 : Math.min(1, (1 - progress) / 0.35);
       const base = greeting.target.position;
-      greeting.group.position.set(
-        base.x,
-        base.y + HAND_Y + 0.12 * Math.sin(time * 3 + greeting.seed),
-        base.z,
-      );
-      greeting.hand.rotation.z = 0.28 * Math.sin(time * 9 + greeting.seed);
-      greeting.hand.material.opacity = Math.max(0, fade);
+      greeting.group.position.set(base.x, base.y + 0.08, base.z);
+      greeting.group.rotation.y = time * 0.6 + greeting.seed;
 
       greeting.particles.forEach((sprite, index) => {
         const particle = greeting.burst[index];
         const rise = Math.max(0, Math.min(1, (progress - particle.phase * 0.15) / 0.85));
-        const radius = 0.5 + rise * 1.1;
-        sprite.position.set(particle.dx * radius, particle.dy * rise * 1.5, particle.dz * radius);
+        const radius = 0.55 + rise * 1.05;
+        sprite.position.set(particle.dx * radius, 0.15 + particle.dy * rise * 1.5, particle.dz * radius);
         sprite.scale.setScalar(0.12 + 0.12 * (1 - rise));
         sprite.material.opacity = Math.max(0, fade * (1 - rise));
       });
@@ -161,7 +152,6 @@ export class GreetingScene extends SceneModule {
 
   private disposeGreeting(greeting: ActiveGreeting): void {
     this.scene.remove(greeting.group);
-    greeting.hand.material.dispose();
     greeting.particles.forEach((sprite) => sprite.material.dispose());
   }
 
@@ -183,22 +173,6 @@ function makeDotTexture(): CanvasTexture {
   gradient.addColorStop(1, 'rgba(255,242,200,0)');
   context.fillStyle = gradient;
   context.fillRect(0, 0, 64, 64);
-  const texture = new CanvasTexture(canvas);
-  texture.encoding = sRGBEncoding;
-  return texture;
-}
-
-/** The raised 👋 drawn on a small canvas (no external asset). */
-function makeHandTexture(): CanvasTexture {
-  const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Canvas 2D is required to render the greeting.');
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.font = '96px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
-  context.fillText('👋', 64, 70);
   const texture = new CanvasTexture(canvas);
   texture.encoding = sRGBEncoding;
   return texture;
